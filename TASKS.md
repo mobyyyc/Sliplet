@@ -196,3 +196,10 @@ Common constraints: entirely on-device recognition and evaluation; personal test
 - Chat: 01a11f0a-c1bc-7f10-a798-f1160a895919 (local; approved P2-05 implementation)
 
 P2-05 Main acceptance: password-only decryption verified independently with 12 checks; 55 source and 10 fictional screenshot hashes match. Final native Files save/cancel paths pass, isolated upgrade evidence retains all three fictional receipts, and unsigned v0.2/build 2 compiles. Private data, the normal Simulator wallet and local signing changes are preserved. [Main review](docs/evidence/p2-05/main-chat-review.json). Commit message: `feat: add portable encrypted receipt backups`. Next: guided personal v0.2 iPhone walkthrough, awaiting user approval.
+
+## Personal v0.2 iPhone walkthrough · 2026-10-11
+
+- Status: user approved in Main; preparation and physical checks in progress.
+- Dependency: P2-05 accepted and pushed as `e419d15`.
+- Scope: existing iPhone 15 Pro in-place update, retained-wallet check, password backup/duplicate preview, offline capture and timed focused corrections. No uninstall/reset or new feature phase.
+- Guide: [One-step-at-a-time phone walkthrough](docs/PHONE_WALKTHROUGH.md). User observations, real accuracy, correction time and lifecycle outcomes remain pending; do not mark this task complete from a build/install alone.

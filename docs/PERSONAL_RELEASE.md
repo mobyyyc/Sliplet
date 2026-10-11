@@ -46,3 +46,5 @@ The accepted recognition baseline remains 57/66 exact purchase amounts on five e
 Main can create a v0.2 build with full `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, retaining the stable project identities/signing settings and setting `MARKETING_VERSION=0.2 CURRENT_PROJECT_VERSION=2` for the build. No signing identity or installed application store is changed by this task.
 
 Main independently accepted the implementation; see [acceptance review](evidence/p2-05/main-chat-review.json) and [independent password-only decoding](evidence/p2-05/main-independent-decrypt.json). The next guided personal-phone walkthrough awaits user approval.
+
+On 2026-10-11 the user approved the guided personal-phone walkthrough. See [stepwise guide](PHONE_WALKTHROUGH.md). Actual device observations remain pending; this approval does not certify the release targets.
