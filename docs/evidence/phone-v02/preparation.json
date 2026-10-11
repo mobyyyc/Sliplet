@@ -8,7 +8,7 @@
   "debugBackupControlAbsent": true,
   "binarySHA256": "412ee4c6abb167a749424e1becf2d1356907c5fae4634058cdbfb3ffc2a1028e",
   "phoneInstallation": "Succeeded, installed over existing stable bundle; no uninstall/reset",
-  "physicalObservations": "Pending user confirmation of wallet retention, backups, offline camera and correction timing",
+  "physicalObservations": "Initial app/wallet/original checks reported passed by user. Backup, offline camera, lifecycle and correction timing remain pending.",
   "date": "2026-10-11",
   "timezone": "America/Toronto",
   "phoneModel": "iPhone 15 Pro",
@@ -17,5 +17,12 @@
   "previousInstalledVersion": "0.1",
   "previousInstalledBuild": "1",
   "installedVersionVerified": true,
-  "launch": "Attempt rejected because phone locked before launch. User must unlock and open app."
+  "launch": "Attempt rejected because phone locked before launch. User must unlock and open app.",
+  "userReportedChecks": {
+    "reportedDate": "2026-10-11",
+    "appOpensAndUnlocks": "passed",
+    "existingWalletPresent": "passed",
+    "existingReceiptOriginalOpens": "passed",
+    "source": "User reported all three checks good in Main; no private data extracted."
+  }
 }

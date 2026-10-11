@@ -256,3 +256,7 @@ Accepted portable password-encrypted backups and merge-only restore after indepe
 User approved the guided test and confirmed their iPhone 15 Pro is connected and unlocked. Main is preparing the signed Release v0.2/build 2 candidate using the existing signing settings and stable bundle. No physical acceptance result is claimed. Wallet preservation, real Files/password paths, offline camera and human correction observations remain pending. [Guide](docs/PHONE_WALKTHROUGH.md).
 
 Preparation result (2026-10-11): signed Release v0.2/build 2 compiled and verified, then installed over the existing 0.1/build 1 app on the user-selected iPhone 15 Pro. Device metadata confirms 0.2/2. The launch request was rejected because the phone locked; user unlock/manual opening remains necessary. No uninstall/reset, source-code change or private phone data extraction occurred. Actual wallet retention and hardware behavior await user observation. [Preparation evidence](docs/evidence/phone-v02/preparation.json).
+
+## Initial phone checks and icon concept · 2026-10-11
+
+User reports all three initial checks passed: app opens/unlocks, saved receipts are present, and an existing receipt original opens. Password backup/restore, offline capture, focused-correction timing and remaining physical checks are still pending. User additionally requested an app icon; the first wallet-and-receipt design is saved for review in [icon concept](docs/design/SLIPLET_ICON.md), with no app asset or installed-icon change yet.
