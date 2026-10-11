@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-11",
+  "version": "0.2",
+  "build": "3",
+  "signatureVerified": true,
+  "stableBundleAndPersonalTeam": true,
+  "sourceFilesUnchanged": 55,
+  "compiledPrimaryIcon": "AppIcon",
+  "assetCatalogPresent": true,
+  "iconFiles": [
+    "AppIcon60x60"
+  ],
+  "binarySHA256": "653809acbea47085a4e0940c4f581e3f7d0c611498f07530d4b92572897aa9e8",
+  "approvedMasterSHA256": "93dd525649830ebee905cf4f0c10dce73972f24da54ebdc2c2ca55bdc4a09a72",
+  "packagedIconSHA256": "5d5794084611dbbf63dd1890e0427bb0b268f583fa2b5f18ea583fb2be1bb664",
+  "phoneInstallation": "Succeeded over existing installation; no uninstall/reset",
+  "userApprovedIconAndReinstall": true,
+  "installedVersionVerified": true,
+  "launch": "Succeeded without test arguments or private stdout collection",
+  "phoneModel": "iPhone 15 Pro",
+  "physicalIconAppearance": "Awaiting user Home Screen review",
+  "remainingWalkthrough": "Password backup, offline capture and correction timing remain pending"
+}

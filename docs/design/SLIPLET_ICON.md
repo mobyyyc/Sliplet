@@ -2,7 +2,7 @@
 
 First design uses cognac leather, an ivory receipt with simple printed bars, a scooped pocket mouth and gentle contact/cast shadows. The paper sits between the wallet back and front. No app-name text is embedded.
 
-Generated with the built-in image-generation tool. The opaque square master is saved as [sliplet-icon-v1.png](sliplet-icon-v1.png). This is a design for user review; it has not been wired into the asset catalog, resized, or installed. Final app icon preparation follows the chosen design.
+Generated with the built-in image-generation tool. The opaque square master is saved as [sliplet-icon-v1.png](sliplet-icon-v1.png). The user approved this design and phone reinstall on 2026-10-11. The unchanged 1254-pixel opaque master is retained here; a 1024-pixel RGB copy is packaged in the iOS AppIcon asset catalog. Debug and Release target settings select AppIcon. Signed v0.2/build 3 compiled, verified, installed in place on the existing iPhone 15 Pro app, and launched. No Swift app behavior or receipt storage/signing identities changed. [Build/install evidence](../evidence/phone-v02/icon-install.json).
 
 ## Generation prompt
 

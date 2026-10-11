@@ -260,3 +260,7 @@ Preparation result (2026-10-11): signed Release v0.2/build 2 compiled and verifi
 ## Initial phone checks and icon concept · 2026-10-11
 
 User reports all three initial checks passed: app opens/unlocks, saved receipts are present, and an existing receipt original opens. Password backup/restore, offline capture, focused-correction timing and remaining physical checks are still pending. User additionally requested an app icon; the first wallet-and-receipt design is saved for review in [icon concept](docs/design/SLIPLET_ICON.md), with no app asset or installed-icon change yet.
+
+## Approved icon applied and phone updated · 2026-10-11
+
+Applied the approved leather-wallet/receipt icon in a standard opaque 1024-pixel iOS asset, selecting AppIcon in Debug and Release. Signed v0.2/build 3 compilation and icon/signature checks pass; device metadata verifies build 3 after in-place installation and launch on the user-selected iPhone 15 Pro. No uninstall/reset or app-source behavior change. Personal Team values stay local and uncommitted. [Verification](docs/evidence/phone-v02/icon-install.json). Initial three phone checks previously passed; backup, offline receipt and timed correction checks remain pending.
