@@ -38,3 +38,6 @@ private-receipts/
 
 # Portable backups contain receipt data; never commit user exports.
 *.slipletbackup
+
+# Private recognition review exports
+/sliplet-p402-checked*.json

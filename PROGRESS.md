@@ -280,3 +280,17 @@ User authorized the whole audit/repair pass. All five Phase 2 chats were archive
 The candidate uses project defaults 0.3/build 4. Verification uses fictional data in a task-created Simulator; exact results, earlier failures and limitations are retained in Phase 3 evidence. Original receipt files, recognition/parser/storage identities and local Personal Team settings are preserved. No phone installation or zero-lag claim. Next proposed task: approved in-place phone update and the Phase 3 UX walkthrough.
 
 Final Phase 3 verification: 147 unit passes / one physical-only skip; 13/13 final native methods and passing latest outcomes for 30 distinct native methods across scoped runs. Final UI runtime-warning count is zero; the unit priority warning and earlier failures remain recorded. Signed 0.3/build 4 candidate passes signature/version/bundle/team/Debug-exclusion checks. All 3,625 private files match the start snapshot; parsing/storage/backup sources are unchanged. [Evidence](docs/evidence/p3-ux/README.md). Implementation is complete; phone installation and physical UX acceptance await the next approval. Milestone commit message: `fix: refine native receipt interactions and responsiveness`.
+
+
+## P4-02 automatic checkpoint — 2026-10-13
+
+Approved in Main. Seven automatic variants completed 70/70 attempts with 35/35 stable repeats; baseline matches P4-01. Language correction improves parser purchase recovery 53/66 to 54/66 without losing checked lines; automatic bounds (52/66) and strips (47/66) regress and are rejected for blanket integration. Eight-orientation coordinate gate and ten fictional evaluator checks pass. Original receipts, historical evidence, production source and signing diff remain unchanged. See [interim report](docs/REGION_OCR_EXPERIMENTS.md).
+
+The private local source-review page is open for the user to verify one literal transcript and region. The human-assisted tests remain unrun until export; P4-02 is not complete and no next task is approved. CAD default preference recorded as editable user context, separate from printed currency. No checkpoint commit/push or phone update yet. Dedicated task Simulator is retained only for the pending assisted comparison.
+
+
+## P4-02 completed — 2026-10-13
+
+User supplied two checked Costco transcripts. Three literal edits produce unchanged parser recovery (33/37 purchases, totals 0/2); exact transcript preservation and independent count verification pass. Both sources reported no printed currency identifier. Region flags had no rectangles, so the original export is preserved and a documented derivative runs transcript-only; no manual-region result is claimed. The automatic seven-variant matrix passed 70 attempts/35 repeat pairs. Production app source remains unchanged.
+
+Next proposal requires approval: P4-04 interpretation and field conversion before adaptive OCR P4-03. Apply the already selected visible editable CAD default as user context, preserve financial ambiguity and provenance, and address verified parsing failures. No future task has begun. See [final diagnostic report](docs/REGION_OCR_EXPERIMENTS.md).

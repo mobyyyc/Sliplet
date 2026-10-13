@@ -1,0 +1,54 @@
+{
+  "automatic_attempts": 70,
+  "fictional_python_tests": 10,
+  "human_assistance": {
+    "exact_purchase_amounts": 33,
+    "manual_regions_not_supplied": 2,
+    "native_failed": 0,
+    "native_passed": 1,
+    "purchase_denominator": 37,
+    "transcripts_preserved_exactly": true,
+    "verified_transcripts": 2
+  },
+  "independent_exact_counts": {
+    "auto-bounds": {
+      "all_line_exact": 56,
+      "purchase_exact": 52
+    },
+    "baseline": {
+      "all_line_exact": 57,
+      "purchase_exact": 53
+    },
+    "candidates-second": {
+      "all_line_exact": 57,
+      "purchase_exact": 53
+    },
+    "correction-off": {
+      "all_line_exact": 57,
+      "purchase_exact": 53
+    },
+    "correction-on": {
+      "all_line_exact": 58,
+      "purchase_exact": 54
+    },
+    "english-only": {
+      "all_line_exact": 57,
+      "purchase_exact": 53
+    },
+    "strips": {
+      "all_line_exact": 51,
+      "purchase_exact": 47
+    }
+  },
+  "native": {
+    "failedTests": 0,
+    "passedTests": 3,
+    "skippedTests": 2,
+    "totalTestCount": 5
+  },
+  "orientation_cases": 8,
+  "preexisting_private_files_production_and_signing_unchanged": true,
+  "production_recognition_changed": false,
+  "task_simulator_deleted": true,
+  "other_simulators_preserved": true
+}

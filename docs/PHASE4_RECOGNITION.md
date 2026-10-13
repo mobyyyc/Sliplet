@@ -1,10 +1,10 @@
 # Phase 4 — automatic receipt recognition with targeted assistance
 
-P4-01 approved and verified; later tasks proposed · 2026-10-13 · Main owns task approval, integration and verification.
+P4-01 and P4-02 verified; next task proposed · 2026-10-13 · Main owns task approval, integration and verification.
 
 ## Authorization and current position
 
-The user accepts Phase 3 based on their Simulator check and wants to move on; its phone walkthrough is no longer a prerequisite. This records Simulator acceptance, not new physical measurements. The user requests a careful Phase 4 procedure and a planning subagent, with approval before each implementation task. A read-only Phase 4 planning subagent independently reviewed the pipeline and this approach. The user separately approved P4-01 on 2026-10-13. Its unchanged-recognition Simulator baseline is implemented and verified; see [the results and frozen gates](RECOGNITION_LAB.md). P4-02 and subsequent implementation tasks are not started.
+The user accepts Phase 3 based on their Simulator check and wants to move on; its phone walkthrough is no longer a prerequisite. This records Simulator acceptance, not new physical measurements. The user requests a careful Phase 4 procedure and a planning subagent, with approval before each implementation task. A read-only Phase 4 planning subagent independently reviewed the pipeline and this approach. The user separately approved P4-01 on 2026-10-13. Its unchanged-recognition Simulator baseline is implemented and verified; see [the results and frozen gates](RECOGNITION_LAB.md). The user approved P4-02 in Main. The automatic matrix and two checked-text comparisons are verified; manually selected regions were not supplied. See [P4-02 results](REGION_OCR_EXPERIMENTS.md). P4-03 onward remain unstarted.
 
 Keep recognition entirely on-device, usable without Apple Intelligence on the user's China-market iPhone 15 Pro. Most development, recognition experiments and user review will run through imported images in the iOS Simulator. Mac-native experiments may help iteration, but accepted improvements must run through the actual iOS app recognition path. Simulator timings and outputs are reported with their OS/runtime; they do not establish phone camera quality or physical-device speed.
 
@@ -83,4 +83,4 @@ Include normal and difficult receipts: long item blocks, wrapped names, repeated
 
 ## Next approval
 
-**P4-01 is complete:** the actual Simulator import baseline and failure map are verified on the existing five checked receipts, with no production recognition changes. **Next approval: P4-02 only — Region and OCR experiments**, including currency-availability attribution and checked-text replay. See [the measured handoff](RECOGNITION_LAB.md). Later scopes remain proposals until their evidence and separate approval are available.
+**P4-01 is complete:** the actual Simulator import baseline and failure map are verified on the existing five checked receipts, with no production recognition changes. **P4-02 is complete** with bounded automatic and checked-text results. **Next proposed approval: P4-04 — Interpretation and structured fields**, before P4-03, because the two human-verified Costco transcripts retain the same monetary interpretation failures. See [the evidence and limitations](REGION_OCR_EXPERIMENTS.md). The user chose a visible, editable CAD default for future app behavior when currency is missing; this is user context, never evidence that OCR read a printed currency. See [the measured handoff](RECOGNITION_LAB.md). Later scopes remain proposals until their evidence and separate approval are available.
