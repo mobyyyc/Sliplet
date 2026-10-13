@@ -1,0 +1,51 @@
+[
+  {
+    "file": "swipe-left.png",
+    "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+    "run": "accepted",
+    "sha256": "f158230b30e8f93fcd75f7cd8686fa566f292bab7b8aab0ae54ee77e2b2c1cdb",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "swipe-centered.png",
+    "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+    "run": "accepted",
+    "sha256": "a95dccd826d41cff9fabc396acbde9a662b58a5a876cfa6cfee397809236af58",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "large-dark-actions.png",
+    "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+    "run": "accepted",
+    "sha256": "e5a6f421159d754410e6c3755ee2deeb9bbb113177ced2e15735b7e3be1ad350",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "search-clear-results.png",
+    "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+    "run": "search-clean",
+    "sha256": "1efe53c0cb5f959421cd08dceaf8849389d158302c7a837a4370b3ea85d183fe",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "review-retained-check.png",
+    "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+    "run": "verification",
+    "sha256": "afc395e32c42716b5a45ecf59f9e7dc1f2737a31c6477674fc3ab8d9be25c88f",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "reader-return.png",
+    "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+    "run": "verification",
+    "sha256": "e4443b19d560abe52eb1c9bf796bf29d60ee6fb908e01a1d31b4fd976dd37193",
+    "data": "Fictional isolated fixture only"
+  },
+  {
+    "file": "wallet.png",
+    "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+    "run": "verification",
+    "sha256": "c401fc6c1aeecf307210c889dcd9da10c7782c3111c05a6c58cb3afe80ac4ac8",
+    "data": "Fictional isolated fixture only"
+  }
+]

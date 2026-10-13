@@ -95,7 +95,7 @@ struct ReceiptWalletScene: View {
     @Environment(\.accessibilityReduceMotion) private var systemMotion
     @State private var revealedID: UUID?
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemMotion) }
-    private var selectedID: UUID? { workspace.flow == .detail ? workspace.selected?.id : nil }
+    private var selectedID: UUID? { [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil }
     private var records: [ReceiptRecord] { retainedRecords ?? Array(workspace.orderedReceipts.filter { !$0.isArchived }.reversed()) }
     private var motion: Animation { reduceMotion ? .easeOut(duration: 0.12) : .easeInOut(duration: 0.38) }
     // A bounded follow-through in both directions. Overscroll moves the leather at
@@ -179,7 +179,7 @@ struct ReceiptWalletScene: View {
                     .opacity(presented == nil ? 1 : 0)
                     .scrollDisabled(presented != nil)
                     .allowsHitTesting(presented == nil)
-                    .accessibilityHidden(presented != nil)
+                    .accessibilityHidden(true, isEnabled: presented != nil)
                     .scrollBounceBehavior(.always)
                     .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
                         if presented == nil { scrollOffset = offset }
@@ -199,16 +199,16 @@ struct ReceiptWalletScene: View {
                             }
                             .padding(.horizontal, 20).padding(.bottom, 20)
                     }
-                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .frame(width: max(0, geometry.size.width), height: max(0, geometry.size.height))
                     .offset(y: pocketMotion)
                     .opacity(presented == nil ? 1 : 0)
                     .allowsHitTesting(presented == nil)
-                    .accessibilityHidden(presented != nil)
+                    .accessibilityHidden(true, isEnabled: presented != nil)
                     .zIndex(Double(records.count + 2))
                 }
                 if let presented {
                     liftedPaper(presented, geometry: geometry)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .frame(width: max(0, geometry.size.width), height: max(0, geometry.size.height))
                         .zIndex(Double(selectedLayer))
                     // The entire live stack is hidden. Each visible neighbour has one frozen
                     // scene sibling, retaining its original depth for both directions.
@@ -244,6 +244,11 @@ struct ReceiptWalletScene: View {
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             .coordinateSpace(name: "walletScene")
             .animation(motion, value: records.map(\.id))
+            .onChange(of: workspace.selected) { _, current in
+                guard let current, presented?.id == current.id else { return }
+                presented = current
+                if let index = retainedRecords?.firstIndex(where: { $0.id == current.id }) { retainedRecords?[index] = current }
+            }
             .onChange(of: selectedID, initial: true) { _, next in
                 revealedID = nil
                 if next != nil, let record = workspace.selected {
@@ -387,16 +392,18 @@ struct ReceiptWalletScene: View {
     }
     private func walletBack(in geometry: GeometryProxy) -> some View {
         WalletBackPanel().frame(width: max(0, geometry.size.width - 40), height: walletHeight + 12)
+            .accessibilityRepresentation { EmptyView() }
     }
     private func liftedPaper(_ record: ReceiptRecord, geometry: GeometryProxy) -> some View {
-        WalletReadingScene(record: record, expanded: expanded, origin: origin,
+        let current = workspace.selected?.id == record.id ? workspace.selected! : record
+        return WalletReadingScene(record: current, input: workspace.readerInput, contentReady: workspace.readerRevisionID == current.current.id || workspace.errorMessage != nil, expanded: expanded, origin: origin,
                            tilt: selectedTilt, reduceMotion: reduceMotion,
                            error: workspace.errorMessage,
                            loading: selectedID != nil && workspace.image == nil && workspace.errorMessage == nil,
-                           visibleToAccessibility: selectedID != nil) {
+                           visibleToAccessibility: selectedID != nil && workspace.flow != .review) {
             guard selectedID == record.id, presented?.id == record.id, !expanded else { return }
             withAnimation(motion) { expanded = true }
-        }
+        }.id(record.id)
     }
 }
 
@@ -413,6 +420,8 @@ private struct WalletReadingScene: View {
     let visibleToAccessibility: Bool
     var onReady: () -> Void
     private let reviewInput: ReceiptReviewDraft?
+    private let contentReady: Bool
+    @State private var retainedInput: ReceiptReviewDraft?
     @State private var fullHeight: CGFloat = 0
     @State private var statusHeight: CGFloat = 0
     @State private var statusMeasured = false
@@ -421,16 +430,16 @@ private struct WalletReadingScene: View {
     @State private var canvasY: CGFloat = 0
     @State private var canvasMeasured = false
     @State private var returnCanvasY: CGFloat?
-    init(record: ReceiptRecord, expanded: Bool, origin: CGRect, tilt: Double,
+    init(record: ReceiptRecord, input: ReceiptReviewDraft?, contentReady: Bool, expanded: Bool, origin: CGRect, tilt: Double,
          reduceMotion: Bool, error: String?, loading: Bool, visibleToAccessibility: Bool,
          onReady: @escaping () -> Void) {
         self.record = record; self.expanded = expanded; self.origin = origin; self.tilt = tilt
         self.reduceMotion = reduceMotion; self.error = error; self.loading = loading
         self.visibleToAccessibility = visibleToAccessibility; self.onReady = onReady
-        reviewInput = record.current.reviewInput.flatMap { try? JSONDecoder().decode(ReceiptReviewDraft.self, from: $0) }
+        reviewInput = input; self.contentReady = contentReady
     }
     private var paperTop: CGFloat { max(12, statusHeight + 12) }
-    private var ready: Bool { fullHeight > 0 && statusMeasured && footerMeasured && canvasMeasured }
+    private var ready: Bool { contentReady && fullHeight > 0 && statusMeasured && footerMeasured && canvasMeasured }
 
     var body: some View {
         GeometryReader { geometry in
@@ -454,7 +463,7 @@ private struct WalletReadingScene: View {
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0; footerMeasured = true }
                             .offset(y: fullHeight + paperTop + 22).opacity(expanded ? 1 : 0)
                     }
-                    .frame(width: geometry.size.width, height: fullHeight + paperTop + 22 + footerHeight)
+                    .frame(width: max(0, geometry.size.width), height: max(0, fullHeight + paperTop + 22 + footerHeight))
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("walletScene")).minY } action: {
                         canvasY = $0; canvasMeasured = true
                     }
@@ -464,16 +473,19 @@ private struct WalletReadingScene: View {
                 .scrollDisabled(!expanded)
                 .allowsHitTesting(expanded)
                 .accessibilityIdentifier("detailScreen")
-                .accessibilityHidden(!visibleToAccessibility)
 
-                WalletMorphingPaper(reviewInput: reviewInput, record: record, expanded: expanded,
+                WalletMorphingPaper(reviewInput: reviewInput ?? retainedInput, record: record, expanded: expanded,
                                     progress: expanded ? 1 : 0,
+                                    visibleToAccessibility: visibleToAccessibility,
                                     origin: origin,
                                     destination: CGRect(x: 30, y: paperTop + (expanded ? canvasY : returnCanvasY ?? canvasY),
                                                         width: max(0, geometry.size.width - 60), height: max(origin.height, fullHeight)),
                                     tilt: tilt, reduceMotion: reduceMotion) { fullHeight = $0 }
                     .allowsHitTesting(false)
-                    .accessibilityHidden(!visibleToAccessibility)
+                readerScreenEdges(in: geometry).opacity(expanded ? 1 : 0)
+            }
+            .onChange(of: reviewInput, initial: true) { _, value in
+                if contentReady { retainedInput = value }
             }
             .onChange(of: ready, initial: true) { _, measured in
                 if measured { onReady() }
@@ -482,6 +494,20 @@ private struct WalletReadingScene: View {
                 if !reading { returnCanvasY = canvasY }
             }
         }
+    }
+    @ViewBuilder private func readerScreenEdges(in geometry: GeometryProxy) -> some View {
+        let top = max(0, geometry.frame(in: .global).minY)
+        let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows).first(where: \.isKeyWindow)
+        let end = (window?.bounds.height ?? (geometry.frame(in: .global).maxY + geometry.safeAreaInsets.bottom)) - top
+        ZStack(alignment: .topLeading) {
+            Rectangle().fill(.ultraThinMaterial)
+                .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                .frame(width: max(0, geometry.size.width), height: top + 16).offset(y: -top)
+            Rectangle().fill(.ultraThinMaterial)
+                .mask(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom))
+                .frame(width: max(0, geometry.size.width), height: 64).offset(y: end - 64)
+        }.allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 
@@ -492,6 +518,7 @@ private struct WalletMorphingPaper: View, Animatable {
     let record: ReceiptRecord
     let expanded: Bool
     var progress: CGFloat
+    let visibleToAccessibility: Bool
     let origin: CGRect
     let destination: CGRect
     let tilt: Double
@@ -504,15 +531,15 @@ private struct WalletMorphingPaper: View, Animatable {
     private func blend(_ start: CGFloat, _ end: CGFloat) -> CGFloat { start + (end - start) * progress }
     var body: some View {
         let start = reduceMotion ? destination : origin
-        let width = blend(start.width, destination.width)
-        let height = blend(start.height, destination.height)
+        let width = max(0, blend(start.width, destination.width))
+        let height = max(0, blend(start.height, destination.height))
         ZStack(alignment: .topLeading) {
             WalletReadingContent(fields: record.current.fields, input: reviewInput, reviewed: ReceiptCompletion.isComplete(record)).equatable()
                 .frame(width: destination.width).fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onFullHeight($0) }
                 .scaleEffect(x: destination.width > 0 ? width / destination.width : 1, y: 1, anchor: .topLeading)
-                .opacity(progress).accessibilityHidden(!expanded)
-            ReceiptPreviewPaper(record: record)
+                .opacity(progress).accessibilityHidden(true, isEnabled: !expanded || !visibleToAccessibility)
+            ReceiptPreviewPaper(record: record).equatable()
                 .frame(width: origin.width, height: origin.height, alignment: .topLeading)
                 .scaleEffect(x: origin.width > 0 ? width / origin.width : 1, y: 1, anchor: .topLeading)
                 .opacity(1 - progress).accessibilityHidden(true)
@@ -535,7 +562,9 @@ private struct WalletReadingContent: View, Equatable {
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.fields == rhs.fields && lhs.input == rhs.input && lhs.reviewed == rhs.reviewed
     }
-    var body: some View { ReceiptPaper(fields: fields, input: input, showsSurface: false, reviewed: reviewed) }
+    var body: some View {
+        ReceiptPaper(fields: fields, input: input, showsSurface: false, reviewed: reviewed)
+    }
 }
 
 private struct WalletCrown: View {
@@ -564,6 +593,7 @@ private struct WalletCrown: View {
         .background { LeatherWalletSurface() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walletPocket")
+        .accessibilityLabel("Wallet, \(count) saved receipts")
     }
 }
 
@@ -709,6 +739,7 @@ private struct ReceiptSwipePaper: View {
     @Environment(\.accessibilityReduceMotion) private var systemMotion
     @State private var offset: CGFloat = 0
     @State private var horizontal = false
+    @State private var gestureStart: CGFloat = 0
     private var action: ReceiptWalletAction { offset < 0 ? settings.leftSwipe : settings.rightSwipe }
     private var animation: Animation { ReceiptAccessibility.reduceMotion(systemMotion) ? .easeOut(duration: 0.1) : .spring(response: 0.32, dampingFraction: 0.88) }
     var body: some View {
@@ -721,7 +752,7 @@ private struct ReceiptSwipePaper: View {
                         .frame(width: 84, height: typeSize.isAccessibilitySize ? 100 : 78)
                         .scaleEffect(0.65 + 0.35 * progress)
                         .opacity(progress)
-                        .frame(width: max(0, distance - 12), height: 44 + 38 * progress)
+                        .frame(width: max(1, distance - 12), height: 44 + 38 * progress)
                         .clipped()
                         .glassEffect(action == .delete ? .regular.tint(.red).interactive() : .regular.interactive(), in: .rect(cornerRadius: 18))
                 }.buttonStyle(.plain)
@@ -739,16 +770,16 @@ private struct ReceiptSwipePaper: View {
                 .accessibilityLabel(summary)
                 .accessibilityHint(revealedID == record.id ? "Closes the swipe action" : "Expands receipt. Swipe left or right for actions.")
                 .accessibilityIdentifier(identifier)
-                .gesture(ReceiptHorizontalPan { translation, ended in
-                    let configured = translation < 0 ? settings.leftSwipe : settings.rightSwipe
-                    if !ended {
-                        guard configured != .none else { return }
-                        horizontal = true; revealedID = record.id
-                        offset = max(-180, min(180, translation))
+                .gesture(ReceiptHorizontalPan { translation, phase in
+                    if phase == .began { gestureStart = revealedID == record.id ? offset : 0; horizontal = true }
+                    if phase == .began || phase == .changed {
+                        offset = ReceiptSwipeGeometry.offset(start: gestureStart, translation: translation,
+                            leftEnabled: settings.leftSwipe != .none, rightEnabled: settings.rightSwipe != .none)
+                        if offset != 0 { revealedID = record.id }
                     } else {
+                        let destination = phase == .cancelled ? gestureStart : ReceiptSwipeGeometry.settled(offset)
                         withAnimation(animation) {
-                            if abs(translation) > 42 && configured != .none { offset = translation < 0 ? -108 : 108; revealedID = record.id }
-                            else { offset = 0; revealedID = nil }
+                            offset = destination; revealedID = destination == 0 ? nil : record.id
                         }
                         horizontal = false
                     }
@@ -776,13 +807,17 @@ private struct ReceiptPreviewSurface: View {
     let record: ReceiptRecord
     var body: some View {
         // Only the item text fades. The receipt paper and its torn edge stay opaque.
-        ReceiptPreviewPaper(record: record)
+        ReceiptPreviewPaper(record: record).equatable()
             .background { ReceiptPaperBackground() }
             .receiptPaperStyle()
     }
 }
 
-struct ReceiptPreviewPaper: View {
+struct ReceiptPreviewPaper: View, Equatable {
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.record.id == rhs.record.id && lhs.record.current.id == rhs.record.current.id
+            && lhs.record.organization == rhs.record.organization
+    }
     let record: ReceiptRecord
     @Environment(\.dynamicTypeSize) private var typeSize
     private var fields: ReceiptFields { record.current.fields }
@@ -825,6 +860,7 @@ struct ReceiptPreviewPaper: View {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
             }.font(.caption).padding(.bottom, 4) }
         }
+        .accessibilityRepresentation { EmptyView() }
         .foregroundStyle(.primary).padding(.horizontal, 22).padding(.top, 30).padding(.bottom, 14)
         .frame(height: typeSize.isAccessibilitySize ? nil : 244, alignment: .top)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -889,7 +925,8 @@ struct ReceiptWalletSettingsView: View {
 
 /// Reject vertical pans before recognition so the surrounding ScrollView keeps its native gesture.
 private struct ReceiptHorizontalPan: UIGestureRecognizerRepresentable {
-    var change: (CGFloat, Bool) -> Void
+    enum Phase { case began, changed, ended, cancelled }
+    var change: (CGFloat, Phase) -> Void
     func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
     func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
         let gesture = UIPanGestureRecognizer()
@@ -899,9 +936,10 @@ private struct ReceiptHorizontalPan: UIGestureRecognizerRepresentable {
     }
     func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
         switch recognizer.state {
-        case .began, .changed: change(recognizer.translation(in: recognizer.view).x, false)
-        case .ended: change(recognizer.translation(in: recognizer.view).x, true)
-        case .cancelled, .failed: change(0, true)
+        case .began: change(recognizer.translation(in: recognizer.view).x, .began)
+        case .changed: change(recognizer.translation(in: recognizer.view).x, .changed)
+        case .ended: change(recognizer.translation(in: recognizer.view).x, .ended)
+        case .cancelled, .failed: change(0, .cancelled)
         default: break
         }
     }

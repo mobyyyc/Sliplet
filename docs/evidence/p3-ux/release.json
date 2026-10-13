@@ -1,0 +1,13 @@
+{
+  "version": "0.3",
+  "build": "4",
+  "bundleIdentifier": "com.mobyyyc.RcpLens",
+  "codesignVerified": true,
+  "teamMatchesExistingLocalSetting": true,
+  "applicationIdentifierMatchesStableBundle": true,
+  "debugSyntheticLaunchFlagAbsent": true,
+  "cameraUsageDescriptionPresent": true,
+  "faceIDUsageDescriptionPresent": true,
+  "executableSHA256": "1ddca014d61861e381b8c6747bd81a417e8b58ffc83227df1cccfcbf5905c6b2",
+  "installedOnPhone": false
+}

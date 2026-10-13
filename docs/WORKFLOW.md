@@ -2,6 +2,10 @@
 
 Use the original planning chat as the main point of contact. Seven Phase 1 task chats were archived on 2026-10-09; their implementation evidence remains in the repository. Five Phase 2 chats are prepared in the “Sliplet · Phase 2” sidebar section, with Main first. The user does not need to choose among them or copy messages between them.
 
+## Current phase · 2026-10-12
+
+Phase 3 is explicitly authorized as a complete audit, repair and verification pass in Main. All five Phase 2 work chats are archived; no new chats or agents were created. Follow [the current Phase 3 plan](PHASE3_UX.md), rather than dispatching the historical Phase 2 order below. After verified commit/push, Main reports the result and asks approval for the concrete in-place phone update and walkthrough. Physical acceptance remains separate from Simulator tests.
+
 ## Starting
 
 The user approves one task at a time in this main chat. Saying "approved" in response to the proposed next task authorizes the main chat to start that task in its existing task chat and send the follow-ups necessary to complete it. The user approved T01, then T02, then T03, then T04, then T05 on 2026-10-07.
@@ -46,6 +50,6 @@ Give design preferences, receipt-folder locations, corrections and demo feedback
 
 The user requested the old-task cleanup and five corresponding Phase 2 chats on 2026-10-09. These chats have only read the roadmap/workflow and acknowledged their pending status; this request does not start the recognition audit. Detailed scopes, acceptance criteria and chat identities are in TASKS.md. The actual repository is /Users/moby/Desktop/cs/Sliplet, even if the saved desktop project still displays its former RcpLens name/path. Always use the actual path for repository work.
 
-## Current handoff · 2026-10-09
+## Historical handoff · 2026-10-09
 
 P2-01 through P2-05 implementations have been individually approved and accepted in Main. P2-05 adds password-encrypted portable backups and merge-only restore. Next is the guided personal v0.2 iPhone walkthrough, requiring separate user approval; stay in Main. Follow [personal release protocol](PERSONAL_RELEASE.md). Real accuracy, human correction time and phone acceptance remain open.

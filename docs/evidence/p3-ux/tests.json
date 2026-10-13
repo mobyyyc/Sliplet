@@ -1,0 +1,2586 @@
+{
+  "runs": [
+    {
+      "run": "before",
+      "total": 2,
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        }
+      ],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "unit2",
+      "total": 147,
+      "passed": 146,
+      "failed": 0,
+      "skipped": 1,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "[Internal] Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions"
+        }
+      ],
+      "cases": [
+        {
+          "test": "FoundationTests/testActualLocalModelAndDiagnosticReport()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRecognizesImportedSyntheticPNG()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRejectsMalformedImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCiphertextBindsPurposeReceiptAndAssetOwnerAndDetectsTampering()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateEditCloseReopenPreservesOriginalAndUnknowns()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateFailureRollsBackReceiptAndAssetAtBothBoundaries()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDatabaseDirectoryAndLiveJournalProtectionAndBackupExclusion()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDeleteCascadesAssetAndRemovesCiphertextFromLiveFile()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testEmptyInterruptedBootstrapResumesOnlyWithExistingKey()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExistingWalletPreferencesKeepSwipeActionsAndDefaultPaperAppearance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExplicitLocalPurgeAndClosedStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedDeletionRetainsReceiptAndAssetOnReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedMigrationRollsBackAndKeepsVersionOne()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testGeometryAndRevisionReferencesPreserveProvenance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testHardwareFileProtectionRequiresDeviceVerification()",
+          "result": "Skipped"
+        },
+        {
+          "test": "PersistenceTests/testMissingAssetFailsListAndDetailWithoutSilentlySkipping()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testMissingWrongAndMalformedKeyNeverReplaceExistingStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRealKeychainPersistenceAttributesAndDeletionFailure()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRevisionFailurePreservesPreviouslyCommittedSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSQLiteContainsOnlyCiphertextForReceiptContentAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testStaleEditorCannotOverwriteAnotherRevision()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSwappedDatabasePayloadsAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnavailableKeychainErrorDoesNotBecomeMissingKeyOrReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnknownFutureVersionFailsWithoutModifyingBytes()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnversionedNonemptyDatabaseIsNeverReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testValidationRejectsBadAssetsCurrencyAndClockRollback()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testVersionOneMigrationPreservesOriginalRevisionsAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRejectStaleEditsAndRevokedWrites()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRollbackAtCommitBoundary()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletOrganizationAndSettingsSurviveEditsAndReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testBackgroundInvalidatesOutstandingSuccess()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testColdStartRequiresAuthenticationEvenAfterPriorUnlock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testDisabledByDefaultAndFiveMinutePreference()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testEnabledAndDelayPersistOnlyAfterAuthentication()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testFailureAndCancellationNeverUnlockOrEnable()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testGracePeriodEndsExactlyAtFiveMinutes()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testImmediateAndDeviceProtectionRevokeGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testRepeatedBackgroundCannotExtendGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testTransientForegroundDoesNotRequestAgain()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testUnavailablePasscodeCannotEnableLock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAssetCollisionWithExistingWalletRejectsEntireMerge()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedDuplicateReceiptAndAssetOwnersAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedInvalidImageDigestReviewInputAndFinalizedSplitAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCancellationDuringMergeRollsBackAndRevokedExportDoesNotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCrossKeyRoundTripPreservesOriginalRevisionsGuidanceOrganizationAndExactSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testEmptyLegacyNilDraftAndRandomizedExports()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMalformedLengthsUnknownVersionAndLimitsFailBeforeUnboundedRead()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMergeIsIdempotentAndDivergentExistingEditsWin()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testPreviewBecomesStaleAndCommitFailureRollsBackEveryNewRecordAndAsset()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceCancellationAndSuspensionClearBackupStateWithoutWalletLoss()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceConfirmedRestoreCancellationReleasesSavingAndRefreshesWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWrongPasswordTamperTruncateAppendReorderAndChangedSaltFail()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testAddingLinkedManualPurchaseRetainsUnassignedGroupIdentityAndDeletingFlaggedLineReopens()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testApplySaveReopenAndEditPreserveGuidanceOriginalAndDraftGates()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testChangingEitherSummaryValueReopensSummaryChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testGroupUnpricedHeadersAndAmountsWithoutLosingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testInstalledDraftDecodesWithoutGuidanceChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testLineAndUnassignedChecksReopenAfterEvidenceOrAmountChange()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testMultipleMalformedFieldsCanBeCorrectedIndependentlyAndNewErrorsRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testNormalAndLongFocusedAmountRepairThenExplicitReviewCanFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testPartialMultiRowCorrectionDoesNotAcknowledgeUncheckedRows()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testScopedCheckSurvivesUnrelatedEditButReopensOnRelatedEdit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testSourceFocusPreservesCoordinatesAndShowsLongReceiptLastRow()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testZoomCommandsOnlyAffectTheirIntendedViewer()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testExactDecimalsAndDecodedBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testMoneyBoundaryArithmeticAndCurrencyMismatch()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testBackgroundRasterPreservesEncodedBytesAndBoundsLongDisplay()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testExistingReviewSurvivesOpeningNoOpDateAndAdvisoryChanges()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testIncrementalSearchKeepsEvidenceAndMetadataWithoutRetokenizingTheWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testLegacyReviewedReceiptsPreserveConfirmationButDraftsNeverAcquireIt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testRealAndTemporarilyMalformedEditsRequireConfirmationWithoutReopeningOriginal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testReverseSwipeIsContinuousClosesAtCenterAndHonorsDisabledActions()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testViewerResizePreservesRelativeZoomAndCancelledDecodeCannotReappear()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testAmbiguousNeighborPricesStayVisible()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testBareShortNoFrillsDatesStayAmbiguous()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testCanonicalHeadersAndFictionalIdentities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConflictingAndInvalidDatesStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConservativeUnknownRetailerKeepsPricesAndCurrencyUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testContradictoryTotalsAndSubtotalsStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDecoratedDetachedTotalDoesNotUseTenderAsEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedNumericDescriptionUnknownAndQuantityRemainUnpaired()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedPrintedAmountPairsOnlyWithUniqueGeometry()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDiscountTaxDepositAndPrintedSignsRemainExact()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testGeometricRateWithMatchingPrintedExtensionLinksSources()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testHeaderTotalWithoutAmountDoesNotEndPurchases()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testInlineRateAndPrintedExtensionMustAgree()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMatchingTotalNeverConfirmsSource()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMultipleAmountsInvalidateEvenAnEarlierClearTotal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testNoFrillsPrintedTransactionTimestampAndMonthFirstFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRateBoundaryClearsPendingAndTaxNeverGetsQuantity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRetailerProductNamesArePurchasesAndNotHeaders()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testSKUsAndUnitWordPrefixesDoNotBecomeQuantities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testUnrelatedOrGeometrylessRateNeverAttaches()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWeightedExtensionExactIntegerCheck()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWrappedAndRepeatedRowsDoNotStealPrices()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testArchiveStarMonthMissingDateCurrencyAndMerchantFilterSemantics()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testBackgroundSynchronouslyClearsQueryIndexMatchAndResults()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testEvidenceAndIndexSurviveEncryptedStoreRestartWithoutPlaintextIndex()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testFiveHundredEncryptedReceiptsMeasuredRebuildSearchAndRestart()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testMerchantRawCorrectedSKUAndSameItemQueryCoverage()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testRemovedOriginalIsEvidenceWithoutCurrentItemOrAmount()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnicodeAccentWidthComposedTextAndExplicitAbbreviations()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnlinkedRawOCRIsEvidenceWithoutInventingAPurchase()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testWorkspaceCreateEditArchiveDeleteFailedRefreshAndRestartKeepIndexConsistent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testCouponLimitedToItemOwnersAndEqualPolicy()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDeterminismAndSumInvariantsAcrossManySignedAmounts()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDraftDiscrepancyAssignmentsAndUnconfirmedPoliciesReject()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testEqualAllPurchasesIncludesPeopleWithoutAssignedItems()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFinalSummaryRequiresCurrentRevisionAndContainsItemsPolicies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFullWidthAndMinimumInteger()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testIndividualSharedDiscountDepositTipAndNegativeAdjustment()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testInvalidPlanBoundsDuplicatesAndTargets()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMalformedReceiptAndReviewAmountBoundsFailWithoutTrapping()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMixedOwnerSetsMaintainIndependentCumulativeRounding()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testOddCentsThreePeopleAndStableUUIDTies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testRepeatedSharedOddCentsStayBalancedWithinEachOwnerSet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testReturnLinesUseAbsoluteGrossValue()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testSourceConfirmedTaxAndUnknownMarkerFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testZeroValueBaseNeverSilentlyFallsBack()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testAddingTenDemoReceiptsPreservesExistingReceiptAndSettingsAndIsIdempotent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testBackgroundClearsStateAndFreshForegroundWaitsForClose()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCancelledImportCannotRepopulateNewSessionAndEditsResetReview()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCommittedSaveAndDeleteRemainTruthfulWhenWalletRefreshFails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCurrencyUnknownEditableDraftRoundTripAndAtomicCorrection()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDatePickerBridgePreservesCivilDayAcrossDSTAndTimeZones()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeniedInputAndSaveDuringBackgroundNeverRestorePrivateState()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeparturesClearTheScreenAndShadowsInScreenOrder()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testElasticStackIsOrderedReversibleAndAnchoredAtThePocket()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testExactAmountsGroupedSignsAndBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testFiveHundredReceiptsRemainListableWithoutPlaintextThumbnails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testGeometryGroupingOrderingAndSourceIdentity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testImmediatePaperOpeningWaitsForOriginalAndCannotResurrectAfterReturn()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testLongReceiptRetainsAllRowsAndRepeatedLines()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testManualFallbackForNoTextAndMalformedInput()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testOrientedDisplayAndVisionGeometryOnMirroredRotation()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testParserNoPartialNumbersOrFalseCurrency()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testReconciliationDepositDiscountAndSourceGate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevocationAtWriteFaultRollsBackWithoutOrphanOrDuplicate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevokedRevisionAndDeleteLeaveCommittedReceiptUnchanged()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testSceneDeactivationInstallsOpaqueNativeCoverBeforeSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testDraftAndIncompletePlansPersistButCannotFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testEncryptedRestartLegacyDecodeDeletionAndEditInvalidation()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testFailedCommitRollsBackSplitWithoutChangingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testInvalidEncryptedPlanStructureFailsClosed()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testRevocationAtCommitRollsBackSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testStaleRevisionStalePlanAndRevokedPermitCannotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testWorkspaceBackgroundClearsSplitPresentationAndRevokesQueuedWrite()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-unit",
+      "total": 148,
+      "passed": 147,
+      "failed": 0,
+      "skipped": 1,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "[Internal] Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions"
+        }
+      ],
+      "cases": [
+        {
+          "test": "FoundationTests/testActualLocalModelAndDiagnosticReport()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRecognizesImportedSyntheticPNG()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRejectsMalformedImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCiphertextBindsPurposeReceiptAndAssetOwnerAndDetectsTampering()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateEditCloseReopenPreservesOriginalAndUnknowns()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateFailureRollsBackReceiptAndAssetAtBothBoundaries()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDatabaseDirectoryAndLiveJournalProtectionAndBackupExclusion()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDeleteCascadesAssetAndRemovesCiphertextFromLiveFile()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testEmptyInterruptedBootstrapResumesOnlyWithExistingKey()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExistingWalletPreferencesKeepSwipeActionsAndDefaultPaperAppearance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExplicitLocalPurgeAndClosedStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedDeletionRetainsReceiptAndAssetOnReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedMigrationRollsBackAndKeepsVersionOne()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testGeometryAndRevisionReferencesPreserveProvenance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testHardwareFileProtectionRequiresDeviceVerification()",
+          "result": "Skipped"
+        },
+        {
+          "test": "PersistenceTests/testMissingAssetFailsListAndDetailWithoutSilentlySkipping()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testMissingWrongAndMalformedKeyNeverReplaceExistingStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRealKeychainPersistenceAttributesAndDeletionFailure()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRevisionFailurePreservesPreviouslyCommittedSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSQLiteContainsOnlyCiphertextForReceiptContentAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testStaleEditorCannotOverwriteAnotherRevision()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSwappedDatabasePayloadsAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnavailableKeychainErrorDoesNotBecomeMissingKeyOrReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnknownFutureVersionFailsWithoutModifyingBytes()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnversionedNonemptyDatabaseIsNeverReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testValidationRejectsBadAssetsCurrencyAndClockRollback()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testVersionOneMigrationPreservesOriginalRevisionsAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRejectStaleEditsAndRevokedWrites()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRollbackAtCommitBoundary()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletOrganizationAndSettingsSurviveEditsAndReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testBackgroundInvalidatesOutstandingSuccess()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testColdStartRequiresAuthenticationEvenAfterPriorUnlock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testDisabledByDefaultAndFiveMinutePreference()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testEnabledAndDelayPersistOnlyAfterAuthentication()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testFailureAndCancellationNeverUnlockOrEnable()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testGracePeriodEndsExactlyAtFiveMinutes()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testImmediateAndDeviceProtectionRevokeGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testRepeatedBackgroundCannotExtendGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testTransientForegroundDoesNotRequestAgain()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testUnavailablePasscodeCannotEnableLock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAssetCollisionWithExistingWalletRejectsEntireMerge()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedDuplicateReceiptAndAssetOwnersAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedInvalidImageDigestReviewInputAndFinalizedSplitAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCancellationDuringMergeRollsBackAndRevokedExportDoesNotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCrossKeyRoundTripPreservesOriginalRevisionsGuidanceOrganizationAndExactSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testEmptyLegacyNilDraftAndRandomizedExports()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMalformedLengthsUnknownVersionAndLimitsFailBeforeUnboundedRead()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMergeIsIdempotentAndDivergentExistingEditsWin()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testPreviewBecomesStaleAndCommitFailureRollsBackEveryNewRecordAndAsset()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceCancellationAndSuspensionClearBackupStateWithoutWalletLoss()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceConfirmedRestoreCancellationReleasesSavingAndRefreshesWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWrongPasswordTamperTruncateAppendReorderAndChangedSaltFail()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testAddingLinkedManualPurchaseRetainsUnassignedGroupIdentityAndDeletingFlaggedLineReopens()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testApplySaveReopenAndEditPreserveGuidanceOriginalAndDraftGates()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testChangingEitherSummaryValueReopensSummaryChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testGroupUnpricedHeadersAndAmountsWithoutLosingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testInstalledDraftDecodesWithoutGuidanceChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testLineAndUnassignedChecksReopenAfterEvidenceOrAmountChange()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testMultipleMalformedFieldsCanBeCorrectedIndependentlyAndNewErrorsRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testNormalAndLongFocusedAmountRepairThenExplicitReviewCanFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testPartialMultiRowCorrectionDoesNotAcknowledgeUncheckedRows()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testScopedCheckSurvivesUnrelatedEditButReopensOnRelatedEdit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testSourceFocusPreservesCoordinatesAndShowsLongReceiptLastRow()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testZoomCommandsOnlyAffectTheirIntendedViewer()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testExactDecimalsAndDecodedBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testMoneyBoundaryArithmeticAndCurrencyMismatch()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testBackgroundRasterPreservesEncodedBytesAndBoundsLongDisplay()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testExistingReviewSurvivesOpeningNoOpDateAndAdvisoryChanges()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testFinishingAnUnchangedReviewedReceiptKeepsRevisionAndFinalizedSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testIncrementalSearchKeepsEvidenceAndMetadataWithoutRetokenizingTheWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testLegacyReviewedReceiptsPreserveConfirmationButDraftsNeverAcquireIt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testRealAndTemporarilyMalformedEditsRequireConfirmationWithoutReopeningOriginal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testReverseSwipeIsContinuousClosesAtCenterAndHonorsDisabledActions()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testViewerResizePreservesRelativeZoomAndCancelledDecodeCannotReappear()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testAmbiguousNeighborPricesStayVisible()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testBareShortNoFrillsDatesStayAmbiguous()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testCanonicalHeadersAndFictionalIdentities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConflictingAndInvalidDatesStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConservativeUnknownRetailerKeepsPricesAndCurrencyUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testContradictoryTotalsAndSubtotalsStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDecoratedDetachedTotalDoesNotUseTenderAsEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedNumericDescriptionUnknownAndQuantityRemainUnpaired()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedPrintedAmountPairsOnlyWithUniqueGeometry()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDiscountTaxDepositAndPrintedSignsRemainExact()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testGeometricRateWithMatchingPrintedExtensionLinksSources()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testHeaderTotalWithoutAmountDoesNotEndPurchases()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testInlineRateAndPrintedExtensionMustAgree()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMatchingTotalNeverConfirmsSource()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMultipleAmountsInvalidateEvenAnEarlierClearTotal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testNoFrillsPrintedTransactionTimestampAndMonthFirstFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRateBoundaryClearsPendingAndTaxNeverGetsQuantity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRetailerProductNamesArePurchasesAndNotHeaders()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testSKUsAndUnitWordPrefixesDoNotBecomeQuantities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testUnrelatedOrGeometrylessRateNeverAttaches()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWeightedExtensionExactIntegerCheck()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWrappedAndRepeatedRowsDoNotStealPrices()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testArchiveStarMonthMissingDateCurrencyAndMerchantFilterSemantics()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testBackgroundSynchronouslyClearsQueryIndexMatchAndResults()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testEvidenceAndIndexSurviveEncryptedStoreRestartWithoutPlaintextIndex()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testFiveHundredEncryptedReceiptsMeasuredRebuildSearchAndRestart()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testMerchantRawCorrectedSKUAndSameItemQueryCoverage()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testRemovedOriginalIsEvidenceWithoutCurrentItemOrAmount()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnicodeAccentWidthComposedTextAndExplicitAbbreviations()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnlinkedRawOCRIsEvidenceWithoutInventingAPurchase()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testWorkspaceCreateEditArchiveDeleteFailedRefreshAndRestartKeepIndexConsistent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testCouponLimitedToItemOwnersAndEqualPolicy()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDeterminismAndSumInvariantsAcrossManySignedAmounts()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDraftDiscrepancyAssignmentsAndUnconfirmedPoliciesReject()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testEqualAllPurchasesIncludesPeopleWithoutAssignedItems()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFinalSummaryRequiresCurrentRevisionAndContainsItemsPolicies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFullWidthAndMinimumInteger()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testIndividualSharedDiscountDepositTipAndNegativeAdjustment()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testInvalidPlanBoundsDuplicatesAndTargets()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMalformedReceiptAndReviewAmountBoundsFailWithoutTrapping()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMixedOwnerSetsMaintainIndependentCumulativeRounding()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testOddCentsThreePeopleAndStableUUIDTies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testRepeatedSharedOddCentsStayBalancedWithinEachOwnerSet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testReturnLinesUseAbsoluteGrossValue()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testSourceConfirmedTaxAndUnknownMarkerFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testZeroValueBaseNeverSilentlyFallsBack()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testAddingTenDemoReceiptsPreservesExistingReceiptAndSettingsAndIsIdempotent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testBackgroundClearsStateAndFreshForegroundWaitsForClose()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCancelledImportCannotRepopulateNewSessionAndEditsResetReview()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCommittedSaveAndDeleteRemainTruthfulWhenWalletRefreshFails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCurrencyUnknownEditableDraftRoundTripAndAtomicCorrection()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDatePickerBridgePreservesCivilDayAcrossDSTAndTimeZones()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeniedInputAndSaveDuringBackgroundNeverRestorePrivateState()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeparturesClearTheScreenAndShadowsInScreenOrder()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testElasticStackIsOrderedReversibleAndAnchoredAtThePocket()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testExactAmountsGroupedSignsAndBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testFiveHundredReceiptsRemainListableWithoutPlaintextThumbnails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testGeometryGroupingOrderingAndSourceIdentity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testImmediatePaperOpeningWaitsForOriginalAndCannotResurrectAfterReturn()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testLongReceiptRetainsAllRowsAndRepeatedLines()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testManualFallbackForNoTextAndMalformedInput()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testOrientedDisplayAndVisionGeometryOnMirroredRotation()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testParserNoPartialNumbersOrFalseCurrency()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testReconciliationDepositDiscountAndSourceGate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevocationAtWriteFaultRollsBackWithoutOrphanOrDuplicate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevokedRevisionAndDeleteLeaveCommittedReceiptUnchanged()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testSceneDeactivationInstallsOpaqueNativeCoverBeforeSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testDraftAndIncompletePlansPersistButCannotFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testEncryptedRestartLegacyDecodeDeletionAndEditInvalidation()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testFailedCommitRollsBackSplitWithoutChangingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testInvalidEncryptedPlanStructureFailsClosed()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testRevocationAtCommitRollsBackSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testStaleRevisionStalePlanAndRevokedPermitCannotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testWorkspaceBackgroundClearsSplitPresentationAndRevokesQueuedWrite()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "core-ui",
+      "total": 6,
+      "passed": 5,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        }
+      ],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "core-ui2",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        },
+        {
+          "issueType": "Runtime Warning",
+          "message": "Invalid frame dimension (negative or non-finite)."
+        }
+      ],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "keyboard-ui",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptCorrectionUITests/testFocusedLongDarkApplyOriginalReturnAndFinish()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testUnchangedFinishReturnsDirectlyToReviewedReceipt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-ui",
+      "total": 21,
+      "passed": 19,
+      "failed": 2,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptAppLockUITests/testFailedAuthenticationHidesWalletAndRetryReleasesIt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockUITests/testSettingsEnableAndFiveMinuteDefault()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupUITests/testBackgroundWhileFilesPickerOpenRevokesOldSessionAndClearsPassword()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupUITests/testNativeLocalFileSaveAndExplicitSelectionProducesDuplicatePreview()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupUITests/testPasswordConfirmationExportPickerCancelAndUsableWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCameraUITests/testDeniedRestrictedAndSimulatorFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCameraUITests/testLandscapeCaptureAndStandardActionHeights()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCameraUITests/testRetakeUsePhotoOriginalAndSaveDraft()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testUnchangedFinishReturnsDirectlyToReviewedReceipt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testNativeCurrentRawSKUUnparsedAndRemovedEvidenceNavigation()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testNativeFiveHundredBrowseFiltersUnicodeAndSource()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testNativeAssignFinalizeCopyShareRestartEditAndWalletReturn()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-scoped-ui",
+      "total": 9,
+      "passed": 7,
+      "failed": 2,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "NativeAccessibilityTests/testEmptyWalletImportProminentContrastDarkAndLight()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testConfigurableDeleteSwipeRequiresTapAndConfirmation()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testDetailContainsOnlySelectedPaperAcrossRepeatedReturns()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testLongWalletReceiptBottomClearsRaisedActions()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testNativeDatePickerCancelClearAndSave()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testRevealStarArchiveRestoreAndPersistence()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "edge-ax-ui",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testDetailContainsOnlySelectedPaperAcrossRepeatedReturns()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "search-clean-ui",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "accepted-ui",
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testUnchangedFinishReturnsDirectlyToReviewedReceipt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "structural-split-ui",
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "NativeAccessibilityTests/testEmptyWalletImportProminentContrastDarkAndLight()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "structure2-ui",
+      "total": 2,
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "structure3-ui",
+      "total": 2,
+      "passed": 1,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "structure4-ui",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "structure5-ui",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "structure6-ui",
+      "total": 2,
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-interaction-ui",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testDetailContainsOnlySelectedPaperAcrossRepeatedReturns()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-visibility2-ui",
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "final-grouped-ui",
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "final-semantic-ui",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Failed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "final-leaf-ui",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "review-diagnosis-ui",
+      "total": 1,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "conditional-ax-ui",
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Failed"
+        }
+      ]
+    },
+    {
+      "run": "verification-ui",
+      "total": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeWarnings": [],
+      "cases": [
+        {
+          "test": "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3UITests/testUnchangedFinishReturnsDirectlyToReviewedReceipt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testDetailContainsOnlySelectedPaperAcrossRepeatedReturns()",
+          "result": "Passed"
+        },
+        {
+          "test": "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()",
+          "result": "Passed"
+        }
+      ]
+    },
+    {
+      "run": "verification-unit",
+      "total": 148,
+      "passed": 147,
+      "failed": 0,
+      "skipped": 1,
+      "runtimeWarnings": [
+        {
+          "issueType": "Runtime Warning",
+          "message": "[Internal] Thread running at User-initiated quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions"
+        }
+      ],
+      "cases": [
+        {
+          "test": "FoundationTests/testActualLocalModelAndDiagnosticReport()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRecognizesImportedSyntheticPNG()",
+          "result": "Passed"
+        },
+        {
+          "test": "FoundationTests/testVisionRejectsMalformedImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCiphertextBindsPurposeReceiptAndAssetOwnerAndDetectsTampering()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateEditCloseReopenPreservesOriginalAndUnknowns()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testCreateFailureRollsBackReceiptAndAssetAtBothBoundaries()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDatabaseDirectoryAndLiveJournalProtectionAndBackupExclusion()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testDeleteCascadesAssetAndRemovesCiphertextFromLiveFile()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testEmptyInterruptedBootstrapResumesOnlyWithExistingKey()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExistingWalletPreferencesKeepSwipeActionsAndDefaultPaperAppearance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testExplicitLocalPurgeAndClosedStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedDeletionRetainsReceiptAndAssetOnReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testFailedMigrationRollsBackAndKeepsVersionOne()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testGeometryAndRevisionReferencesPreserveProvenance()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testHardwareFileProtectionRequiresDeviceVerification()",
+          "result": "Skipped"
+        },
+        {
+          "test": "PersistenceTests/testMissingAssetFailsListAndDetailWithoutSilentlySkipping()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testMissingWrongAndMalformedKeyNeverReplaceExistingStore()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRealKeychainPersistenceAttributesAndDeletionFailure()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testRevisionFailurePreservesPreviouslyCommittedSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSQLiteContainsOnlyCiphertextForReceiptContentAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testStaleEditorCannotOverwriteAnotherRevision()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testSwappedDatabasePayloadsAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnavailableKeychainErrorDoesNotBecomeMissingKeyOrReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnknownFutureVersionFailsWithoutModifyingBytes()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testUnversionedNonemptyDatabaseIsNeverReset()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testValidationRejectsBadAssetsCurrencyAndClockRollback()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testVersionOneMigrationPreservesOriginalRevisionsAndImage()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRejectStaleEditsAndRevokedWrites()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletActionsRollbackAtCommitBoundary()",
+          "result": "Passed"
+        },
+        {
+          "test": "PersistenceTests/testWalletOrganizationAndSettingsSurviveEditsAndReopen()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testBackgroundInvalidatesOutstandingSuccess()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testColdStartRequiresAuthenticationEvenAfterPriorUnlock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testDisabledByDefaultAndFiveMinutePreference()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testEnabledAndDelayPersistOnlyAfterAuthentication()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testFailureAndCancellationNeverUnlockOrEnable()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testGracePeriodEndsExactlyAtFiveMinutes()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testImmediateAndDeviceProtectionRevokeGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testRepeatedBackgroundCannotExtendGrace()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testTransientForegroundDoesNotRequestAgain()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptAppLockTests/testUnavailablePasscodeCannotEnableLock()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAssetCollisionWithExistingWalletRejectsEntireMerge()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedDuplicateReceiptAndAssetOwnersAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testAuthenticatedInvalidImageDigestReviewInputAndFinalizedSplitAreRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCancellationDuringMergeRollsBackAndRevokedExportDoesNotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testCrossKeyRoundTripPreservesOriginalRevisionsGuidanceOrganizationAndExactSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testEmptyLegacyNilDraftAndRandomizedExports()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMalformedLengthsUnknownVersionAndLimitsFailBeforeUnboundedRead()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testMergeIsIdempotentAndDivergentExistingEditsWin()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testPreviewBecomesStaleAndCommitFailureRollsBackEveryNewRecordAndAsset()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceCancellationAndSuspensionClearBackupStateWithoutWalletLoss()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWorkspaceConfirmedRestoreCancellationReleasesSavingAndRefreshesWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptBackupTests/testWrongPasswordTamperTruncateAppendReorderAndChangedSaltFail()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testAddingLinkedManualPurchaseRetainsUnassignedGroupIdentityAndDeletingFlaggedLineReopens()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testApplySaveReopenAndEditPreserveGuidanceOriginalAndDraftGates()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testChangingEitherSummaryValueReopensSummaryChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testGroupUnpricedHeadersAndAmountsWithoutLosingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testInstalledDraftDecodesWithoutGuidanceChecks()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testLineAndUnassignedChecksReopenAfterEvidenceOrAmountChange()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testMultipleMalformedFieldsCanBeCorrectedIndependentlyAndNewErrorsRejected()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testNormalAndLongFocusedAmountRepairThenExplicitReviewCanFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testPartialMultiRowCorrectionDoesNotAcknowledgeUncheckedRows()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testScopedCheckSurvivesUnrelatedEditButReopensOnRelatedEdit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testSourceFocusPreservesCoordinatesAndShowsLongReceiptLastRow()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptCorrectionTests/testZoomCommandsOnlyAffectTheirIntendedViewer()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testExactDecimalsAndDecodedBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptDomainTests/testMoneyBoundaryArithmeticAndCurrencyMismatch()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testBackgroundRasterPreservesEncodedBytesAndBoundsLongDisplay()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testExistingReviewSurvivesOpeningNoOpDateAndAdvisoryChanges()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testFinishingAnUnchangedReviewedReceiptKeepsRevisionAndFinalizedSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testIncrementalSearchKeepsEvidenceAndMetadataWithoutRetokenizingTheWallet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testLegacyReviewedReceiptsPreserveConfirmationButDraftsNeverAcquireIt()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testRealAndTemporarilyMalformedEditsRequireConfirmationWithoutReopeningOriginal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testReverseSwipeIsContinuousClosesAtCenterAndHonorsDisabledActions()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptPhase3Tests/testViewerResizePreservesRelativeZoomAndCancelledDecodeCannotReappear()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testAmbiguousNeighborPricesStayVisible()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testBareShortNoFrillsDatesStayAmbiguous()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testCanonicalHeadersAndFictionalIdentities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConflictingAndInvalidDatesStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testConservativeUnknownRetailerKeepsPricesAndCurrencyUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testContradictoryTotalsAndSubtotalsStayUnknown()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDecoratedDetachedTotalDoesNotUseTenderAsEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedNumericDescriptionUnknownAndQuantityRemainUnpaired()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDetachedPrintedAmountPairsOnlyWithUniqueGeometry()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testDiscountTaxDepositAndPrintedSignsRemainExact()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testGeometricRateWithMatchingPrintedExtensionLinksSources()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testHeaderTotalWithoutAmountDoesNotEndPurchases()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testInlineRateAndPrintedExtensionMustAgree()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMatchingTotalNeverConfirmsSource()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testMultipleAmountsInvalidateEvenAnEarlierClearTotal()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testNoFrillsPrintedTransactionTimestampAndMonthFirstFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRateBoundaryClearsPendingAndTaxNeverGetsQuantity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testRetailerProductNamesArePurchasesAndNotHeaders()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testSKUsAndUnitWordPrefixesDoNotBecomeQuantities()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testUnrelatedOrGeometrylessRateNeverAttaches()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWeightedExtensionExactIntegerCheck()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptRetailerParserTests/testWrappedAndRepeatedRowsDoNotStealPrices()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testArchiveStarMonthMissingDateCurrencyAndMerchantFilterSemantics()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testBackgroundSynchronouslyClearsQueryIndexMatchAndResults()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testEvidenceAndIndexSurviveEncryptedStoreRestartWithoutPlaintextIndex()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testFiveHundredEncryptedReceiptsMeasuredRebuildSearchAndRestart()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testMerchantRawCorrectedSKUAndSameItemQueryCoverage()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testRemovedOriginalIsEvidenceWithoutCurrentItemOrAmount()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnicodeAccentWidthComposedTextAndExplicitAbbreviations()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testUnlinkedRawOCRIsEvidenceWithoutInventingAPurchase()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSearchTests/testWorkspaceCreateEditArchiveDeleteFailedRefreshAndRestartKeepIndexConsistent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testCouponLimitedToItemOwnersAndEqualPolicy()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDeterminismAndSumInvariantsAcrossManySignedAmounts()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testDraftDiscrepancyAssignmentsAndUnconfirmedPoliciesReject()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testEqualAllPurchasesIncludesPeopleWithoutAssignedItems()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFinalSummaryRequiresCurrentRevisionAndContainsItemsPolicies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testFullWidthAndMinimumInteger()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testIndividualSharedDiscountDepositTipAndNegativeAdjustment()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testInvalidPlanBoundsDuplicatesAndTargets()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMalformedReceiptAndReviewAmountBoundsFailWithoutTrapping()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testMixedOwnerSetsMaintainIndependentCumulativeRounding()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testOddCentsThreePeopleAndStableUUIDTies()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testRepeatedSharedOddCentsStayBalancedWithinEachOwnerSet()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testReturnLinesUseAbsoluteGrossValue()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testSourceConfirmedTaxAndUnknownMarkerFallback()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptSplitTests/testZeroValueBaseNeverSilentlyFallsBack()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testAddingTenDemoReceiptsPreservesExistingReceiptAndSettingsAndIsIdempotent()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testBackgroundClearsStateAndFreshForegroundWaitsForClose()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCancelledImportCannotRepopulateNewSessionAndEditsResetReview()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCommittedSaveAndDeleteRemainTruthfulWhenWalletRefreshFails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testCurrencyUnknownEditableDraftRoundTripAndAtomicCorrection()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDatePickerBridgePreservesCivilDayAcrossDSTAndTimeZones()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeniedInputAndSaveDuringBackgroundNeverRestorePrivateState()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testDeparturesClearTheScreenAndShadowsInScreenOrder()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testElasticStackIsOrderedReversibleAndAnchoredAtThePocket()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testExactAmountsGroupedSignsAndBounds()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testFiveHundredReceiptsRemainListableWithoutPlaintextThumbnails()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testGeometryGroupingOrderingAndSourceIdentity()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testImmediatePaperOpeningWaitsForOriginalAndCannotResurrectAfterReturn()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testLongReceiptRetainsAllRowsAndRepeatedLines()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testManualFallbackForNoTextAndMalformedInput()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testOrientedDisplayAndVisionGeometryOnMirroredRotation()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testParserNoPartialNumbersOrFalseCurrency()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testReconciliationDepositDiscountAndSourceGate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevocationAtWriteFaultRollsBackWithoutOrphanOrDuplicate()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testRevokedRevisionAndDeleteLeaveCommittedReceiptUnchanged()",
+          "result": "Passed"
+        },
+        {
+          "test": "ReceiptWorkflowTests/testSceneDeactivationInstallsOpaqueNativeCoverBeforeSnapshot()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testDraftAndIncompletePlansPersistButCannotFinalize()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testEncryptedRestartLegacyDecodeDeletionAndEditInvalidation()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testFailedCommitRollsBackSplitWithoutChangingEvidence()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testInvalidEncryptedPlanStructureFailsClosed()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testRevocationAtCommitRollsBackSplit()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testStaleRevisionStalePlanAndRevokedPermitCannotWrite()",
+          "result": "Passed"
+        },
+        {
+          "test": "SplitPersistenceTests/testWorkspaceBackgroundClearsSplitPresentationAndRevokesQueuedWrite()",
+          "result": "Passed"
+        }
+      ]
+    }
+  ],
+  "latestNative": {
+    "ReceiptPhase3UITests/testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard()": "Passed",
+    "ReceiptPhase3UITests/testReverseSwipeClosesRevealedActionBeforeOppositeAction()": "Passed",
+    "ReceiptPhase3UITests/testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups()": "Passed",
+    "ReceiptPhase3UITests/testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit()": "Passed",
+    "ReceiptPhase3UITests/testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled()": "Passed",
+    "ReceiptSplitUITests/testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately()": "Passed",
+    "ReceiptCorrectionUITests/testFocusedLongDarkApplyOriginalReturnAndFinish()": "Passed",
+    "ReceiptPhase3UITests/testUnchangedFinishReturnsDirectlyToReviewedReceipt()": "Passed",
+    "ReceiptAppLockUITests/testFailedAuthenticationHidesWalletAndRetryReleasesIt()": "Passed",
+    "ReceiptAppLockUITests/testSettingsEnableAndFiveMinuteDefault()": "Passed",
+    "ReceiptBackupUITests/testBackgroundWhileFilesPickerOpenRevokesOldSessionAndClearsPassword()": "Passed",
+    "ReceiptBackupUITests/testNativeLocalFileSaveAndExplicitSelectionProducesDuplicatePreview()": "Passed",
+    "ReceiptBackupUITests/testPasswordConfirmationExportPickerCancelAndUsableWallet()": "Passed",
+    "ReceiptCameraUITests/testDeniedRestrictedAndSimulatorFallback()": "Passed",
+    "ReceiptCameraUITests/testLandscapeCaptureAndStandardActionHeights()": "Passed",
+    "ReceiptCameraUITests/testRetakeUsePhotoOriginalAndSaveDraft()": "Passed",
+    "ReceiptPhase3UITests/testEditingAndCancelRetainLongReaderScrollPosition()": "Passed",
+    "ReceiptSearchUITests/testHistoryDetailScrollsMatchContextWithLongPaper()": "Passed",
+    "ReceiptSearchUITests/testLargeTextReducedMotionDarkSearchAndStructuralAccessibility()": "Passed",
+    "ReceiptSearchUITests/testNativeCurrentRawSKUUnparsedAndRemovedEvidenceNavigation()": "Passed",
+    "ReceiptSearchUITests/testNativeFiveHundredBrowseFiltersUnicodeAndSource()": "Passed",
+    "ReceiptSplitUITests/testNativeAssignFinalizeCopyShareRestartEditAndWalletReturn()": "Passed",
+    "NativeAccessibilityTests/testEmptyWalletImportProminentContrastDarkAndLight()": "Passed",
+    "WalletInteractionTests/testConfigurableDeleteSwipeRequiresTapAndConfirmation()": "Passed",
+    "WalletInteractionTests/testDetailContainsOnlySelectedPaperAcrossRepeatedReturns()": "Passed",
+    "WalletInteractionTests/testLongWalletReceiptBottomClearsRaisedActions()": "Passed",
+    "WalletInteractionTests/testNativeDatePickerCancelClearAndSave()": "Passed",
+    "WalletInteractionTests/testReceiptAppearanceChangesPaperOnlyAndPersistsAcrossRelaunch()": "Passed",
+    "WalletInteractionTests/testRevealStarArchiveRestoreAndPersistence()": "Passed",
+    "ReceiptPhase3UITests/testNativeScreenStructuralAccessibilityWithoutWaivers()": "Passed"
+  },
+  "latestNativeCounts": {
+    "Passed": 30
+  },
+  "compileOnlyFailures": [
+    "unit",
+    "final-visibility-ui"
+  ],
+  "scope": "Distinct native methods across scoped runs; final verification-ui repeats 13 affected methods. This is not a claim that an entire unfiltered UI suite passed."
+}

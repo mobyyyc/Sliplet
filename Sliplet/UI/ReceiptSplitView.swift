@@ -9,6 +9,7 @@ struct ReceiptSplitView: View {
     @State private var path: [Destination] = []
     @State private var plan: ReceiptSplitPlan
     @State private var name = ""
+    @FocusState private var enteringName: Bool
     @State private var source = false
     @State private var discard = false
     @State private var copied = false
@@ -64,10 +65,9 @@ struct ReceiptSplitView: View {
                             .buttonStyle(.borderless).accessibilityLabel("Remove \(person.name)")
                         }
                     }
-                    TextField("Person's name", text: $name).textContentType(.nickname).accessibilityIdentifier("splitName")
+                    TextField("Person's name", text: $name).textContentType(.nickname).focused($enteringName).submitLabel(.done).onSubmit(addPerson).accessibilityIdentifier("splitName")
                     Button("Add person", systemImage: "person.badge.plus") {
-                        let entered = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                        change { $0.participants.append(.init(id: UUID(), name: entered)) }; name = ""
+                        addPerson()
                     }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 80 || plan.participants.count >= 100)
                         .accessibilityIdentifier("splitAddPerson")
                 } header: { Text("People").foregroundStyle(Color(uiColor: .label)) }
@@ -143,26 +143,36 @@ struct ReceiptSplitView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { source = true } label: { Text("Original") }.disabled(workspace.image == nil || workspace.saving).accessibilityIdentifier("splitOriginal")
                 }
-                ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Dismiss keyboard") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } }
+
                 }
             }
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if path.isEmpty {
-                    HStack(spacing: 16) {
+                    if enteringName {
+                        HStack {
+                            Button("Add person", action: addPerson).buttonStyle(ReceiptSecondaryStyle())
+                                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 80 || plan.participants.count >= 100)
+                                .accessibilityIdentifier("splitKeyboardAdd")
+                            Spacer()
+                            Button("Done") { enteringName = false }.buttonStyle(ReceiptSecondaryStyle())
+                                .accessibilityLabel("Dismiss keyboard").accessibilityIdentifier("splitKeyboardDone")
+                        }.modifier(ReceiptActionBarLayout())
+                    } else { ReceiptPairedActions {
                         Button("Save choices") { workspace.saveSplit(plan, finalize: false) }
                             .buttonStyle(ReceiptSecondaryStyle())
                             .disabled(workspace.saving || (try? plan.validateStructure()) == nil).accessibilityIdentifier("splitSave")
+                    } primary: {
                         Button("Finalize") { workspace.saveSplit(plan, finalize: true) }
                             .buttonStyle(ReceiptProminentStyle())
                             .disabled(workspace.saving || result == nil || summary != nil).accessibilityIdentifier("splitFinalize")
-                    }.modifier(ReceiptActionBarLayout())
+                    }.modifier(ReceiptActionBarLayout()) }
                 }
             }
             .sheet(isPresented: $source) { ReceiptSourceView(workspace: workspace) }
             .confirmationDialog("Discard unsaved split choices?", isPresented: $discard, titleVisibility: .visible) {
                 Button("Discard choices", role: .destructive) { dismiss() }
             }
-            .onChange(of: record?.splitPlan?.id) { _, _ in
+            .onChange(of: record?.splitPlan) { _, _ in
                 if let saved = record?.splitPlan { plan = saved; copied = false }
             }
             .disabled(workspace.saving)
@@ -171,6 +181,12 @@ struct ReceiptSplitView: View {
         #if DEBUG
         .dynamicTypeSize(SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize)
         #endif
+    }
+    private func addPerson() {
+        let entered = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !entered.isEmpty, name.count <= 80, plan.participants.count < 100 else { return }
+        change { $0.participants.append(.init(id: UUID(), name: entered)) }
+        name = ""; enteringName = false
     }
     private func owners(_ item: UUID) -> String {
         let ids = Set(plan.assignments[item] ?? [])
@@ -276,20 +292,7 @@ private struct SplitSelectionRow: View {
     }
 }
 
+/// Keep UIKit's native Back button and interactive edge gesture on split subpages.
 private struct SplitEditorBack: ViewModifier {
-    @Environment(\.dismiss) private var pop
-    func body(content: Content) -> some View {
-        content.navigationBarBackButtonHidden()
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { pop() } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chevron.left").accessibilityHidden(true)
-                            Text("Back")
-                        }.foregroundStyle(Color(uiColor: .label)).frame(minHeight: 48).padding(.horizontal, 8).contentShape(Rectangle())
-                    }.buttonStyle(.plain).controlSize(.regular)
-                        .accessibilityLabel("Back to split").accessibilityIdentifier("splitEditorBack")
-                }
-            }
-    }
+    func body(content: Content) -> some View { content }
 }

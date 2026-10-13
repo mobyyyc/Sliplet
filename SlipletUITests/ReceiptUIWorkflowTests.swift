@@ -484,7 +484,7 @@ import Vision
         capture(app, "Dark-wallet-white-paper")
         paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)).tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 15))
-        let merchant = app.staticTexts["SYNTHETIC CORNER"]
+        let merchant = app.staticTexts["receiptPaperMerchant"]
         XCTAssertTrue(merchant.waitForExistence(timeout: 10))
         XCTAssertGreaterThan(try paperBrightness(app, at: CGPoint(x: merchant.frame.midX, y: merchant.frame.minY - 12)), 245, "Expanded paper keeps the white surface")
         capture(app, "Dark-detail-white-paper")

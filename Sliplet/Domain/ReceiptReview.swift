@@ -52,6 +52,12 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
                 sourceLineIDs: $0.sourceLineIDs, rate: $0.rate)
         }
     }
+    /// Raw editable values matter even while a typed value is temporarily malformed.
+    func hasSameReceiptValues(as other: Self) -> Bool {
+        merchant == other.merchant && date == other.date && currency == other.currency
+            && lines == other.lines && subtotal == other.subtotal && total == other.total
+            && subtotalNotPrinted == other.subtotalNotPrinted
+    }
     var fields: ReceiptFields {
         let c = ExactInput.currency(currency)
         func money(_ value: String) -> ReceiptMoney? {

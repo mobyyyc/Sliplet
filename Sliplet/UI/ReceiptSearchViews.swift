@@ -21,7 +21,7 @@ struct ReceiptSearchDetailView: View {
                             if record.isStarred { Image(systemName: "star.fill").accessibilityLabel("Starred") }
                         }.font(.footnote.weight(.medium)).fixedSize(horizontal: false, vertical: true)
                         ReceiptPaper(fields: record.current.fields,
-                                     input: record.current.reviewInput.flatMap { try? JSONDecoder().decode(ReceiptReviewDraft.self, from: $0) }, reviewed: ReceiptCompletion.isComplete(record))
+                                     input: workspace.readerInput, reviewed: ReceiptCompletion.isComplete(record))
                         VStack(alignment: .leading, spacing: 18) {
                             if workspace.image == nil && workspace.errorMessage == nil { ProgressView("Loading original").font(.footnote) }
                             if let error = workspace.errorMessage { Text(error).font(.subheadline) }
@@ -108,7 +108,7 @@ struct ReceiptPurchaseHistoryView: View {
         .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or SKU")
         .autocorrectionDisabled()
         .scrollDismissesKeyboard(.interactively)
-        .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
         .accessibilityIdentifier("receiptLibrary")
         // Reset only stale filters after a committed edit/deletion. Never replace a missing civil date.
         .onChange(of: merchants) { _, values in

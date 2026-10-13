@@ -50,7 +50,7 @@ struct ReceiptFocusedCorrectionView: View {
                 Section {
                     if workspace.active && !workspace.privacyCovered, let image = workspace.image {
                         ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
-                            .id(sourceIndex).frame(height: systemTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
+                            .frame(height: systemTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
                         HStack {
                             ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
                             Spacer()
@@ -157,7 +157,12 @@ struct ReceiptFocusedCorrectionView: View {
                             .disabled(workspace.saving || !workspace.active || workspace.privacyCovered || workspace.image == nil || (isSourceGroup && !groupChecked && input == baseline))
                             .accessibilityIdentifier("applyFocusedCorrection")
                     }
-                    ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { editing = nil } }
+                }
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    if editing != nil {
+                        HStack { Spacer(); Button("Done") { editing = nil }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("focusedKeyboardDone") }
+                            .modifier(ReceiptActionBarLayout())
+                    }
                 }
                 .sheet(isPresented: $expanded) {
                     NavigationStack {

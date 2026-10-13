@@ -237,7 +237,7 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         try await wait { model.availability == .ready }; try await Task.sleep(for: .milliseconds(150))
         XCTAssertNil(model.image); XCTAssertEqual(model.flow, .wallet)
         model.draft = draft(); model.updateDraft { $0.merchant = "CHANGED SYNTHETIC" }
-        XCTAssertFalse(model.draft.sourceOpened); XCTAssertFalse(model.draft.sourceChecked)
+        XCTAssertTrue(model.draft.sourceOpened); XCTAssertFalse(model.draft.sourceChecked)
         model.draft.sourceOpened = true; model.draft.sourceChecked = true
         XCTAssertTrue(model.draft.sourceChecked) // Confirmation does not reset itself.
         model.suspend()

@@ -51,11 +51,11 @@ import Vision
         XCTAssertTrue(original.waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["walletHeading"].exists, "Search detail must not mount the home wallet")
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'receipt-'" )).count, 0)
-        let status = app.staticTexts["Reviewed"]
+        let status = app.images["receiptReviewedMark"]
         XCTAssertGreaterThan(status.frame.minY, original.frame.maxY, "The match context must not cover the status")
         capture(app, "history-detail-top")
         let originalY = original.frame.minY
-        let footer = app.descendants(matching: .any)["searchReceiptFooter"]
+        let footer = app.descendants(matching: .any)["receiptPaperTotal"]
         reveal(footer, app: app)
         XCTAssertTrue(footer.isHittable, "The whole long receipt must remain scrollable")
         XCTAssertTrue(!original.isHittable || original.frame.minY < originalY - 100,
@@ -72,7 +72,7 @@ import Vision
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["searchOriginal"].exists)
         XCTAssertFalse(app.staticTexts["walletHeading"].exists)
-        reveal(app.descendants(matching: .any)["searchReceiptFooter"], app: app)
+        reveal(app.descendants(matching: .any)["receiptPaperTotal"], app: app)
         returnToResults(app); app.terminate()
     }
     func testFictionalImageImportReviewSplitShareSearchAndEvidence() throws {
@@ -179,28 +179,27 @@ import Vision
         XCTAssertGreaterThanOrEqual(match.frame.height, 44); match.tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
         let original = app.buttons["searchOriginal"]; reveal(original, app: app); XCTAssertGreaterThanOrEqual(original.frame.height, 44)
-        let status = app.staticTexts["Reviewed"]
+        let status = app.images["receiptReviewedMark"]
         XCTAssertTrue(status.exists)
         let merchant = app.descendants(matching: .any)["detailScreen"].staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'FICTIONAL '")).firstMatch
         XCTAssertTrue(merchant.exists)
-        // The paper has 24 points of top padding: the status must clear its surface, not merely its text.
-        XCTAssertGreaterThanOrEqual(merchant.frame.minY - status.frame.maxY, 34,
-                                   "The expanded paper must leave space below the full large-text status")
-        let screenshot = try XCTUnwrap(app.screenshot().image.cgImage)
-        let scale = CGFloat(screenshot.width) / app.frame.width
-        let region = status.frame.insetBy(dx: -4, dy: -4)
-        let statusPixels = try XCTUnwrap(screenshot.cropping(to: CGRect(x: region.minX * scale, y: region.minY * scale,
-                                                                      width: region.width * scale, height: region.height * scale)))
-        let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate; request.usesLanguageCorrection = false
-        try VNImageRequestHandler(cgImage: statusPixels).perform([request])
-        XCTAssertTrue((request.results ?? []).contains { $0.topCandidates(1).first?.string == "Reviewed" },
-                      "Rendered status pixels must show the entire Reviewed label without paper occlusion")
+        XCTAssertTrue(status.isHittable)
+        XCTAssertGreaterThanOrEqual(status.frame.minY, original.frame.maxY + 8,
+                                   "The match context must clear the approved corner checkmark")
+        XCTAssertGreaterThanOrEqual(status.frame.minY, merchant.frame.minY - 2)
+        XCTAssertLessThanOrEqual(status.frame.maxY, merchant.frame.maxY + 2,
+                                "The reviewed mark belongs inside the receipt header")
+        XCTAssertEqual(status.label, "Reviewed and saved")
+        XCTAssertFalse(app.staticTexts["Reviewed"].exists)
         capture(app, "large-dark-match-context")
         app.buttons["searchMatchDetails"].tap(); XCTAssertTrue(app.navigationBars["Match details"].waitForExistence(timeout: 10))
         capture(app, "large-dark-full-match-details"); app.buttons["Done"].tap(); original.tap(); XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); app.buttons["sourceDone"].tap()
         returnToResults(app); app.terminate()
         let regular = launch(); search("milk", app: regular)
-        try regular.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription])
+        try regular.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription]) { issue in
+            print("P3_FICTIONAL_AX " + issue.detailedDescription + " element=" + (issue.element?.debugDescription ?? "none"))
+            return false
+        }
         capture(regular, "search-structure-audit"); regular.terminate()
     }
 }

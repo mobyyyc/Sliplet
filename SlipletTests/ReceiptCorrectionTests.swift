@@ -158,7 +158,7 @@ final class ReceiptCorrectionTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(check.isChecked(in: workspace.draft)); XCTAssertFalse(workspace.draft.sourceChecked)
         XCTAssertEqual(workspace.extraction, original); XCTAssertEqual(workspace.image?.bytes, bytes)
         workspace.updateDraft { $0.lines[0].amount = "2.00" }
-        XCTAssertFalse(check.isChecked(in: workspace.draft)); XCTAssertFalse(workspace.draft.sourceOpened)
+        XCTAssertFalse(check.isChecked(in: workspace.draft)); XCTAssertTrue(workspace.draft.sourceOpened)
         let before = workspace.draft
         var malformed = before; malformed.total = "bad"
         workspace.applyFocusedCorrection(malformed, check: check)

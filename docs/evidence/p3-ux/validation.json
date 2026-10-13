@@ -1,0 +1,32 @@
+{
+  "baselineCommit": "7507acfcbba6c12e0196ede8508da668aed1903f",
+  "findings": 21,
+  "privateFilesChecked": 3625,
+  "privateFilesUnchanged": true,
+  "sourceHashFiles": 62,
+  "nativeLatestDistinct": {
+    "Passed": 30
+  },
+  "normalPhoneAndSimulatorStores": "Not written or opened; task-created Simulator and fictional stores only. No physical installation.",
+  "phase2ChatsArchived": 5,
+  "newChatsOrAgents": 0,
+  "recognitionAndStorageUnchanged": true,
+  "indexSample": {
+    "records": 500,
+    "metadataRefreshSecondsObserved": 0.004611333,
+    "retokenizedAfterMetadataChange": 0,
+    "retokenizedAfterOneReceiptChange": 1,
+    "limits": "Single Simulator observation, not a phone benchmark or frame-rate measurement."
+  },
+  "invalidFrameDiagnosis": "Captured warning symbolicated to SwiftUI.InputAccessoryBar.body/_FrameLayout.init; safe-area keyboard controls replace keyboard-placement accessories. Final native result warnings checked explicitly.",
+  "retainedFailures": "Before repro failures, intermediate drivers/assertions and accessibility experiments remain in tests.json and local xcresults. The experimental full-paper accessibility representation was removed after a long-reader interaction failure; hidden text metadata is checked for interaction, not forced deletion.",
+  "toolchainDiagnosticLimit": "Xcode automatic diagnostic collection still reports simctl unavailable under the global Command Line Tools selection; explicit DEVELOPER_DIR test/cleanup/build commands work. No global configuration change.",
+  "physicalPending": [
+    "smoothness and actual hitches",
+    "VoiceOver navigation",
+    "remaining Phase 2 backup/offline recognition/human timing checks"
+  ],
+  "ux21Limit": "Source-reviewed readiness/error fallback; no destructive fault injection into a normal saved original.",
+  "taskSimulatorRemoved": true,
+  "preExistingSimulatorsPreserved": true
+}

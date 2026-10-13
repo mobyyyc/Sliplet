@@ -1,7 +1,7 @@
 import Foundation
 
 /// Memory-only index of decrypted records. Never serialized, logged or sent off device.
-struct ReceiptSearchIndex {
+struct ReceiptSearchIndex: Sendable {
     enum Basis: String, Sendable { case merchant, corrected, sku, originalSKU, original, rawText }
     struct Match: Identifiable, Equatable, Sendable {
         let id: String
@@ -18,7 +18,7 @@ struct ReceiptSearchIndex {
         let matches: [Match]
         var id: UUID { record.id }
     }
-    private struct Field {
+    private struct Field: Sendable {
         let text: String
         let basis: Basis
         let tokens: [String]
@@ -34,7 +34,7 @@ struct ReceiptSearchIndex {
             (literal ? literalTokens : tokens).contains { basis == .merchant ? $0.contains(term) : ReceiptSearchText.matches($0, term) }
         }
     }
-    private struct Item {
+    private struct Item: Sendable {
         let id: UUID
         let currentID: UUID?
         let title: String
@@ -42,7 +42,7 @@ struct ReceiptSearchIndex {
         let sourceIDs: [UUID]
         var unparsed = false
     }
-    private struct Document {
+    private struct Document: Sendable {
         let record: ReceiptRecord
         let merchants: [Field]
         let items: [Item]
@@ -50,35 +50,55 @@ struct ReceiptSearchIndex {
     private var documents: [Document] = []
     var count: Int { documents.count }
 
-    init(_ records: [ReceiptRecord] = []) {
+    #if DEBUG
+    private(set) var lastRebuiltDocumentCount = 0
+    #endif
+    init(_ records: [ReceiptRecord] = []) { update(records) }
+
+    /// Refresh record metadata while reusing normalized evidence for unchanged purchases.
+    mutating func update(_ records: [ReceiptRecord]) {
+        let previous = Dictionary(uniqueKeysWithValues: documents.map { ($0.record.id, $0) })
+        #if DEBUG
+        lastRebuiltDocumentCount = 0
+        #endif
         documents = records.sorted(by: ReceiptHistory.newestFirst).map { record in
-            let source = Dictionary(uniqueKeysWithValues: record.original.rawOCR.map { ($0.id, $0.text) })
-            var linkedOriginals = Set<UUID>()
-            var items: [Item] = record.current.fields.items.map { current in
-                let ids = Set(current.sourceLineIDs)
-                let originals = record.original.fields.items.filter {
-                    $0.id == current.id || (!ids.isEmpty && !ids.isDisjoint(with: $0.sourceLineIDs))
-                }
-                linkedOriginals.formUnion(originals.map(\.id))
-                let sourceIDs = Array(Set(current.sourceLineIDs + originals.flatMap(\.sourceLineIDs))).sorted { $0.uuidString < $1.uuidString }
-                let fields = [Field(current.description, .corrected), Field(current.sku, .sku)]
-                    + originals.flatMap { [Field($0.description, .original), Field($0.sku, .originalSKU)] }
-                    + sourceIDs.compactMap { source[$0].map { Field($0, .rawText) } }
-                return Item(id: current.id, currentID: current.id, title: current.description ?? "Description missing", fields: fields, sourceIDs: sourceIDs)
+            if let cached = previous[record.id], cached.record.current.fields == record.current.fields,
+               cached.record.original == record.original {
+                return Document(record: record, merchants: cached.merchants, items: cached.items)
             }
-            // Removed extraction lines remain evidence, never current purchases or current amounts.
-            items += record.original.fields.items.filter { !linkedOriginals.contains($0.id) }.map { original in
-                Item(id: original.id, currentID: nil, title: original.description ?? "Original description missing",
-                     fields: [Field(original.description, .original), Field(original.sku, .originalSKU)]
-                        + original.sourceLineIDs.compactMap { source[$0].map { Field($0, .rawText) } },
-                     sourceIDs: original.sourceLineIDs)
-            }
-            let linkedRows = Set(items.flatMap(\.sourceIDs))
-            items += record.original.rawOCR.filter { !linkedRows.contains($0.id) }.map { row in
-                Item(id: row.id, currentID: nil, title: row.text, fields: [Field(row.text, .rawText)], sourceIDs: [row.id], unparsed: true)
-            }
-            return Document(record: record, merchants: [Field(record.current.fields.merchant, .merchant), Field(record.original.fields.merchant, .merchant)], items: items)
+            #if DEBUG
+            lastRebuiltDocumentCount += 1
+            #endif
+            return Self.document(record)
         }
+    }
+    private static func document(_ record: ReceiptRecord) -> Document {
+        let source = Dictionary(uniqueKeysWithValues: record.original.rawOCR.map { ($0.id, $0.text) })
+        var linkedOriginals = Set<UUID>()
+        var items: [Item] = record.current.fields.items.map { current in
+            let ids = Set(current.sourceLineIDs)
+            let originals = record.original.fields.items.filter {
+                $0.id == current.id || (!ids.isEmpty && !ids.isDisjoint(with: $0.sourceLineIDs))
+            }
+            linkedOriginals.formUnion(originals.map(\.id))
+            let sourceIDs = Array(Set(current.sourceLineIDs + originals.flatMap(\.sourceLineIDs))).sorted { $0.uuidString < $1.uuidString }
+            let fields = [Field(current.description, .corrected), Field(current.sku, .sku)]
+                + originals.flatMap { [Field($0.description, .original), Field($0.sku, .originalSKU)] }
+                + sourceIDs.compactMap { source[$0].map { Field($0, .rawText) } }
+            return Item(id: current.id, currentID: current.id, title: current.description ?? "Description missing", fields: fields, sourceIDs: sourceIDs)
+        }
+        // Removed extraction lines remain evidence, never current purchases or current amounts.
+        items += record.original.fields.items.filter { !linkedOriginals.contains($0.id) }.map { original in
+            Item(id: original.id, currentID: nil, title: original.description ?? "Original description missing",
+                 fields: [Field(original.description, .original), Field(original.sku, .originalSKU)]
+                    + original.sourceLineIDs.compactMap { source[$0].map { Field($0, .rawText) } },
+                 sourceIDs: original.sourceLineIDs)
+        }
+        let linkedRows = Set(items.flatMap(\.sourceIDs))
+        items += record.original.rawOCR.filter { !linkedRows.contains($0.id) }.map { row in
+            Item(id: row.id, currentID: nil, title: row.text, fields: [Field(row.text, .rawText)], sourceIDs: [row.id], unparsed: true)
+        }
+        return Document(record: record, merchants: [Field(record.current.fields.merchant, .merchant), Field(record.original.fields.merchant, .merchant)], items: items)
     }
 
     func results(query: String, collection: String = "All receipts", includeArchived: Bool = false,
@@ -147,8 +167,13 @@ enum ReceiptHistory {
         record.current.fields.purchaseDate.map { String(format: "%04d-%02d", $0.year, $0.month) }
     }
     static func newestFirst(_ a: ReceiptRecord, _ b: ReceiptRecord) -> Bool {
-        let x = ExactInput.dateText(a.current.fields.purchaseDate), y = ExactInput.dateText(b.current.fields.purchaseDate)
-        if x != y { return x > y } // Missing civil dates stay after known dates, never become import dates.
+        if let x = a.current.fields.purchaseDate, let y = b.current.fields.purchaseDate {
+            if x.year != y.year { return x.year > y.year }
+            if x.month != y.month { return x.month > y.month }
+            if x.day != y.day { return x.day > y.day }
+        } else if (a.current.fields.purchaseDate == nil) != (b.current.fields.purchaseDate == nil) {
+            return a.current.fields.purchaseDate != nil // Missing civil dates stay after known dates.
+        }
         if a.createdAt != b.createdAt { return a.createdAt > b.createdAt }
         return a.id.uuidString < b.id.uuidString
     }

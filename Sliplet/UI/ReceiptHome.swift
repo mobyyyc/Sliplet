@@ -42,7 +42,8 @@ struct ReceiptHome: View {
                     if workspace.flow != .wallet {
                         ToolbarItem(placement: .topBarLeading) {
                             Button(workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
-                                if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading { discard = true }
+                                if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
+                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading { editing = nil; discard = true }
                                 else { workspace.backToWallet() }
                             }.disabled(workspace.saving).accessibilityIdentifier("back")
                         }
@@ -55,6 +56,10 @@ struct ReceiptHome: View {
                     }
                     if workspace.flow == .wallet {
                         if workspace.library {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Import receipt", systemImage: "plus") { importChoices = true }
+                                    .accessibilityIdentifier("import")
+                            }
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Wallet", systemImage: "chevron.left") { workspace.library = false }
                                     .accessibilityIdentifier("walletTab")
@@ -84,11 +89,6 @@ struct ReceiptHome: View {
                                     .accessibilityIdentifier("delete")
                             } label: { Image(systemName: "ellipsis") }
                             .accessibilityLabel("Receipt options").accessibilityIdentifier("receiptOptions")
-                        }
-                    }
-                    if workspace.flow == .review {
-                        ToolbarItemGroup(placement: .keyboard) {
-                            Spacer(); Button("Done") { editing = nil }.accessibilityIdentifier("keyboardDone")
                         }
                     }
                     #if DEBUG
@@ -123,7 +123,7 @@ struct ReceiptHome: View {
                 }
             }
             .safeAreaBar(edge: .bottom, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) {
+                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) && !(workspace.flow == .wallet && workspace.library) {
                     bottomActions.modifier(ReceiptActionBarLayout())
                 }
             }
@@ -206,16 +206,22 @@ struct ReceiptHome: View {
                 }
             }
         case .review:
-            HStack(spacing: 16) {
+            if editing != nil {
+                HStack {
+                    Spacer()
+                    Button("Done") { editing = nil }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("keyboardDone")
+                }
+            } else { ReceiptPairedActions {
                 Button { editing = nil; workspace.save(asDraft: true) } label: {
                     Text("Save draft")
                 }.buttonStyle(ReceiptSecondaryStyle())
                     .disabled(!workspace.draft.canSaveDraft || workspace.saving).accessibilityIdentifier("saveDraft")
+            } primary: {
                 Button { editing = nil; workspace.save(asDraft: false) } label: {
                     Text("Finish")
                 }.buttonStyle(ReceiptProminentStyle())
                     .disabled(!workspace.draft.canFinalize || workspace.saving).accessibilityIdentifier("finishSave")
-            }.frame(maxWidth: .infinity)
+            }.frame(maxWidth: .infinity) }
         case .loading, .reading, .failed: EmptyView()
         }
     }
@@ -236,8 +242,14 @@ struct ReceiptHome: View {
     }
     @ViewBuilder private var flow: some View {
         switch workspace.flow {
-        case .wallet, .detail: wallet
-        case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
+        case .wallet, .detail, .review:
+            ZStack {
+                // Disable this modifier when visible so decorative child visibility is preserved.
+                wallet.opacity(workspace.flow == .review ? 0 : 1)
+                    .allowsHitTesting(workspace.flow != .review)
+                    .accessibilityHidden(true, isEnabled: workspace.flow == .review)
+                if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
+            }
         case .loading, .reading:
             VStack(spacing: 24) {
                 ProgressView(workspace.flow == .loading ? "Loading image" : "Reading receipt")
@@ -269,7 +281,7 @@ struct ReceiptHome: View {
         Group {
             if workspace.library && workspace.flow == .wallet {
                 ReceiptLibraryView(workspace: workspace)
-            } else if workspace.library && workspace.flow == .detail {
+            } else if workspace.library {
                 ReceiptSearchDetailView(workspace: workspace)
             } else {
                 ReceiptWalletScene(workspace: workspace) { record in
@@ -302,7 +314,7 @@ private struct WalletInformationView: View {
                     Text("Recognition and receipt storage stay on this device.")
                 }
                 Section("Storage") {
-                    Text("Receipts are excluded from automatic backup. There is no export or restore yet. Uninstalling the app or losing this device can lose your receipts.")
+                    Text("Receipts stay on this device. Export a password-encrypted backup in Settings so you can restore them later. Automatic backup is excluded.")
                 }
                 Section("Before you leave") {
                     Text("Save your draft before leaving the app. Backgrounding clears unsaved work.")

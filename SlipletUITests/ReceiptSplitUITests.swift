@@ -33,7 +33,8 @@ import XCTest
     private func addPeople(_ app: XCUIApplication) {
         for name in ["Alex", "Blair", "Casey"] {
             let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText(name)
-            reveal(app.buttons["splitAddPerson"], app: app); app.buttons["splitAddPerson"].tap()
+            if app.buttons["splitKeyboardAdd"].isHittable { app.buttons["splitKeyboardAdd"].tap() }
+            else { reveal(app.buttons["splitAddPerson"], app: app); app.buttons["splitAddPerson"].tap() }
         }
         if app.buttons["Dismiss keyboard"].exists { app.buttons["Dismiss keyboard"].tap() }
     }
@@ -46,7 +47,7 @@ import XCTest
             XCTAssertEqual(toggle.value as? String, "Selected")
         }
         capture(app, "T06-item-\(index)")
-        app.buttons["splitEditorBack"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         reveal(app.buttons["splitItem-\(index)"], app: app)
         for name in names { XCTAssertTrue(app.buttons["splitItem-\(index)"].label.contains(name)) }
     }
@@ -60,7 +61,7 @@ import XCTest
         reveal(app.buttons["splitPolicyAccepted"], app: app); app.buttons["splitPolicyAccepted"].tap()
         XCTAssertEqual(app.buttons["splitPolicyAccepted"].value as? String, "Selected")
         capture(app, "T06-explicit-tax-fallback")
-        app.buttons["splitEditorBack"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         if !app.buttons["splitFinalize"].isEnabled { capture(app, "T06-finalization-blocker"); if app.staticTexts["splitFailure"].exists { print("T06_FINALIZATION_GATE " + app.staticTexts["splitFailure"].label) } }
         XCTAssertTrue(app.buttons["splitFinalize"].isEnabled); app.buttons["splitFinalize"].tap()
         let copy = app.buttons["splitCopy"]; reveal(copy, app: app)
@@ -91,6 +92,24 @@ import XCTest
         app.buttons["splitDone"].tap(); XCTAssertTrue(app.buttons["Discard choices"].waitForExistence(timeout: 5)); app.buttons["Discard choices"].tap()
         openSplit(app); XCTAssertFalse(app.staticTexts["Alex"].exists)
         app.buttons["splitSave"].tap()
+        app.terminate()
+    }
+
+    func testSameIDSplitSaveReturnsWithoutStaleDiscardAndCanEditImmediately() {
+        let app = launch(); addPeople(app)
+        app.buttons["splitSave"].tap()
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitDone"])
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText("Dana")
+        app.buttons["splitKeyboardAdd"].tap(); XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        app.buttons["splitSave"].tap()
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitDone"])
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 10), .completed)
+        app.buttons["splitDone"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10)); XCTAssertFalse(app.buttons["Discard choices"].exists)
+        app.buttons["edit"].tap(); XCTAssertTrue(app.buttons["finishSave"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["finishSave"].isEnabled)
+        capture(app, "P3-same-id-saved-and-immediate-edit")
         app.terminate()
     }
     private func pixelContrast(_ screenshot: XCUIScreenshot) -> (foreground: String, background: String, ratio: Double)? {
@@ -160,7 +179,7 @@ import XCTest
         addPeople(app)
         let item = app.buttons["splitItem-0"]; reveal(item, app: app); item.tap()
         try contrastAudit(app, screen: "owners")
-        app.buttons["splitEditorBack"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         let policy = app.buttons["splitAdjustment-0"]; reveal(policy, app: app); policy.tap()
         try contrastAudit(app, screen: "policy")
         capture(app, "T06-policy-contrast"); app.terminate()
@@ -185,7 +204,7 @@ import XCTest
         assign(app, index: 0, names: ["Alex"])
         let item = app.buttons["splitItem-1"]; reveal(item, app: app); item.tap()
         try structureAudit(app, screen: "owners")
-        app.buttons["splitEditorBack"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         let policy = app.buttons["splitAdjustment-0"]; reveal(policy, app: app); policy.tap()
         try structureAudit(app, screen: "policy")
         capture(app, "T06-policy-structure-audit"); app.terminate()

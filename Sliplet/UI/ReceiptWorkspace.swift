@@ -12,14 +12,29 @@ final class ReceiptWorkspace {
     enum Flow: Equatable { case wallet, loading, reading, review, detail, failed }
     var availability: Availability = .closed
     var flow: Flow = .wallet
-    var receipts: [ReceiptRecord] = [] { didSet { searchIndex = ReceiptSearchIndex(receipts) } }
+    var receipts: [ReceiptRecord] = [] { didSet {
+        if let preparedSearchIndex { searchIndex = preparedSearchIndex; self.preparedSearchIndex = nil }
+        else { searchIndex.update(receipts) }
+        orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
+    } }
     private(set) var searchIndex = ReceiptSearchIndex()
+    @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
+    private(set) var orderedReceipts: [ReceiptRecord] = []
     var searchQuery = ""
     var includeArchived = false
     var searchMatch: ReceiptSearchIndex.Match?
     var selected: ReceiptRecord?
     var draft = ReceiptReviewDraft()
+    @ObservationIgnored private var reviewBaseline: ReceiptReviewDraft?
+    var hasUnsavedReviewChanges: Bool {
+        guard selected != nil, var baseline = reviewBaseline else { return true }
+        var current = draft
+        baseline.sourceOpened = false; current.sourceOpened = false
+        return current != baseline
+    }
     var image: ReceiptImage?
+    private(set) var readerInput: ReceiptReviewDraft?
+    private(set) var readerRevisionID: UUID?
     var extraction: ReceiptExtraction?
     var splitVisible = false
     var sourceVisible = false
@@ -77,8 +92,11 @@ final class ReceiptWorkspace {
                 self.store = opened
                 let records = try await opened.receipts()
                 let settings = try await opened.walletSettings()
+                let indexing = Task.detached(priority: .userInitiated) { ReceiptSearchIndex(records) }
+                let index = await withTaskCancellationHandler { await indexing.value } onCancel: { indexing.cancel() }
                 try lease.check()
                 guard self.isCurrent(session) else { return }
+                self.preparedSearchIndex = index
                 self.receipts = records; self.walletSettings = settings; self.availability = .ready
             } catch is CancellationError { }
             catch { if self.isCurrent(session) { self.availability = .failed(Self.storageMessage(error)) } }
@@ -92,8 +110,9 @@ final class ReceiptWorkspace {
         let closing = store; store = nil
         let previous = shutdown
         shutdown = Task { await previous?.value; try? await closing?.close() }
-        receipts = []; selected = nil; image = nil; extraction = nil
-        draft = ReceiptReviewDraft(); sourceVisible = false; splitVisible = false; sourceLineIDs = []
+        preparedSearchIndex = nil; receipts = []; selected = nil; image = nil; extraction = nil
+        readerInput = nil; readerRevisionID = nil
+        draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; splitVisible = false; sourceLineIDs = []
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         searchQuery = ""; searchMatch = nil; includeArchived = false
@@ -184,6 +203,8 @@ final class ReceiptWorkspace {
         guard !saving else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
+        readerInput = nil; readerRevisionID = nil
+        reviewBaseline = nil
         sourceVisible = false; sourceLineIDs = []; searchMatch = nil; errorMessage = nil; flow = .wallet
         if showNotice { notice = "Unsaved receipt discarded." }
     }
@@ -196,15 +217,22 @@ final class ReceiptWorkspace {
         guard let store, active, !saving else { return }
         task?.cancel(); let session = sessionID
         selected = record; image = nil; extraction = record.original; searchMatch = match
+        readerInput = nil; readerRevisionID = nil
         flow = .detail; errorMessage = nil
         task = Task { [weak self] in
             do {
                 guard let current = try await store.receipt(id: record.id) else { throw ReceiptStoreError.notFound }
                 let bytes = try await store.originalImage(receiptID: record.id)
-                let decoded = try await Task.detached(priority: .userInitiated) { try ReceiptImage.decode(bytes) }.value
+                let decode = Task.detached(priority: .userInitiated) {
+                    let image = try ReceiptImage.decode(bytes)
+                    let input = current.current.reviewInput.flatMap { try? JSONDecoder().decode(ReceiptReviewDraft.self, from: $0) }
+                    return (image, input)
+                }
+                let (decoded, input) = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard let self, self.isCurrent(session), self.flow == .detail, self.selected?.id == record.id else { return }
-                self.selected = current; self.image = decoded; self.extraction = current.original; self.flow = .detail
-                if let index = self.receipts.firstIndex(where: { $0.id == current.id }) { self.receipts[index] = current }
+                self.selected = current; self.readerInput = input; self.readerRevisionID = current.current.id
+                self.image = decoded; self.extraction = current.original; self.flow = .detail
+                if let index = self.receipts.firstIndex(where: { $0.id == current.id }), self.receipts[index] != current { self.receipts[index] = current }
             } catch {
                 guard let self, self.isCurrent(session) else { return }
                 guard self.selected?.id == record.id, self.flow == .detail else { return }
@@ -215,28 +243,33 @@ final class ReceiptWorkspace {
     func edit() {
         guard let selected, image != nil, !saving else { return }
         searchMatch = nil
-        if let bytes = selected.current.reviewInput, let input = try? JSONDecoder().decode(ReceiptReviewDraft.self, from: bytes) { draft = input }
+        if readerRevisionID == selected.current.id, let readerInput { draft = readerInput }
+        else if let bytes = selected.current.reviewInput, let input = try? JSONDecoder().decode(ReceiptReviewDraft.self, from: bytes) { draft = input }
         else { draft = ReceiptReviewDraft(fields: selected.current.fields) }
-        draft.sourceChecked = false; draft.sourceOpened = false
+        if selected.current.reviewInput == nil, ReceiptCompletion.isComplete(selected) {
+            draft.subtotalNotPrinted = selected.current.fields.subtotal == nil
+            draft.sourceOpened = true; draft.sourceChecked = true
+        }
+        reviewBaseline = draft
         flow = .review; errorMessage = nil
     }
     func finishEditing() {
         guard !saving else { return }
-        draft = ReceiptReviewDraft(); errorMessage = nil
+        draft = ReceiptReviewDraft(); reviewBaseline = nil; errorMessage = nil
         if selected != nil { flow = .detail } else { cancelImport() }
     }
     func updateDraft(_ change: (inout ReceiptReviewDraft) -> Void) {
         guard !saving else { return }
         let previous = draft
         change(&draft)
-        if draft != previous { draft.sourceChecked = false; draft.sourceOpened = false }
+        if !draft.hasSameReceiptValues(as: previous) { draft.sourceChecked = false }
     }
     /// Focused sheets edit a local copy; cancel never touches the receipt or its review confirmation.
     func applyFocusedCorrection(_ input: ReceiptReviewDraft, check: ReceiptReviewGuidance, markChecked: Bool = true) {
         guard active, flow == .review, !saving, image != nil, !privacyCovered, ReceiptFocusedCorrection.canApply(input, replacing: draft) else { return }
         updateDraft { $0 = input }
         draft.sourceOpened = true // The original was displayed in the focused comparison.
-        draft.sourceChecked = false // One check never confirms every field/purchase.
+        // Unchanged advisory checks preserve prior full review; actual value changes cleared it above.
         if !check.requiresCorrection && markChecked {
             if draft.guidanceChecks == nil { draft.guidanceChecks = [:] }
             let signature = check.signature(in: draft)
@@ -246,11 +279,17 @@ final class ReceiptWorkspace {
         }
     }
     func save(asDraft: Bool) {
-        guard active, !saving, let store, let image, let extraction,
+        guard active, !saving, let image, let extraction,
               asDraft ? draft.canSaveDraft : draft.canFinalize else { return }
+        if !asDraft, selected?.current.review == .sourceReviewed, !hasUnsavedReviewChanges {
+            finishEditing() // Already reviewed: no duplicate revision or needless split invalidation.
+            return
+        }
+        guard let store else { return }
         let fields = draft.fields
         let review: ReceiptRevision.Review = asDraft ? .draft : .sourceReviewed
         let session = sessionID, lease = permit, old = selected
+        let savedInput = draft
         let input: Data
         do { input = try JSONEncoder().encode(draft); try fields.validate() }
         catch { errorMessage = "Check the entered values before saving."; return }
@@ -268,14 +307,15 @@ final class ReceiptWorkspace {
                 try lease.check()
                 guard let self, self.isCurrent(session) else { return }
                 // Reflect the committed identity before refreshing. A failed list must not allow duplicate creation on retry.
-                self.selected = saved; self.draft = ReceiptReviewDraft(); self.flow = .detail
+                self.selected = saved; self.readerInput = savedInput; self.readerRevisionID = saved.current.id
+                self.draft = ReceiptReviewDraft(); self.flow = .detail
                 if let index = self.receipts.firstIndex(where: { $0.id == saved.id }) { self.receipts[index] = saved }
                 else { self.receipts.append(saved) }
                 let records = try await self.refreshedList(store)
                 guard self.isCurrent(session) else { return }
                 self.receipts = records
                 self.saving = false; self.flow = .detail
-                self.notice = asDraft ? "Draft saved. It still needs review." : "Receipt reviewed and saved."
+                self.notice = asDraft ? "Draft saved. It still needs review." : nil
             } catch is CancellationError { }
             catch {
                 guard let self, self.isCurrent(session) else { return }
@@ -299,6 +339,7 @@ final class ReceiptWorkspace {
                 guard let self, self.isCurrent(session) else { return }
                 // Forget deleted evidence as soon as DELETE commits, independently of list refresh.
                 self.selected = nil; self.image = nil; self.extraction = nil; self.draft = ReceiptReviewDraft()
+                self.readerInput = nil; self.readerRevisionID = nil
                 self.sourceVisible = false; self.sourceLineIDs = []; self.searchMatch = nil; self.flow = .wallet
                 self.receipts.removeAll { $0.id == selected.id }
                 self.notice = "Receipt and original deleted from this app."
@@ -471,12 +512,6 @@ final class ReceiptWorkspace {
     }
 
     func backToWallet() { cancelImport(showNotice: false) }
-    var orderedReceipts: [ReceiptRecord] {
-        receipts.sorted {
-            let a = ExactInput.dateText($0.current.fields.purchaseDate), b = ExactInput.dateText($1.current.fields.purchaseDate)
-            return a == b ? $0.createdAt > $1.createdAt : a > b
-        }
-    }
     static func storageMessage(_ error: Error) -> String {
         guard let error = error as? ReceiptStoreError else { return "Local storage could not complete this action. Your stored data has not been reset. Try again after unlocking." }
         switch error {

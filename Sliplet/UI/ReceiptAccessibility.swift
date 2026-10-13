@@ -71,3 +71,18 @@ struct ReceiptSecondaryStyle: PrimitiveButtonStyle {
         }
     }
 }
+
+/// Retain native button sizing; stack paired actions when their labels no longer fit.
+struct ReceiptPairedActions<Secondary: View, Primary: View>: View {
+    let secondary: Secondary
+    let primary: Primary
+    init(@ViewBuilder secondary: () -> Secondary, @ViewBuilder primary: () -> Primary) {
+        self.secondary = secondary(); self.primary = primary()
+    }
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) { secondary; primary }.fixedSize(horizontal: true, vertical: false)
+            VStack(spacing: 12) { secondary; primary }
+        }.frame(maxWidth: .infinity)
+    }
+}

@@ -12,7 +12,7 @@ Partial multi-row edits can be applied while the group remains pending. Apply co
 
 Checked guidance is stored with the encrypted review input and tied to deterministic signatures of relevant current values. It survives draft reopening and saved-receipt editing, and reopens after related changes/removal. Legacy installed review input decodes without the optional new checks. Subtotal/total checks cover both editable summary fields. Previously unassigned source groups retain their identity after manual linking/addition.
 
-A focused check never sets full `sourceChecked`. Finish still requires explicit full source review, complete valid fields and exact deterministic reconciliation. Matching totals never establishes factual accuracy; diagnostics may miss omissions. Drafts retain Needs review and cannot finalize splits. Existing unfinished split choices remain available. No re-recognition feature was added: rerunning the unchanged OCR cannot resolve the established interpretation failures and would add an unnecessary replacement/duplication boundary. Existing failed-reading Retry/manual fallback remain unchanged.
+A focused check never grants full `sourceChecked`. As of Phase 3, opening or applying an unchanged check preserves an existing full confirmation; actual value changes clear it, while retaining that the original was already opened. Finish still requires explicit full source review, complete valid fields and exact deterministic reconciliation. Matching totals never establishes factual accuracy; diagnostics may miss omissions. Drafts retain Needs review and cannot finalize splits. Existing unfinished split choices remain available. No re-recognition feature was added: rerunning the unchanged OCR cannot resolve the established interpretation failures and would add an unnecessary replacement/duplication boundary. Existing failed-reading Retry/manual fallback remain unchanged.
 
 ## Measurement boundaries
 
@@ -29,6 +29,10 @@ The broader fictional UI run passed four methods and retained one combined-metho
 The fictional 36-purchase navigation check needed 18 form gestures to reach the final amount; the focused editor needed zero editor gestures, with opening, tapping the field, typing the amount and Apply counted as four activity groups. This excludes full source review, finishing, human key presses and elapsed time. The conventional baseline is navigation only; its typing path was not established. It cannot establish real-receipt speed or the under-30-second goal.
 
 The final unsigned iPhone SDK Release build passes with bundle identifier unchanged; it was not signed or installed on the phone. Native light/dark, long and largest-text captures were visually reviewed, including the actual amount editor and visibly green multi-row confirmation. Structural accessibility checks cover element detection, hit regions and descriptions only. Native result bundles still report launch-time invalid-frame warnings; their cause is unestablished. The earlier unit bundle also reports a priority-inversion warning. Simulator evidence and [safe captures](evidence/p2-04/README.md) do not certify physical accessibility, phone latency or absence of responsiveness issues.
+
+## Phase 3 follow-up · 2026-10-12
+
+[Phase 3](PHASE3_UX.md) repairs the native invalid-frame warning (traced to SwiftUI's keyboard accessory), same-ID Split Done → Edit state and repeated original decoding. Saved receipt review flags survive unchanged editing; Cancel and unchanged Finish return without writing another revision. Home reader scroll state is retained through review. Phase 2 results above remain historical and are not retroactively described as passing.
 
 ## Pending physical-phone walkthrough
 

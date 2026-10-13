@@ -91,7 +91,7 @@ struct ReceiptReviewView: View {
             Section {
                 Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
                     .tint(.green).disabled(!workspace.draft.sourceOpened).accessibilityIdentifier("sourceCheck")
-                Text(workspace.draft.sourceOpened ? "Confirm every field and line. Editing clears this check; matching totals alone do not prove completeness." : "Open Original above and check every field and line, including anything recognition missed.")
+                Text(workspace.draft.sourceOpened ? "Confirm every field and line. Changing receipt values requires confirmation again; the original remains available. Matching totals alone do not prove completeness." : "Open Original above and check every field and line, including anything recognition missed.")
                     .font(.footnote).foregroundStyle(.primary)
             } header: { Text("Source review").foregroundStyle(Color(uiColor: .label)) }
             Section {
@@ -100,7 +100,7 @@ struct ReceiptReviewView: View {
                 if !workspace.draft.canSaveDraft {
                     Text("Choose a valid purchase date and check typed quantities or amounts before saving a draft. Missing fields can remain blank.").font(.footnote)
                 }
-                Text("Saved only on this device. The wallet is excluded from ordinary backup; no export or restore is available yet. Uninstalling or losing the device can lose your receipts.")
+                Text("Saved on this device. Export an encrypted backup in Settings to keep a restorable copy.")
                     .font(.footnote).foregroundStyle(.primary).accessibilityIdentifier("reviewStorageFooter")
             }
 
@@ -243,7 +243,7 @@ struct ReceiptPaper: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
-                Text(fields.merchant ?? "Merchant missing").font(.title2.weight(.semibold))
+                Text(fields.merchant ?? "Merchant missing").font(.title2.weight(.semibold)).accessibilityIdentifier("receiptPaperMerchant")
                 Spacer(minLength: 0)
                 if reviewed { ReceiptReviewedMark() }
             }

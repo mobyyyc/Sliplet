@@ -1,6 +1,16 @@
 # Task registry
 
-The main chat coordinates these task chats. Phase 1 task chats T01–T07 were archived on 2026-10-09 after their implementation handoffs; their records and evidence below remain available. Phase 2 chats require separate task-specific approval; P2-01 was approved on 2026-10-09. The user approves one task at a time in the main chat; the main chat verifies, commits/pushes and reports the result before requesting approval for the next task. Dependencies must be verified from actual files/results, not assumed from a chat title.
+Main coordinates Sliplet. All Phase 1 and Phase 2 work chats are archived; their historical records below remain available. The user authorized the complete Phase 3 UX audit and repair pass in Main on 2026-10-12. No new chat or agent is required. Subsequent work still needs Main/user approval; Main owns verification and signed commit/push.
+
+## Phase 3 — native interaction and responsiveness
+
+- Previous task: approved icon installed in place, signed milestone `7507acf`; initial three phone checks passed. Phase 2 backup/accuracy/timing observations remain open.
+- Authorization: audit the whole app, design the repair plan and implement it; explicit user instruction on 2026-10-12.
+- Scope: [21 findings and acceptance plan](docs/PHASE3_UX.md). Review confirmation/no-op editing, continuous reverse swipes, retained reader/scroll state, bounded background original rendering and cold indexing, incremental search, native split navigation/save state, adaptive keyboard/bottom actions, truthful storage copy, accessible paper semantics and unobstructed search.
+- Sequence inside Main: P3-01 audit/baseline; P3-02 review/swipe; P3-03 rendering/index performance; P3-04 native navigation/layout; P3-05 regression and phone walkthrough. These are internal steps, not separate chats.
+- Candidate: project defaults v0.3/build 4, stable app/storage identities and existing local signing settings. No normal-store reset, phone install or private-data publication.
+- Acceptance: 147 unit passes / one hardware skip; final 13/13 native methods and 30 distinct native passing outcomes across scoped runs; signed 0.3/build 4 candidate verified. [Exact evidence](docs/evidence/p3-ux/README.md). Implementation complete; physical smoothness, VoiceOver and practical phone acceptance remain separate. Next proposed task is an approved in-place phone update and guided UX walkthrough.
+
 
 ## T01 — 01 · Xcode and SwiftUI foundation
 

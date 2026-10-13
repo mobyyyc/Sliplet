@@ -1,4 +1,19 @@
-# Personal v0.2 iPhone walkthrough
+# Phase 3 personal UX walkthrough
+
+The signed 0.3/build 4 candidate is prepared in Main; installing it on the phone requires the next approval. This updates the same stable app in place using the existing Personal Team; retain receipts and never uninstall/reset. The previous 0.2/build 3 icon update and initial three checks are historical below.
+
+After the update, use Main only and check:
+
+1. Open/unlock and verify the existing receipt count plus one Original. Open a reviewed receipt → Edit: the original-review confirmation should remain checked. Cancel without editing should return directly to the same scroll position. Finish without editing should preserve any finalized split. Change an actual value: confirmation must clear and Cancel must ask to discard.
+2. On Home, reveal a left swipe action, then swipe right: the receipt should move continuously back to center. Use a separate right swipe to expose the other action. Repeat on receipts at different heights; enter/return several times and check for jumps or visible pauses.
+3. Search for an item, open a result, view Original, return and clear the search. The detail should use the short upward fade, with no home-wallet departure animation or covering Import button. Try a long receipt, scroll to the bottom, edit/cancel, and verify the same reader position.
+4. Add a split participant using Return/Add above the keyboard. Save or finalize an existing split, Done, then immediately Edit receipt. Try original double-tap/pinch/reset, photo rotation and the focused comparison. Confirm controls remain reachable with larger text, Reduce Motion and VoiceOver.
+
+Report which step fails and whether you see a jump, covered control, delayed response or lost state. Keep receipt content local. These phone observations validate physical UX; Simulator passes do not prove zero lag. Phase 2 backup/offline receipt and human accuracy/time checks remain open.
+
+---
+
+# Historical personal v0.2 iPhone walkthrough
 
 Approved in Main on 2026-10-11. This is one guided physical test, not another feature phase. Continue replying in Main. The prior signed milestone is `e419d15` (`feat: add portable encrypted receipt backups`).
 

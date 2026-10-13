@@ -1,6 +1,9 @@
 # Progress
 
 ## Current milestone
+Phase 3 — whole-app UX audit and native interaction repairs, authorized in Main on 2026-10-12. [Current plan and verification](docs/PHASE3_UX.md). The following Phase 1/2 entries are historical; Phase 2 implementations are accepted and archived. Initial phone open/unlock/retained-original checks passed, while backup, fresh offline recognition and human correction timings remain pending.
+
+## Historical milestones
 M0 — environment, design and extraction validation: complete and accepted. M1 — store purchase records: complete and accepted. M2 — usable imported-image receipt demo: complete and accepted. M3 — exact splits and purchase search: demo implementation complete in Simulator; T06 and wallet transitions accepted, T07 independently verified with normal Release installed; user review pending.
 
 ## Completed
@@ -21,13 +24,13 @@ M0 — environment, design and extraction validation: complete and accepted. M1 
 - T04: validated exact-money/evidence models, append-only corrections and transactional encrypted receipt/image storage with real Keychain and schema migrations. Main-chat review matched final source hashes, inspected the actual xcresult (27 passed, 0 failed, 1 hardware skip), verified simulator entitlements and the Release signature. Synthetic process relaunch, hot-journal recovery and complete deletion passed. [Storage report](docs/STORAGE.md), [ADR 003](docs/adr/003-local-receipt-storage.md).
 - T05: native image import, local Vision/parser, editable review, drafts and exact finish gate, original-image zoom/linked text, encrypted save/reopen/edit/delete, scene privacy cover and protected-data lifecycle. Paper lift includes shadows and native Glass navigation/buttons; all receipts have month/store browsing. Main-chat review independently checked actual 43-pass/1-hardware-skip unit results, two native workflow passes before the final cosmetic button fix, and three final accessibility/interaction passes with matching source hashes, Release build/signature/Debug-control exclusion, and five private reference-assisted round-trip reports (two finished, three drafts). Synthetic native screenshots reviewed; 14 simulator contrast exceptions individually classified/measured, without device certification. [Demo report](docs/IMPORT_DEMO.md).
 
-## Current task
+## Historical task
 T07 phone-layout follow-up — review no longer cuts content behind a clipped blank strip; native glass actions sit farther above the home indicator, dark switches have distinct on tracks, and long home receipts reserve the actual footer and action-bar inset. Wallet leather follows both scroll directions at lower speed. Eleven unique native cases passed across scoped iPhone 15 Pro Simulator runs, including six final-source cases after the reader viewport repair; optimized Simulator and compilation-only physical iOS SDK builds passed. Normal Release installed, with all twelve encrypted receipts/originals/preferences preserved. User reload and visual review on their iPhone remain. [Exact scope and screenshots](docs/evidence/t07-phone-layout/README.md).
 
-## Task status
+## Historical Phase 1 task status
 T01–T06: complete and accepted, including the wallet-transition refinement through T07 approval. T07: implemented and verified; independent main-chat review complete; user review pending. Task IDs are recorded in TASKS.md.
 
-## Blockers and pending inputs
+## Historical Phase 1 blockers and pending inputs
 - xcode-select points to standalone Command Line Tools; verified build commands use DEVELOPER_DIR to select full Xcode per shell/command.
 - Simulator local Foundation Models availability and generation verified; physical-phone availability remains unverified until its later phase.
 - Five private HEIC images and independently checked human labels are present, matched to original hashes and Git-ignored. No additional reference-label input is pending.
@@ -37,7 +40,7 @@ T01–T06: complete and accepted, including the wallet-transition refinement thr
 ## Decisions
 Native Swift/SwiftUI; Mac/simulator first; Paper lift with layer shadows and native Liquid Glass navigation/controls; one simplified digital receipt layout across stores; original evidence preserved; local processing/storage; deterministic money; Vision plus deterministic parsing with mandatory source correction and reconciliation. Storage uses system SQLite with authenticated encrypted receipt/image payloads and a non-sync Keychain key, with ordinary backup excluded. Local model variants remain evaluation-only; cloud and physical camera deferred.
 
-## Known issues
+## Historical Phase 1 known issues
 The app now has a usable imported-image review/save workflow. T06 adds exact item splitting and explicit copy/share; T07 adds verified local purchase search and history. Physical camera is deferred. Save explicitly before leaving: backgrounding clears unsaved work. Encrypted contents/Keychain are verified in Simulator; SQLite structural metadata is visible, physical lock enforcement unverified, and backup/export/restore unavailable. The five-receipt T03 pilot recovered 57/66 exact purchase amounts, matched only 2/5 totals and reconciled 0/5 without correction; T05's reference-assisted round trips are not a replacement accuracy score. Human correction time and broader retailer accuracy remain unmeasured. Wallet contrast exceptions and six split audit classifications are individually documented; device accessibility/material behavior remains unverified. Current deployment target is iOS 27.0; device OS/signing must be checked later.
 
 ## Next recommended action
@@ -264,3 +267,12 @@ User reports all three initial checks passed: app opens/unlocks, saved receipts 
 ## Approved icon applied and phone updated · 2026-10-11
 
 Applied the approved leather-wallet/receipt icon in a standard opaque 1024-pixel iOS asset, selecting AppIcon in Debug and Release. Signed v0.2/build 3 compilation and icon/signature checks pass; device metadata verifies build 3 after in-place installation and launch on the user-selected iPhone 15 Pro. No uninstall/reset or app-source behavior change. Personal Team values stay local and uncommitted. [Verification](docs/evidence/phone-v02/icon-install.json). Initial three phone checks previously passed; backup, offline receipt and timed correction checks remain pending.
+
+
+## Phase 3 UX repairs · 2026-10-12
+
+User authorized the whole audit/repair pass. All five Phase 2 chats were archived, the sidebar section renamed Sliplet · Phase 3, and Main remains the only coordination chat. The [repair plan](docs/PHASE3_UX.md) records 21 findings covering the app's main surfaces and lifecycle. Saved full review survives entering/no-op editing; real value changes require reconfirmation. Reverse swipes close continuously before exposing the opposite action. Unchanged Cancel/Finish avoids needless prompts, revisions and split invalidation. The home reader retains its position through editing, background work prepares originals/index/input, and metadata changes reuse normalized evidence. Native Back, split same-ID saves, keyboards, large-text actions, source zoom/resize, actual-screen edge fading and search hit regions are corrected.
+
+The candidate uses project defaults 0.3/build 4. Verification uses fictional data in a task-created Simulator; exact results, earlier failures and limitations are retained in Phase 3 evidence. Original receipt files, recognition/parser/storage identities and local Personal Team settings are preserved. No phone installation or zero-lag claim. Next proposed task: approved in-place phone update and the Phase 3 UX walkthrough.
+
+Final Phase 3 verification: 147 unit passes / one physical-only skip; 13/13 final native methods and passing latest outcomes for 30 distinct native methods across scoped runs. Final UI runtime-warning count is zero; the unit priority warning and earlier failures remain recorded. Signed 0.3/build 4 candidate passes signature/version/bundle/team/Debug-exclusion checks. All 3,625 private files match the start snapshot; parsing/storage/backup sources are unchanged. [Evidence](docs/evidence/p3-ux/README.md). Implementation is complete; phone installation and physical UX acceptance await the next approval. Milestone commit message: `fix: refine native receipt interactions and responsiveness`.
