@@ -49,3 +49,8 @@ The final full hosted unit suite passes **147**, with **one physical-device-only
 The signed **0.3/build 4** physical-iOS Release candidate compiles, passes strict signature checks, preserves the stable bundle and existing local team, and excludes the synthetic launch flag. It has **not been installed on the phone**. All 3,625 private files match the start snapshot; parsing/storage/backup sources and original app resources are unchanged. The exact two local Personal Team project entries remain uncommitted. [Validation and limits](evidence/p3-ux/validation.json), [signature/version proof](evidence/p3-ux/release.json), [fictional visual evidence](evidence/p3-ux/README.md).
 
 P3-01–P3-04 and Simulator verification in P3-05 are complete. Next approval is the in-place phone update and [guided UX walkthrough](PHONE_WALKTHROUGH.md). Physical smoothness, VoiceOver, and the still-open Phase 2 backup/recognition/human timing checks remain explicit follow-ups. No zero-hitch or general accessibility certification is claimed.
+
+
+## User acceptance and next direction · 2026-10-13
+
+The user reports checking Phase 3 in Simulator and explicitly moves on to recognition work. Phase 3 is accepted on that basis; the proposed physical-phone update/walkthrough is not required before Phase 4. No new phone installation or hardware validation is implied. See [the Phase 4 planning proposal](PHASE4_RECOGNITION.md); implementation tasks await individual approval.

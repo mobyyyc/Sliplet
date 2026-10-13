@@ -1,5 +1,9 @@
 # User workflow
 
+## Current direction · 2026-10-13
+
+The user accepts Phase 3 based on their Simulator check and moves on; a Phase 3 phone update/walkthrough is no longer the next prerequisite. Phase 4 **P4-01 is approved and verified**, with primarily Simulator-based receipt-accuracy testing and a read-only planning subagent explicitly requested. Follow [the Phase 4 proposal](PHASE4_RECOGNITION.md). P4-01 completed the actual Simulator import baseline and failure map. P4-02 through P4-06 remain unstarted and each needs separate approval. Existing five receipts are development data. Main remains the sole user coordination point, with on-device recognition and private evidence preserved. Historical phone-measurement limitations below remain limitations, not failed prerequisites or newly passed checks. P4-01: 10 successful imports, five stable repeat pairs and preserved draft round trips; parser purchase recovery 53/66, three currency-unresolved receipts, zero fully correct receipts and zero held-out purchases. [Measured report](RECOGNITION_LAB.md). Production app source is unchanged.
+
 Use the original planning chat as the main point of contact. Seven Phase 1 task chats were archived on 2026-10-09; their implementation evidence remains in the repository. Five Phase 2 chats are prepared in the “Sliplet · Phase 2” sidebar section, with Main first. The user does not need to choose among them or copy messages between them.
 
 ## Current phase · 2026-10-12

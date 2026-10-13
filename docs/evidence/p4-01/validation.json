@@ -1,0 +1,43 @@
+{
+  "app_binary_sha256": "5ebb36e70ebd8067fbad0a8582e1a1e7cf4d569bc3fefa7990c1157481c93438",
+  "baseline_commit": "9dc52bc2c2511edab3d13579e22c82fefe9df27a",
+  "captured_binary_hashes_verified": true,
+  "default_private_test_gate": {
+    "expected_skip": true,
+    "failed": 0,
+    "passed": 0,
+    "skipped": 1
+  },
+  "draft_save_reload_preserved": 5,
+  "earlier_attempts_retained": [
+    "initial staging only",
+    "setup failed on existing input directory; no recognition",
+    "ten imports passed; collection found old Xcode container location",
+    "ten imports passed; independent date normalization check caught scoring mismatch"
+  ],
+  "held_out_purchases": 0,
+  "independent_essential_counter_verification": "passed",
+  "limitations": [
+    "Actual import handler under hosted Debug XCTest; no Files picker/camera UI test.",
+    "Five previously exposed development purchases only.",
+    "Expanded labels incomplete; ambiguity and unknowns retained.",
+    "Simulator elapsed times with polling, not phone or user review seconds.",
+    "Existing unrelated test-source actor-isolation build warnings retained."
+  ],
+  "native_baseline_methods_passed": 1,
+  "native_import_attempts": 10,
+  "native_runtime_warnings": 0,
+  "original_private_files_unchanged": 3625,
+  "other_simulators_preserved": true,
+  "parser_recognizer_settings_changed": false,
+  "phase2_improvement_claim": false,
+  "production_app_sources_unchanged": true,
+  "protocol_tests_passed": 18,
+  "reference_answers_supplied_to_app": false,
+  "repeat_pairs_equal": 5,
+  "signing_project_unchanged": true,
+  "source_recompute_verification": "passed",
+  "task": "P4-01",
+  "task_simulator_deleted": true,
+  "test_binary_sha256": "a09a5c49ca7765bda53bfc49fc131682fafe987df62e5f9c0850e62cea48a2fc"
+}
