@@ -9,8 +9,14 @@ struct EditableReceiptLine: Identifiable, Codable, Equatable, Sendable {
     var sourceLineIDs: [UUID]
     var sku: String? = nil
     var unitPrice: ReceiptMoney? = nil
+    /// Raw editable decimal survives even when currency is unknown or changed.
+    var unitPriceText: String? = nil
+    var editableUnitPrice: String {
+        unitPriceText ?? unitPrice.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? ""
+    }
     var taxMarker: String? = nil
     var rate: ReceiptDecimal? = nil
+    var unit: String? = nil
     static func blank(kind: String = "purchase") -> Self {
         .init(id: UUID(), kind: kind, name: "", quantity: "", amount: "", sourceLineIDs: [])
     }
@@ -19,7 +25,24 @@ struct EditableReceiptLine: Identifiable, Codable, Equatable, Sendable {
 struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     var merchant = ""
     var date = ""
-    var currency = ""
+    enum CurrencyOrigin: String, Codable, Sendable { case defaultCAD, userSelected }
+    /// Nil preserves legacy/recognized provenance; never writes context into raw extraction.
+    var currencyOrigin: CurrencyOrigin? = nil
+    var currency = "" {
+        didSet { if currency != oldValue { currencyOrigin = .userSelected } }
+    }
+    var currencyContextMessage: String? {
+        switch currencyOrigin {
+        case .defaultCAD: "CAD is your default, not read from the receipt. Change it if needed."
+        case .userSelected: "Currency selected by you. Amounts are not exchanged or converted."
+        case nil: nil
+        }
+    }
+    mutating func applyDefaultCurrency() {
+        guard currency.isEmpty else { return }
+        currency = "CAD"
+        currencyOrigin = .defaultCAD
+    }
     var lines: [EditableReceiptLine] = []
     var subtotal = ""
     var total = ""
@@ -30,15 +53,17 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     var guidanceChecks: [String: String]? = nil
 
     init() {}
-    init(parsed: ParsedReceipt) {
+    init(parsed: ParsedReceipt, useDefaultCurrency: Bool = false) {
         merchant = parsed.merchant ?? ""; date = ExactInput.dateText(parsed.date)
         currency = parsed.currency?.code ?? ""
         subtotal = parsed.subtotal.map { ExactInput.format($0) } ?? ""
         total = parsed.total.map { ExactInput.format($0) } ?? ""
         lines = parsed.lines.map {
             EditableReceiptLine(id: $0.id, kind: $0.kind, name: $0.description,
-                quantity: ExactInput.quantity($0.quantity), amount: ExactInput.format($0.amount), sourceLineIDs: $0.sourceLineIDs)
+                quantity: ExactInput.quantity($0.quantity), amount: ExactInput.format($0.amount), sourceLineIDs: $0.sourceLineIDs,
+                sku: $0.sku, unitPriceText: $0.unitPrice.map { ExactInput.format($0) }, taxMarker: $0.taxMarker, rate: $0.rate, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
         }
+        if useDefaultCurrency && !parsed.issues.contains(where: { $0.code == "currency_conflicting" }) { applyDefaultCurrency() }
     }
     init(fields: ReceiptFields) {
         merchant = fields.merchant ?? ""; date = ExactInput.dateText(fields.purchaseDate); currency = fields.currency?.code ?? ""
@@ -46,7 +71,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
         subtotal = text(fields.subtotal); total = text(fields.total)
         lines = fields.items.map {
             EditableReceiptLine(id: $0.id, kind: "purchase", name: $0.description ?? "", quantity: ExactInput.quantity($0.quantity),
-                amount: text($0.amount), sourceLineIDs: $0.sourceLineIDs, sku: $0.sku, unitPrice: $0.unitPrice, taxMarker: $0.taxMarker)
+                amount: text($0.amount), sourceLineIDs: $0.sourceLineIDs, sku: $0.sku, unitPrice: $0.unitPrice, taxMarker: $0.taxMarker, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
         } + fields.adjustments.map {
             EditableReceiptLine(id: $0.id, kind: $0.kind.rawValue, name: $0.label ?? "", quantity: "", amount: text($0.amount),
                 sourceLineIDs: $0.sourceLineIDs, rate: $0.rate)
@@ -54,7 +79,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     }
     /// Raw editable values matter even while a typed value is temporarily malformed.
     func hasSameReceiptValues(as other: Self) -> Bool {
-        merchant == other.merchant && date == other.date && currency == other.currency
+        merchant == other.merchant && date == other.date && currency == other.currency && currencyOrigin == other.currencyOrigin
             && lines == other.lines && subtotal == other.subtotal && total == other.total
             && subtotalNotPrinted == other.subtotalNotPrinted
     }
@@ -69,8 +94,8 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
             items: lines.filter { $0.kind == "purchase" }.map {
                 ReceiptLine(id: $0.id, description: $0.name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
                     sku: $0.sku, quantity: ExactInput.decimal($0.quantity),
-                    unitPrice: $0.unitPrice?.currency == c ? $0.unitPrice : nil, amount: money($0.amount),
-                    taxMarker: $0.taxMarker, sourceLineIDs: $0.sourceLineIDs)
+                    unitPrice: money($0.editableUnitPrice), amount: money($0.amount),
+                    taxMarker: $0.taxMarker, sourceLineIDs: $0.sourceLineIDs, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
             }, adjustments: lines.filter { $0.kind != "purchase" }.map {
                 ReceiptAdjustment(id: $0.id, kind: ReceiptAdjustment.Kind(rawValue: $0.kind) ?? .other,
                     label: $0.name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty, amount: money($0.amount),
@@ -88,6 +113,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
         if lines.contains(where: { !$0.quantity.isEmpty && ExactInput.decimal($0.quantity) == nil }) { issues.append("Quantities must be positive decimals (for example 1 or 0.375).") }
         let scale = f.currency?.minorUnitScale ?? 2
         if lines.contains(where: { ExactInput.money($0.amount, scale: scale) == nil }) { issues.append("Every line needs a valid printed amount.") }
+        if lines.contains(where: { !$0.editableUnitPrice.isEmpty && ExactInput.money($0.editableUnitPrice, scale: scale) == nil }) { issues.append("Check unit prices for the selected currency. Values are kept unchanged; no rounding or exchange is applied.") }
         if lines.contains(where: { $0.kind == "discount" && (ExactInput.money($0.amount, scale: scale) ?? 0) > 0 }) { issues.append("Enter discounts as negative amounts.") }
         if f.total == nil { issues.append("The printed total is missing or invalid.") }
         if !subtotal.isEmpty && f.subtotal == nil { issues.append("The subtotal is invalid.") }
@@ -125,7 +151,8 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
             && (subtotal.isEmpty || ExactInput.money(subtotal, scale: scale) != nil)
             && (total.isEmpty || ExactInput.money(total, scale: scale) != nil)
             && lines.allSatisfy { ($0.amount.isEmpty || ExactInput.money($0.amount, scale: scale) != nil)
-                && ($0.quantity.isEmpty || ExactInput.decimal($0.quantity) != nil) }
+                && ($0.quantity.isEmpty || ExactInput.decimal($0.quantity) != nil)
+                && ($0.editableUnitPrice.isEmpty || ExactInput.money($0.editableUnitPrice, scale: scale) != nil) }
 
     }
 }

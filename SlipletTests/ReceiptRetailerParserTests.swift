@@ -156,4 +156,76 @@ final class ReceiptRetailerParserTests: XCTestCase {
         XCTAssertTrue(extraction.issues.contains { $0.code == "source_review_required" })
         XCTAssertEqual(extraction.rawOCR, s)
     }
+    func testStructuredPrintedMetadataPreservesDescriptionAndSource() throws {
+        let observations = source("COSTCO CAD\n123456 SOAP 2 X 3.50 7.00 H\nTOTAL 7.00")
+        let parsed = ReceiptParser.parse(observations)
+        let line = try XCTUnwrap(parsed.lines.first)
+        XCTAssertEqual(line.description, "123456 SOAP 2 X 3.50")
+        XCTAssertEqual(line.sku, "123456")
+        XCTAssertEqual(line.unitPrice, 350)
+        XCTAssertEqual(line.taxMarker, "H")
+        XCTAssertEqual(line.sourceLineIDs, [observations[1].id])
+        XCTAssertEqual(parsed.fields().items.first?.unitPrice?.minorUnits, 350)
+        XCTAssertEqual(parsed.fields().items.first?.sku, "123456")
+    }
+    func testTwoDecimalWeightIsNotMistakenForMoney() throws {
+        let parsed = ReceiptParser.parse(source("COSTCO CAD\n123456 PEARS 1.25 KG @ 8.00 10.00\nTOTAL 10.00"))
+        let line = try XCTUnwrap(parsed.lines.first)
+        XCTAssertEqual(line.quantity, ExactInput.decimal("1.25"))
+        XCTAssertEqual(line.unit, "KG")
+        XCTAssertEqual(line.unitPrice, 800)
+        XCTAssertEqual(line.amount, 1000)
+        XCTAssertEqual(parsed.fields().items.first?.unit, "KG")
+    }
+    func testSeparateRateRetainsUnitAndPrintedUnitPrice() throws {
+        let observations = try [box("COSTCO CAD", x: 0.1, y: 0.9), box("1.25 KG @ 8.00", x: 0.1, y: 0.7), box("PEARS 10.00", x: 0.1, y: 0.67)]
+        let line = try XCTUnwrap(ReceiptParser.parse(observations).lines.first)
+        XCTAssertEqual(line.unit, "KG"); XCTAssertEqual(line.unitPrice, 800)
+        XCTAssertEqual(line.quantity, ExactInput.decimal("1.25"))
+        XCTAssertEqual(line.sourceLineIDs, [observations[1].id, observations[2].id])
+    }
+    func testPrintedTaxPercentIsNotMoneyAndZeroRateSurvives() throws {
+        for rate in ["13.00", "0"] {
+            let p = ReceiptParser.parse(source("COSTCO CAD\nSOAP 4.00\nSUBTOTAL 4.00\nHST " + rate + "% 0.52\nTOTAL 4.52"))
+            let tax = try XCTUnwrap(p.lines.first { $0.kind == "tax" })
+            XCTAssertEqual(tax.amount, 52)
+            XCTAssertEqual(tax.rate, try ReceiptDecimal(coefficient: rate == "0" ? 0 : 1300, scale: rate == "0" ? 2 : 4))
+            XCTAssertEqual(p.fields().adjustments.first?.rate, tax.rate)
+        }
+    }
+    func testDecimalCommaRequiresPrintedSeparatorAndPreservesSigns() {
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO\nSOAP 4,25\nTOTAL 4,25")).total, 425)
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO\nSOAP 4.25\nCOUPON 0,25-\nTOTAL 4,00")).lines.last?.amount, -25)
+        for amount in ["425", "4,250", "4 25", "4,,25"] {
+            XCTAssertNil(ReceiptParser.parse(source("COSTCO\nTOTAL " + amount)).total)
+        }
+        let uncertain = ReceiptParser.parse(source("COSTCO\nTOTAL 4,25-"))
+        XCTAssertNil(uncertain.total)
+        XCTAssertTrue(uncertain.issues.contains { $0.code == "negative_summary_check_source" })
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO\nTOTAL -4.25")).total, -425)
+    }
+    func testExplicitCurrencyAndConflictsDoNotUsePricedProductNames() {
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO USD\nSOAP 4.00")).currency?.code, "USD")
+        XCTAssertNil(ReceiptParser.parse(source("COSTCO\nUSD SOAP 4.00\nTOTAL 4.00")).currency)
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO\nCAD$ 8.25")).currency?.code, "CAD")
+        XCTAssertEqual(ReceiptParser.parse(source("COSTCO\nCAD$ |8.25")).currency?.code, "CAD")
+        XCTAssertNil(ReceiptParser.parse(source("COSTCO\nCAD SOAP 8.25")).currency)
+        let mixed = ReceiptParser.parse(source("COSTCO CAD\nCURRENCY USD\nSOAP 4.00"))
+        XCTAssertNil(mixed.currency)
+        XCTAssertTrue(mixed.issues.contains { $0.code == "currency_conflicting" })
+        XCTAssertNil(ReceiptParser.parse(source("COSTCO\nSOAP $4.00")).currency)
+    }
+    func testNumericPromotionCodeDoesNotInventAdjustmentMeaning() {
+        for text in ["999999/123456 1.00-", "999999/654321 1.00-", "999999/123456 1.00", "999999/123456 100-"] {
+            let parsed = ReceiptParser.parse(source("COSTCO\n123456 SOAP 4.00\n" + text))
+            XCTAssertEqual(parsed.lines.count, 1)
+            XCTAssertTrue(parsed.issues.contains { $0.code == "unpaired_amount" || $0.code == "amount_unparsed_check_source" || $0.code == "source_review_required" })
+        }
+    }
+    func testLegacyParsedLineDecodesWithoutNewMetadata() throws {
+        let data = Data("{\"kind\":\"purchase\",\"description\":\"FICTIONAL SOAP\",\"amount\":400,\"sourceLineIDs\":[],\"id\":\"00000000-0000-0000-0000-000000000001\"}".utf8)
+        let line = try JSONDecoder().decode(ParsedReceipt.Line.self, from: data)
+        XCTAssertNil(line.sku); XCTAssertNil(line.unitPrice); XCTAssertNil(line.taxMarker); XCTAssertNil(line.rate); XCTAssertNil(line.unit)
+    }
+
 }

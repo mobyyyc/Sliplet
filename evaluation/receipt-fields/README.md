@@ -1,0 +1,7 @@
+# P4-04 field and currency validation
+
+Use a task-created Simulator named `Sliplet P4-04 Field Lab`, never an installed user wallet. The hosted import test runs five originals twice through production import and saves/reopens drafts in isolated encrypted stores. A separate native parser replay uses only the two user-verified literal transcripts from P4-02. Semantic references never reach recognition.
+
+Build Sliplet for testing with an explicit Xcode developer directory and dedicated derived data. Run `run.py prepare --run PRIVATE_NEW_RUN --device DEVICE --build BUILD`. Execute the generated private.xctestrun with only `ReceiptRecognitionLabTests/testExplicitPrivateSimulatorBaseline` and `ReceiptRegionExperimentTests/testExplicitCheckedTranscript`, parallel testing disabled; redirect logs/results privately. `run.py collect --run RUN` and `run.py verify --run RUN` produce/check safe aggregates. Never reuse a frozen run after source changes.
+
+The legacy counter is parser-level exact kind/description/amount recovery. Structured draft fields are scored separately: currency context may come from the user's visible default, not OCR. Expanded attributes retain unreviewed reference status; fictional round-trip tests do not establish real-photo attribute accuracy. All five purchases are exposed development data with zero held-out purchases. Unknown/ambiguous values must stay unresolved, not synthesized from reconciliation. Private originals, raw OCR, checked labels and source locations remain immutable.

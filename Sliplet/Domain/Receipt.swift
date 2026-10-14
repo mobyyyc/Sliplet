@@ -98,6 +98,8 @@ struct ReceiptLine: Codable, Equatable, Sendable, Identifiable {
     var taxMarker: String?
     /// OCR line identities; optional because source linkage may be unavailable.
     var sourceLineIDs: [UUID]
+    /// Literal printed measurement unit; never inferred from the item description.
+    var unit: String? = nil
 }
 
 struct ReceiptAdjustment: Codable, Equatable, Sendable, Identifiable {

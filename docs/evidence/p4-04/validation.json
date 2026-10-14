@@ -1,0 +1,32 @@
+{
+  "task": "P4-04",
+  "date": "2026-10-14",
+  "status": "bounded implementation accepted; accuracy target unmet",
+  "native_regression": {
+    "passed": 107,
+    "skipped_hardware_only": 1,
+    "failed": 0
+  },
+  "final_changed_area_and_import_run": {
+    "passed": 38,
+    "failed": 0
+  },
+  "private_preservation": {
+    "files_unchanged": 4071,
+    "signing_preserved": true
+  },
+  "phone_tested": false,
+  "ui_walkthrough_performed": false,
+  "held_out_purchases": 0,
+  "sources": {
+    "Sliplet/Domain/Receipt.swift": "2242175222e4093e9e2743560e56293af7a1d0ad850177ed006e51d1f7f0538d",
+    "Sliplet/Domain/ReceiptReview.swift": "32f8bbfe92ca80e6cc9fd8e2cb8b28cf1bf113d63d4683ed5a4600db72d75e45",
+    "Sliplet/Parsing/Parsing.swift": "283c787400a4570de248f66dee3c2c785fd61d8db8791be4cb7fbde5fbe9b0c1",
+    "Sliplet/UI/ReceiptFocusedCorrectionView.swift": "a96cafb9cafac25495b23235ed4ca77d5c0ae67d643aa7749bd8fa831de63b7d",
+    "Sliplet/UI/ReceiptReviewView.swift": "845d7039c4c86e43695c1b4bc0cc5cb02a19a39ed1ef03822e414c0f68126a2c",
+    "Sliplet/UI/ReceiptWorkspace.swift": "a860795bbbd5d9f893f5f7f7fa20a95867b5661a9dba65057e004466ab0e7ef6",
+    "SlipletTests/ReceiptRetailerParserTests.swift": "91a9d684ff8dd0dd61d92d530529319d197578a4774fe2989cbe369e9f31ab68",
+    "SlipletTests/ReceiptCurrencyContextTests.swift": "a9c39a1df030b19f388a7eef7215482b359a43d28f1c62b2c3bf513d02e070d0",
+    "evaluation/receipt-fields/run.py": "a0c2d9740bddd6fcedfa4072463e8f7d9da8c924c0fc64b1cedfdbc249b9081b"
+  }
+}

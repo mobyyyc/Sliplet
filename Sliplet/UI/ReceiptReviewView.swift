@@ -51,6 +51,9 @@ struct ReceiptReviewView: View {
                     Text("Choose currency").tag("")
                     ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
                 }.accessibilityIdentifier("currencyField")
+                if let context = workspace.draft.currencyContextMessage {
+                    Text(context).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("currencyContext")
+                }
             } header: { Text("Receipt").foregroundStyle(Color(uiColor: .label)) }
             footer: { Text("Use printed line amounts. Leave unknown quantities blank.").foregroundStyle(Color(uiColor: .label)) }
             Section {
@@ -211,6 +214,28 @@ private struct ReceiptLineEditor: View {
                             .accessibilityLabel("Printed quantity").accessibilityIdentifier("lineQuantity-\(id)")
                     }
                 }
+                if line.kind == "purchase", line.unit != nil {
+                    LabeledContent("Unit") {
+                        TextField("Unknown", text: Binding(get: { self.line?.unit ?? "" }, set: { value in
+                            workspace.updateDraft { draft in
+                                if let index = draft.lines.firstIndex(where: { $0.id == id }) {
+                                    draft.lines[index].unit = value
+                                }
+                            }
+                        })).multilineTextAlignment(.trailing).focused(editing, equals: "unit-\(id)")
+                            .accessibilityIdentifier("lineUnit-\(id)")
+                    }
+                }
+                if line.kind == "purchase", line.unitPrice != nil || line.unitPriceText != nil {
+                    LabeledContent("Unit price") {
+                        TextField("Unknown", text: Binding(get: { self.line?.editableUnitPrice ?? "" }, set: { value in
+                            workspace.updateDraft { draft in
+                                if let index = draft.lines.firstIndex(where: { $0.id == id }) { draft.lines[index].unitPriceText = value }
+                            }
+                        })).keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing)
+                            .focused(editing, equals: "unitPrice-\(id)").accessibilityIdentifier("lineUnitPrice-\(id)")
+                    }
+                }
                 LabeledContent("Line amount") {
                     TextField("Missing", text: field(\.amount)).keyboardType(.numbersAndPunctuation).multilineTextAlignment(.trailing).focused(editing, equals: "amount-\(id)")
                         .accessibilityLabel("Printed line amount").accessibilityIdentifier("lineAmount-\(id)")
@@ -256,7 +281,7 @@ struct ReceiptPaper: View {
                         HStack(alignment: .top) { Text(item.description ?? "Description missing"); Spacer(minLength: 20); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
                         VStack(alignment: .leading, spacing: 4) { Text(item.description ?? "Description missing"); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
                     }
-                    Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
+                    Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" + (item.unit.map { " " + $0 } ?? "") } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
                 }.accessibilityElement(children: .combine)
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }

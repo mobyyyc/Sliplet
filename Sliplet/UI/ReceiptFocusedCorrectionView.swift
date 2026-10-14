@@ -80,6 +80,7 @@ struct ReceiptFocusedCorrectionView: View {
                             Text("Choose currency").tag("")
                             ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
                         }
+                        if let context = input.currencyContextMessage { Text(context).font(.footnote).foregroundStyle(.secondary) }
                     } header: { Text("Receipt details") }
                 case .date:
                     Section {

@@ -170,7 +170,7 @@ final class ReceiptWorkspace {
                 let extraction = try await withTaskCancellationHandler { try await work.value } onCancel: { job.cancel(); work.cancel() }
                 guard let self, self.isCurrent(session), self.recognition === job else { return }
                 self.extraction = extraction
-                self.draft = ReceiptReviewDraft(parsed: try JSONDecoder().decode(ParsedReceipt.self, from: extraction.rawParserOutput))
+                self.draft = ReceiptReviewDraft(parsed: try JSONDecoder().decode(ParsedReceipt.self, from: extraction.rawParserOutput), useDefaultCurrency: true)
                 self.worker = nil; self.recognition = nil
                 if extraction.rawOCR.isEmpty { self.flow = .failed; self.errorMessage = ImportFailure.noText.message }
                 else { self.flow = .review }
@@ -197,7 +197,7 @@ final class ReceiptWorkspace {
             let result = OCRResult(lines: [], revision: 0)
             extraction = try? ReceiptParser.extraction(result)
         }
-        draft = ReceiptReviewDraft(); flow = .review; sourceVisible = false
+        draft = ReceiptReviewDraft(); draft.applyDefaultCurrency(); flow = .review; sourceVisible = false
     }
     func cancelImport(showNotice: Bool = true) {
         guard !saving else { return }

@@ -10,6 +10,12 @@ struct ParsedReceipt: Codable, Sendable {
         var quantity: ReceiptDecimal?
         var sourceLineIDs: [UUID]
         var id = UUID()
+        // Optional for decoding historical parser evidence unchanged.
+        var sku: String? = nil
+        var unitPrice: Int64? = nil
+        var taxMarker: String? = nil
+        var rate: ReceiptDecimal? = nil
+        var unit: String? = nil
     }
     var merchant: String?
     var date: ReceiptDate?
@@ -26,11 +32,12 @@ struct ParsedReceipt: Codable, Sendable {
         }
         return ReceiptFields(merchant: merchant, purchaseDate: date, currency: currency,
             items: lines.filter { $0.kind == "purchase" }.map {
-                ReceiptLine(id: $0.id, description: $0.description, quantity: $0.quantity,
-                            amount: money($0.amount), sourceLineIDs: $0.sourceLineIDs)
+                ReceiptLine(id: $0.id, description: $0.description, sku: $0.sku, quantity: $0.quantity,
+                            unitPrice: money($0.unitPrice), amount: money($0.amount), taxMarker: $0.taxMarker,
+                            sourceLineIDs: $0.sourceLineIDs, unit: $0.unit)
             }, adjustments: lines.filter { $0.kind != "purchase" }.map {
                 ReceiptAdjustment(id: $0.id, kind: ReceiptAdjustment.Kind(rawValue: $0.kind) ?? .other,
-                                  label: $0.description, amount: money($0.amount), sourceLineIDs: $0.sourceLineIDs)
+                                  label: $0.description, amount: money($0.amount), rate: $0.rate, sourceLineIDs: $0.sourceLineIDs)
             }, subtotal: money(subtotal), total: money(total))
     }
 }
@@ -96,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p2-03-deterministic-0.2.0"
+    static let version = "p4-04-deterministic-0.4.0"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -135,7 +142,51 @@ enum ReceiptParser {
             return group
         }
     }
-    static let moneyPattern = #"(?<![\d.,])(-?\$?(?:\d{1,3}(?:,\d{3})+|\d{1,7})\.\d{2}-?)(?![\d.,])"#
+    static let moneyPattern = #"(?<![\d.,])(-?\$?(?:(?:\d{1,3}(?:,\d{3})+|\d{1,7})\.\d{2}|\d{1,7},\d{2})-?)(?![\d.,])"#
+    /// Decimal comma is accepted only with exactly two fractional digits and no dot.
+    /// This never inserts a missing separator, sign or currency.
+    static func printedMoney(_ token: String) -> Int64? {
+        if !token.contains("."), token.filter({ $0 == "," }).count == 1,
+           first(#"^-?\$?\d{1,7},\d{2}-?$"#, token) == token {
+            return ExactInput.money(token.replacingOccurrences(of: ",", with: "."))
+        }
+        return ExactInput.money(token)
+    }
+    static func monetaryTokens(_ text: String) -> [NSTextCheckingResult] {
+        matches(moneyPattern, text).filter { token in
+            guard let range = Range(token.range, in: text) else { return false }
+            let tail = text[range.upperBound...].trimmingCharacters(in: .whitespaces)
+            return !tail.hasPrefix("%") && first(#"^(?:KG|LBS|LB|X)\b|^@"#, tail) == nil
+        }
+    }
+    static func firstPrintedMoney(_ text: String) -> Int64? {
+        guard let token = monetaryTokens(text).first, let range = Range(token.range, in: text) else { return nil }
+        return printedMoney(String(text[range]))
+    }
+    static func printedSKU(_ description: String) -> String? {
+        // Keep the full printed description. Only explicit SKU labels or long leading
+        // product codes are metadata; short leading numbers may instead be quantities.
+        if let marked = first(#"^SKU\s*[:#]?\s*\d{1,14}\b"#, description) {
+            return first(#"\d{1,14}"#, marked)
+        }
+        guard let prefix = first(#"^(?:[AEHN]\s+)?\d{5,14}\s+(?=\p{L})"#, description) else { return nil }
+        return first(#"\d{5,14}"#, prefix)
+    }
+    static func printedUnit(_ text: String) -> String? {
+        guard let quantity = first(quantityPattern, text) else { return nil }
+        return first(#"\b(?:KG|LBS|LB)\b"#, quantity)?.uppercased()
+    }
+    static func printedTaxRate(_ text: String) -> ReceiptDecimal? {
+        let tokens = matches(#"(?<![\d.,])\d{1,3}(?:[.,]\d{1,6})?\s*%"#, text)
+        guard tokens.count == 1, let range = Range(tokens[0].range, in: text) else { return nil }
+        let numeric = text[range].replacingOccurrences(of: "%", with: "").trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: ",", with: ".")
+        let pieces = numeric.split(separator: ".", omittingEmptySubsequences: false)
+        guard pieces.count <= 2, let coefficient = Int64(pieces.joined()), coefficient >= 0 else { return nil }
+        let scale = pieces.count == 2 ? pieces[1].count : 0
+        guard scale <= 6 else { return nil }
+        return try? ReceiptDecimal(coefficient: coefficient, scale: UInt8(scale + 2))
+    }
     static let quantityPattern = #"\b\d+(?:\.\d+)?\s*(?:(?:KG|LB|LBS|X)\b|@)"#
     static let summaryPattern = #"^(?:(?:GRAND\s+)?TOTAL|SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#
     static let metadataPattern = #"^(?:CASH|VISA|MASTERCARD|DEBIT|CREDIT|CHANGE|TENDER|BALANCE|SAVINGS|YOU SAVED|MEMBER|REGISTER|AUTH|TRANSACTION|STORE|TERMINAL|TEL|PHONE|DATE|TIME|ITEMS SOLD|TOTAL ITEMS|TOTAL SAVINGS|TOTAL DISCOUNT)\b"#
@@ -199,7 +250,7 @@ enum ReceiptParser {
             let t = fieldText(r.text)
             return matches(moneyPattern, r.text).isEmpty && first(#"\p{L}"#, t) != nil
                 && first(quantityPattern, t) == nil && first(metadataPattern, t) == nil
-                // A detached numeric-leading row can be a SKU, quantity or promotion code. Leave it uncertain.
+                // Detached numeric-leading text can be a product code or quantity; retain uncertainty.
                 && first(#"^\d"#, t) == nil
                 && merchant(r.text) == nil && dateCandidates(r.text).isEmpty
                 && first(#"\bCAD\b|CA\$|^\d+\s+(?:ST|AVE|ROAD|RD)\b"#, t) == nil
@@ -244,8 +295,8 @@ enum ReceiptParser {
         guard rateRow.height > 0, purchase.height > 0, rateRow.center > purchase.center,
               rateRow.center - purchase.center <= 2 * min(rateRow.height, purchase.height),
               let q = first(quantityPattern, rateRow.text).flatMap({ first(#"\d+(?:\.\d+)?"#, $0) }).flatMap(ExactInput.decimal),
-              matches(moneyPattern, rateRow.text).count == 1,
-              let rate = first(moneyPattern, rateRow.text).flatMap({ ExactInput.money($0) }),
+              monetaryTokens(rateRow.text).count == 1,
+              let rate = firstPrintedMoney(rateRow.text),
               extensionMatches(q, rate: rate, amount: amount) else { return nil }
         return q
     }
@@ -258,6 +309,7 @@ enum ReceiptParser {
         var totals: [(Int64, [UUID])] = [], subtotals: [(Int64, [UUID])] = []
         var totalAmbiguous = false, subtotalAmbiguous = false
         var dates: [(ReceiptDate, [UUID])] = []
+        var currencies: [(ReceiptCurrency, [UUID])] = []
         func issue(_ code: String, _ ids: [UUID]) { result.issues.append(.init(code: code, sourceLineIDs: ids, detail: nil)) }
         if observations.contains(where: { $0.boundingBox == nil }) {
             issue("geometry_incomplete", observations.filter { $0.boundingBox == nil }.map(\.id))
@@ -268,13 +320,37 @@ enum ReceiptParser {
             let previousQuantity = pendingQuantity; pendingQuantity = nil
             var quantityLinked = false
             defer { if let previousQuantity, !quantityLinked { issue("quantity_association_uncertain", previousQuantity.ids) } }
-            if result.currency == nil, first(#"\bCAD\b|CA\$"#, upper) != nil { result.currency = .cad }
+            // Codes in an unpriced header/footer or explicit summary/currency row are
+            // evidence. A priced product named CAD/USD must not select the currency.
+            let currencyContext = matches(moneyPattern, text).isEmpty
+                || first(summaryPattern, upper) != nil || first(#"^CURRENCY\b"#, upper) != nil
+                || first(#"^(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\s*\$?\s*[^\p{L}]*$"#, upper) != nil
+            // A currency/amount observation can share a grouped row with a payment
+            // label. Inspect that self-contained observation without borrowing meaning
+            // from the neighbouring text or treating a product name as currency.
+            for part in row.parts {
+                let value = fieldText(part.text)
+                if first(#"^(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\s*\$?\s*[^\p{L}]*$"#, value) != nil,
+                   let code = first(#"^[A-Z]{3}"#, value), let currency = ExactInput.currency(code) {
+                    currencies.append((currency, [part.id]))
+                }
+            }
+            if currencyContext {
+                for code in ExactInput.currencies.keys.sorted() {
+                    if first("\\b" + code + "\\b", upper) != nil, let currency = ExactInput.currency(code) {
+                        currencies.append((currency, row.ids))
+                    }
+                }
+                for (symbol, code) in [(#"CA\$"#, "CAD"), (#"US\$"#, "USD"), (#"HK\$"#, "HKD")] {
+                    if first(symbol, upper) != nil, let currency = ExactInput.currency(code) { currencies.append((currency, row.ids)) }
+                }
+            }
             let candidates = dateCandidates(text, noFrills: result.merchant.map { first("NO\\s*FRILLS", $0) != nil } ?? false)
             for (date, orderCheck) in candidates {
                 dates.append((date, row.ids)); if orderCheck { issue("date_order_check", row.ids) }
             }
             if (merchant(text) != nil && matches(moneyPattern, text).isEmpty) || !candidates.isEmpty { continue }
-            let tokens = matches(moneyPattern, text)
+            let tokens = monetaryTokens(text)
             let summary = first(summaryPattern, upper) != nil && first(#"^TOTAL\s+(?:SAVINGS|ITEMS|DISCOUNT)"#, upper) == nil
             let tax = first(#"^(?:HST|GST|PST|QST|TPS|TVQ|TAX|TAXES)\b"#, upper) != nil
             let adjustment = first(#"^(?:DISCOUNT|COUPON|DEPOSIT|ADJUSTMENT)\b"#, upper) != nil
@@ -282,7 +358,7 @@ enum ReceiptParser {
             if first(metadataPattern, upper) != nil { continue }
             if finished && !summary && !tax && !adjustment { continue }
             guard let last = tokens.last, let range = Range(last.range, in: text),
-                  let amount = ExactInput.money(String(text[range])) else {
+                  let amount = printedMoney(String(text[range])) else {
                 if first(#"\d+[.,]\d+"#, text) != nil { issue("amount_unparsed_check_source", row.ids) }
                 if first(#"^\d+(?:\.\d+)?\s*(?:(?:KG|LB|LBS|X)\b|@)"#, upper) != nil && !finished { pendingQuantity = row }
                 else if !finished && !summary && first(#"\p{L}"#, text) != nil { issue("unpriced_source_row", row.ids) }
@@ -290,6 +366,16 @@ enum ReceiptParser {
             }
             let prefix = String(text[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
             if summary {
+                // The new decimal-comma path does not promote signed summaries until
+                // their refund/return context is established. Preserve established dot
+                // decimal behavior and never remove a printed or OCR trailing sign.
+                let decimalComma = String(text[range]).contains(",") && !String(text[range]).contains(".")
+                guard !decimalComma || amount >= 0 else {
+                    issue("negative_summary_check_source", row.ids)
+                    if first(#"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#, upper) != nil { subtotalAmbiguous = true }
+                    else { totalAmbiguous = true }
+                    continue
+                }
                 guard tokens.count == 1 else {
                     issue("summary_amount_ambiguous", row.ids)
                     if first(#"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#, upper) != nil { subtotalAmbiguous = true }
@@ -302,38 +388,57 @@ enum ReceiptParser {
             }
             // A standalone rate never supplies a purchase or a calculated extension.
             if first(#"^\d+(?:\.\d+)?\s*(?:(?:KG|LB|LBS|X)\b|@)"#, upper) != nil { pendingQuantity = row; continue }
-            guard !prefix.isEmpty, first(#"\p{L}"#, prefix) != nil else { issue("unpaired_amount", row.ids); continue }
+            // Numeric-only promotion codes stay unresolved until their printed meaning is
+            // verified; a matching product code alone does not establish an adjustment.
+            guard !prefix.isEmpty, first(#"\p{L}"#, prefix) != nil else {
+                issue("unpaired_amount", row.ids); continue
+            }
             let inlineQuantity = first(quantityPattern, prefix)
             let inlineRate = inlineQuantity.map { first(#"(?:\bX\b|@)"#, $0) != nil } ?? false
+            var unitPrice: Int64?
             if tokens.count > 1 {
                 guard tokens.count == 2, let qText = inlineQuantity,
                       let q = first(#"\d+(?:\.\d+)?"#, qText).flatMap(ExactInput.decimal),
                       let qRange = prefix.range(of: qText), let rateRange = Range(tokens[0].range, in: text),
                       qRange.upperBound <= rateRange.lowerBound,
-                      let rate = ExactInput.money(String(text[rateRange])), extensionMatches(q, rate: rate, amount: amount) else {
+                      let rate = printedMoney(String(text[rateRange])), extensionMatches(q, rate: rate, amount: amount) else {
                     issue("item_amount_ambiguous", row.ids); continue
                 }
+                unitPrice = rate
             } else if inlineRate { issue("extension_missing", row.ids); continue }
             let suffix = String(text[range.upperBound...]).trimmingCharacters(in: .whitespaces)
             if !suffix.isEmpty && first(#"^[AEHN]$"#, suffix) == nil { issue("item_amount_ambiguous", row.ids); continue }
             var quantity = inlineQuantity.flatMap { first(#"\d+(?:\.\d+)?"#, $0) }.flatMap(ExactInput.decimal)
+            var unit = printedUnit(prefix)
             var qIDs: [UUID] = []
             if let previousQuantity, inlineQuantity == nil, !tax, !adjustment, amount >= 0 {
                 if let q = linkedQuantity(previousQuantity, purchase: row, amount: amount) {
                     quantity = q; qIDs = previousQuantity.ids; quantityLinked = true
+                    unitPrice = firstPrintedMoney(previousQuantity.text)
+                    unit = printedUnit(previousQuantity.text)
                     issue("quantity_association_check", previousQuantity.ids + row.ids)
                 }
             }
             var kind = tax ? "tax" : (amount < 0 ? "discount" : "purchase")
             if adjustment { kind = upper.hasPrefix("DEPOSIT") ? "deposit" : (amount < 0 ? "discount" : "other") }
             if adjustment && amount >= 0 && !upper.hasPrefix("DEPOSIT") { issue("adjustment_sign_check", row.ids) }
-            result.lines.append(.init(kind: kind, description: prefix, amount: amount, quantity: quantity, sourceLineIDs: qIDs + row.ids))
+            var line = ParsedReceipt.Line(kind: kind, description: prefix, amount: amount, quantity: quantity, sourceLineIDs: qIDs + row.ids)
+            if kind == "purchase" {
+                line.sku = printedSKU(prefix); line.unitPrice = unitPrice; line.unit = unit
+                line.taxMarker = suffix.isEmpty ? nil : suffix.uppercased()
+            }
+            if kind == "tax" { line.rate = printedTaxRate(prefix) }
+            result.lines.append(line)
         }
         if let pendingQuantity { issue("quantity_association_uncertain", pendingQuantity.ids) }
         func resolved(_ values: [(Int64, [UUID])], code: String) -> Int64? {
             guard let value = values.first?.0 else { return nil }
             guard values.allSatisfy({ $0.0 == value }) else { issue(code, Array(Set(values.flatMap { $0.1 })).sorted { $0.uuidString < $1.uuidString }); return nil }
             return value
+        }
+        if let currency = currencies.first?.0 {
+            if currencies.allSatisfy({ $0.0 == currency }) { result.currency = currency }
+            else { issue("currency_conflicting", Array(Set(currencies.flatMap { $0.1 })).sorted { $0.uuidString < $1.uuidString }) }
         }
         result.subtotal = subtotalAmbiguous ? nil : resolved(subtotals, code: "subtotal_conflicting")
         result.total = totalAmbiguous ? nil : resolved(totals, code: "total_conflicting")
