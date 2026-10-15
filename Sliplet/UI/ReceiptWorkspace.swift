@@ -62,6 +62,8 @@ final class ReceiptWorkspace {
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var worker: Task<ReceiptExtraction, Error>?
     @ObservationIgnored private var recognition: ReceiptRecognitionJob?
+    /// Internal evaluation opt-in; no product setting until the no-regression/latency gate passes.
+    var adaptiveReading = false
     @ObservationIgnored private var permit = ReceiptOperationPermit()
     @ObservationIgnored private var shutdown: Task<Void, Never>?
     #if DEBUG
@@ -158,9 +160,10 @@ final class ReceiptWorkspace {
         flow = .reading; errorMessage = nil
         let job = ReceiptRecognitionJob(); recognition = job
         let session = sessionID
+        let adaptive = adaptiveReading
         let work = Task.detached(priority: .userInitiated) {
             try Task.checkCancellation()
-            let result = try job.run(image)
+            let result = try job.run(image, adaptive: adaptive)
             try Task.checkCancellation()
             return try ReceiptParser.extraction(result)
         }

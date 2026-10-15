@@ -19,6 +19,7 @@ import Vision
         let nonce: String
         let slot: Int
         let pass: Int
+        let readingEvidence: ReceiptReadingEvidence?
         let observations: [ReceiptOCRLine]
         let groupedRowIDs: [[UUID]]
         let interpretedRowIDs: [[UUID]]
@@ -82,6 +83,7 @@ import Vision
                     let directory = root.appendingPathComponent("store-\(slot.slot)-\(pass)")
                     guard !FileManager.default.fileExists(atPath: directory.path) else { throw LabFailure.invalidInput }
                     let model = ReceiptWorkspace(directory: directory, keyProvider: Key())
+                    model.adaptiveReading = ProcessInfo.processInfo.environment["SLIPLET_P403_ADAPTIVE"] == "YES"
                     defer { model.suspend() }
                     model.activate(protectedDataAvailable: true)
                     _ = try await wait { model.availability == .ready || { if case .failed = model.availability { return true }; return false }() }
@@ -117,11 +119,11 @@ import Vision
                         loaded = reloaded.current.fields
                         roundtrip = loaded == fields && model.image?.bytes == sourceBytes
                             && reloaded.original.rawParserOutput == extraction.rawParserOutput
-                            && reloaded.original.rawOCR == extraction.rawOCR && reloaded.current.review == .draft
+                            && reloaded.original.rawOCR == extraction.rawOCR && reloaded.original.readingEvidence == extraction.readingEvidence && reloaded.current.review == .draft
                         reviewEqual = model.readerInput == draft
                     }
                     let response = Response(status: "ok", nonce: request.nonce, slot: slot.slot, pass: pass,
-                        observations: extraction.rawOCR, groupedRowIDs: grouped.map(\.ids), interpretedRowIDs: interpreted.map(\.ids),
+                        readingEvidence: extraction.readingEvidence, observations: extraction.rawOCR, groupedRowIDs: grouped.map(\.ids), interpretedRowIDs: interpreted.map(\.ids),
                         groupedRows: grouped.map { Row(text: $0.text, ids: $0.ids) }, interpretedRows: interpreted.map { Row(text: $0.text, ids: $0.ids) },
                         parsed: parsed, fields: extraction.fields, draftFields: fields, draft: draft,
                         replayEqual: try semantic(parsed) == semantic(replay), originalBytesEqual: image.bytes == sourceBytes,

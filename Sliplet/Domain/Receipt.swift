@@ -175,6 +175,40 @@ struct ReceiptExtractionIssue: Codable, Equatable, Sendable {
     let detail: String?
 }
 
+/// Full-image reads use the original oriented coordinate space. No crop transform or
+/// cross-pass row merging is permitted; the unselected read remains evidence only.
+struct ReceiptReadingPass: Codable, Equatable, Sendable {
+    let lines: [ReceiptOCRLine]
+    let revision: Int
+    let usesLanguageCorrection: Bool
+    func validate() throws {
+        guard revision > 0, lines.count <= 2_000, lines.reduce(0, { $0 + $1.text.utf8.count }) <= 512 * 1_024,
+              Set(lines.map(\.id)).count == lines.count,
+              lines.allSatisfy({ $0.text.utf8.count <= 8_192 && ($0.engineConfidence.map { $0.isFinite && (0...1).contains($0) } ?? true) }) else {
+            throw ReceiptValidationError.invalidEvidence
+        }
+    }
+}
+struct ReceiptReadingEvidence: Codable, Equatable, Sendable {
+    enum Outcome: String, Codable, Sendable {
+        case notNeeded, budgetExceeded, failed, timedOut, baselineRetained, correctionSelected
+    }
+    let baseline: ReceiptReadingPass
+    let corrected: ReceiptReadingPass?
+    let outcome: Outcome
+    var selected: ReceiptReadingPass { outcome == .correctionSelected ? corrected ?? baseline : baseline }
+    func validate(selectedLines: [ReceiptOCRLine]) throws {
+        try baseline.validate(); try corrected?.validate()
+        let hasCandidate = outcome == .baselineRetained || outcome == .correctionSelected
+        guard !baseline.usesLanguageCorrection,
+              corrected.map({ $0.usesLanguageCorrection }) ?? true,
+              hasCandidate == (corrected != nil), selected.lines == selectedLines,
+              corrected.map({ Set($0.lines.map(\.id)).isDisjoint(with: Set(baseline.lines.map(\.id))) }) ?? true else {
+            throw ReceiptValidationError.invalidEvidence
+        }
+    }
+}
+
 struct ReceiptExtraction: Codable, Equatable, Sendable {
     let capturedAt: Date
     let recognizer: String
@@ -186,9 +220,12 @@ struct ReceiptExtraction: Codable, Equatable, Sendable {
     let rawParserOutput: Data
     let fields: ReceiptFields
     let issues: [ReceiptExtractionIssue]
+    /// Optional for records created before adaptive reading. Always encrypted with the record.
+    var readingEvidence: ReceiptReadingEvidence? = nil
 
     func validate() throws {
         try fields.validate()
+        try readingEvidence?.validate(selectedLines: rawOCR)
         guard capturedAt.timeIntervalSince1970.isFinite,
               Set(rawOCR.map(\.id)).count == rawOCR.count,
               rawOCR.allSatisfy({ $0.engineConfidence.map { $0.isFinite && (0...1).contains($0) } ?? true }) else {

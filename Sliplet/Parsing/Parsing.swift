@@ -454,6 +454,6 @@ enum ReceiptParser {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys]
         return ReceiptExtraction(capturedAt: Date(), recognizer: "Apple Vision accurate", recognizerVersion: String(result.revision),
             parser: "Deterministic retailer Swift parser", parserVersion: version, rawOCR: result.lines,
-            rawParserOutput: try encoder.encode(parsed), fields: parsed.fields(), issues: parsed.issues)
+            rawParserOutput: try encoder.encode(parsed), fields: parsed.fields(), issues: parsed.issues, readingEvidence: result.readingEvidence)
     }
 }

@@ -1,0 +1,27 @@
+{
+  "task": "P4-03",
+  "date": "2026-10-15",
+  "status": "engine verified; automatic promotion rejected",
+  "automatic_reading_enabled": false,
+  "native_tests": {
+    "passed": 117,
+    "skipped_hardware_only": 1,
+    "failed": 0,
+    "new_adaptive_tests": 21
+  },
+  "private_preservation": {
+    "files_unchanged": 4187,
+    "signing_preserved": true
+  },
+  "phone_tested": false,
+  "held_out_purchases": 0,
+  "sources": {
+    "Sliplet/Domain/Receipt.swift": "d77f0c4155c9627c132eba8ca8e0e6d0bb3d160f6c51cc22c5edf0c710267ba3",
+    "Sliplet/Parsing/Parsing.swift": "7bba9ea2524d7aade875c8b7f04879c5dfa56d4e170d30fedb0da941c6edf312",
+    "Sliplet/Recognition/VisionTextRecognizer.swift": "8ae222b52452cfe4c1bff570728fcac907df0f5a32471ce5eca118b186375297",
+    "Sliplet/UI/ReceiptWorkspace.swift": "9e69578085eea37cb7a2bea545125c7dfca897f42d6413a979c701b113987873",
+    "SlipletTests/ReceiptAdaptiveReadingTests.swift": "47b10c2498e95ae82e1c165c752650bd2381e9f1718b7cdb9d88ff901124898d",
+    "SlipletTests/ReceiptRecognitionLabTests.swift": "f9620929a6f517fb777502c6ca72bebaf42cbc3389535d269c6f29791435dff3",
+    "evaluation/receipt-adaptive/run.py": "1fa71e94062d8fdf074bfe9d36fd68b4fcf93f93b74550f3dc75e40a1dcece7d"
+  }
+}
