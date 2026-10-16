@@ -93,7 +93,7 @@ import Vision
         let add = app.buttons["splitAddPerson"]; reveal(add, app: app); add.tap()
         if app.buttons["Dismiss keyboard"].exists { app.buttons["Dismiss keyboard"].tap() }
         let item = app.buttons["splitItem-0"]; reveal(item, app: app); item.tap()
-        let owner = app.buttons["splitOwner-Fictional Alex"]; reveal(owner, app: app); owner.tap(); app.buttons["splitEditorBack"].tap()
+        let owner = app.buttons["splitOwner-Fictional Alex"]; reveal(owner, app: app); owner.tap(); app.navigationBars["Item owners"].buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["splitFinalize"].isEnabled); app.buttons["splitFinalize"].tap()
         let copy = app.buttons["splitCopy"]; reveal(copy, app: app); copy.tap()
         XCTAssertTrue(app.staticTexts["splitCopied"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["splitExactTotal"].label.contains("12.34"))

@@ -1,0 +1,44 @@
+{
+  "actual_imports": 10,
+  "candidate_commit": "97827eece74161e33f9f24ed66b0213dea4e802c",
+  "candidate_literal_and_geometry_membership_verified": true,
+  "date": "2026-10-16",
+  "development_purchases": 5,
+  "device": "iPhone 15 Pro Simulator",
+  "fictional_ui_methods_passed": 5,
+  "full_semantic_baseline_matches": {
+    "draft": 5,
+    "draftFields": 5,
+    "fields": 5,
+    "groupedRowIDs": 5,
+    "interpretedRowIDs": 5,
+    "observations": 5,
+    "parsed": 5
+  },
+  "held_out_purchases": 0,
+  "human_assisted_completeness_measured": false,
+  "human_correction_time_measured": false,
+  "initial_failures": [
+    "Dependent private probe initially ran before baseline captures; separate dependent run passed.",
+    "Search workflow test used removed custom Back identifier; updated to existing native Back; rerun passed."
+  ],
+  "native_private_methods_passed": 3,
+  "peak_memory_measured": false,
+  "phone_tested": false,
+  "private_preservation": {
+    "files_unchanged": 4211,
+    "signing_preserved": true
+  },
+  "production_changes": false,
+  "runtime": "iOS 27.0",
+  "scorer_tests_passed": 18,
+  "sources": {
+    "SlipletTests/ReceiptAcceptanceLabTests.swift": "d55ff5dd079bd9eb5b236e66a72c14915f7fd953bca81858f38eb49973b5e377",
+    "SlipletUITests/ReceiptSearchUITests.swift": "e14d8c1f08f3b33125025560e0fa03e133d1a7c98f042ea1406972b7728d6950",
+    "evaluation/receipt-acceptance/run.py": "a10a2ada93e9b09d5720300fcd56785f74fa771429050e79aea6b39d6f810d8d"
+  },
+  "status": "development evaluation complete; accuracy acceptance rejected",
+  "suggested_region_attempts": 61,
+  "task": "P4-06",
+  "xcode": "27.1"
+}
