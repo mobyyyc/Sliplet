@@ -104,6 +104,7 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
 /// New or changed typed values must be valid (or deliberately blank); Save draft remains stricter.
 enum ReceiptFocusedCorrection {
     static func canApply(_ input: ReceiptReviewDraft, replacing baseline: ReceiptReviewDraft) -> Bool {
+        guard (try? input.validateAssistedReadings()) != nil else { return false }
         if input.date != baseline.date && !input.date.isEmpty && ExactInput.date(input.date) == nil { return false }
         if input.currency != baseline.currency && !input.currency.isEmpty && ExactInput.currency(input.currency) == nil { return false }
         let scale = ExactInput.currency(input.currency)?.minorUnitScale ?? 2

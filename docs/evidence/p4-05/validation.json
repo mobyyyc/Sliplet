@@ -1,0 +1,45 @@
+{
+  "task": "P4-05",
+  "date": "2026-10-16",
+  "status": "targeted assistance implemented and verified",
+  "automatic_second_read_enabled": false,
+  "native_tests": {
+    "executed": 94,
+    "passed": 93,
+    "skipped_hardware_only": 1,
+    "failed": 0,
+    "xcode": "27.1",
+    "runtime": "iOS 27.0"
+  },
+  "ui_tests": {
+    "passed": 2,
+    "failed": 0,
+    "xcode": "27",
+    "runtime": "iOS 27.0",
+    "fixtures": "fictional only",
+    "screenshots_inspected": [
+      "light candidate selection",
+      "dark drawn region"
+    ]
+  },
+  "private_preservation": {
+    "files_unchanged": 4211,
+    "signing_preserved": true
+  },
+  "real_assisted_accuracy_measured": false,
+  "human_correction_time_measured": false,
+  "phone_tested": false,
+  "held_out_purchases": 0,
+  "sources": {
+    "Sliplet/Domain/Receipt.swift": "24cbf87aa73fe2f14c71825f7d4cc569a57f6388c25f387e0bb62cc85acce2c7",
+    "Sliplet/Domain/ReceiptReview.swift": "dbf0c90e47da244026f3a20762fda00aa6607c7e43944e31bb53a0fa998580b4",
+    "Sliplet/Domain/ReceiptReviewGuidance.swift": "fc5c12cd667b37b3237efade5ee618b846944ecec566122b01e03819f9385bbf",
+    "Sliplet/Recognition/ReceiptRegionReader.swift": "582d4f96b809c838ca9e7f41bd45aee1e76dd3b66d6412eec60c1085147d7c4a",
+    "Sliplet/UI/ReceiptRereadView.swift": "b8212d6f507fe265ae8ef0608d0bf46c16be52579f2081549ca568838086d6c9",
+    "Sliplet/UI/ReceiptFocusedCorrectionView.swift": "92df9269f98621819660c751f359dcb1fec813075581c277ef307a3bfed2f70c",
+    "Sliplet/UI/ReceiptSourceView.swift": "452a467881e4f7cfdc976cd70596921a6248f0d833d1da30b53de01303a73448",
+    "SlipletTests/ReceiptAssistedReadingTests.swift": "2b9ec1144e0a81ce7b45cae6278a780e1389723fbc60f6d6da62a97c6626b10e",
+    "SlipletTests/ReceiptRegionReaderTests.swift": "0e6f855f405289220e43802f18a7e5afbbdd8cc9fbd3c1ba3d142b1010351c23",
+    "SlipletUITests/ReceiptRereadUITests.swift": "e9dc8a36f82603cdd91985f91fced20760fd2fa84af243e9b8277bdb28f7bab6"
+  }
+}

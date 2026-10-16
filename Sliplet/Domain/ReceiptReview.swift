@@ -51,6 +51,8 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     var sourceChecked = false
     /// Optional for backward-compatible decoding of installed drafts. Checks are scoped to current values.
     var guidanceChecks: [String: String]? = nil
+    /// Optional encrypted history of explicit region-assisted edits; older drafts decode nil.
+    var assistedReadings: [ReceiptAssistedReading]? = nil
 
     init() {}
     init(parsed: ParsedReceipt, useDefaultCurrency: Bool = false) {
@@ -145,6 +147,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     var canFinalize: Bool { reconciliation.issues.isEmpty && sourceOpened && sourceChecked }
     /// Drafts allow missing fields, never malformed typed values that would be silently discarded.
     var canSaveDraft: Bool {
+        guard (try? validateAssistedReadings()) != nil else { return false }
         let scale = ExactInput.currency(currency)?.minorUnitScale ?? 2
         return (date.isEmpty || ExactInput.date(date) != nil)
             && (currency.isEmpty || ExactInput.currency(currency) != nil)
@@ -192,5 +195,191 @@ final class ReceiptOperationPermit: @unchecked Sendable {
     func check() throws {
         lock.lock(); let allowed = valid; lock.unlock()
         if !allowed || Task.isCancelled { throw CancellationError() }
+    }
+}
+
+/// Explicit human-selected recovery targets. No automatic field or row assignment.
+enum ReceiptAssistedField: String, Codable, CaseIterable, Sendable {
+    case merchant, date, subtotal, total, description, amount, quantity
+    var title: String {
+        switch self {
+        case .merchant: "Merchant"
+        case .date: "Purchase date"
+        case .subtotal: "Subtotal"
+        case .total: "Total"
+        case .description: "Description"
+        case .amount: "Line amount"
+        case .quantity: "Quantity"
+        }
+    }
+    var needsLine: Bool { self == .description || self == .amount || self == .quantity }
+    var isMoney: Bool { self == .subtotal || self == .total || self == .amount }
+}
+
+struct ReceiptAssistedChoice: Identifiable, Codable, Equatable, Sendable {
+    let id: String
+    let observationID: UUID
+    /// UTF-16 offsets into the retained observation, never offsets into normalized text.
+    let rangeStart: Int
+    let rangeLength: Int
+    let literal: String
+    let value: String
+}
+
+/// Historical explicit edit event. Later manual changes do not rewrite this evidence.
+/// Region and observation boxes are in the original upright image's normalized space.
+struct ReceiptAssistedReading: Codable, Equatable, Sendable, Identifiable {
+    let id: UUID
+    let date: Date
+    let assetSHA256: Data
+    let region: ReceiptOCRBox
+    let revision: Int
+    let observations: [ReceiptOCRLine]
+    let choice: ReceiptAssistedChoice
+    let field: ReceiptAssistedField
+    let lineID: UUID?
+    let previousValue: String
+    let currency: ReceiptCurrency?
+    var value: String { choice.value }
+
+    static let maximumEvents = 32
+    static let maximumObservations = 128
+    static let maximumTextBytes = 256 * 1_024
+
+    static func choices(lines: [ReceiptOCRLine], field: ReceiptAssistedField,
+                        currency: ReceiptCurrency?) -> [ReceiptAssistedChoice] {
+        guard lines.count <= maximumObservations else { return [] }
+        return lines.flatMap { observation -> [ReceiptAssistedChoice] in
+            let text = observation.text
+            guard text.utf8.count <= 8_192 else { return [] }
+            let ranges: [NSRange]
+            switch field {
+            case .merchant, .description:
+                let literal = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !literal.isEmpty, let range = text.range(of: literal) else { return [] }
+                ranges = [NSRange(range, in: text)]
+            case .date:
+                // Year-first dates have no month/day convention ambiguity.
+                ranges = ReceiptParser.matches(#"(?<![\p{L}\d/.-])\d{4}[-/]\d{2}[-/]\d{2}(?![\p{L}\d/.-])"#, text).map(\.range)
+            case .subtotal, .total, .amount, .quantity:
+                // Whole whitespace tokens only: never strip a sign, unit, parentheses,
+                // percentage, or ambiguous punctuation to manufacture a valid number.
+                ranges = ReceiptParser.matches(#"\S+"#, text).map(\.range)
+            }
+            return ranges.compactMap { nsRange in
+                guard let range = Range(nsRange, in: text) else { return nil }
+                let literal = String(text[range])
+                let value: String
+                switch field {
+                case .merchant, .description: value = literal
+                case .date:
+                    guard !(literal.contains("/") && literal.contains("-")) else { return nil }
+                    let normalized = literal.replacingOccurrences(of: "/", with: "-")
+                    guard let parsed = ExactInput.date(normalized) else { return nil }
+                    value = ExactInput.dateText(parsed)
+                case .subtotal, .total, .amount:
+                    let prefix = String(text[..<range.lowerBound])
+                    let suffix = String(text[range.upperBound...])
+                    guard ReceiptParser.first(#"(?:[-+]|\()\s*\$?\s*$"#, prefix) == nil,
+                          ReceiptParser.first(#"^\s*(?:[-)%]|/\s*(?:KG|LBS?))"#, suffix) == nil else { return nil }
+                    guard let currency, currency == ExactInput.currency(currency.code),
+                          let amount = ExactInput.money(literal, scale: currency.minorUnitScale) else { return nil }
+                    value = ExactInput.format(amount, scale: currency.minorUnitScale)
+                case .quantity:
+                    let prefix = String(text[..<range.lowerBound])
+                    let suffix = String(text[range.upperBound...])
+                    guard ReceiptParser.first(#"(?:[-+]|\()\s*$"#, prefix) == nil,
+                          ReceiptParser.first(#"^\s*[-)%/]"#, suffix) == nil,
+                          let quantity = ExactInput.decimal(literal) else { return nil }
+                    value = ExactInput.quantity(quantity)
+                }
+                return ReceiptAssistedChoice(id: "\(observation.id.uuidString):\(nsRange.location):\(nsRange.length):\(field.rawValue)",
+                    observationID: observation.id, rangeStart: nsRange.location, rangeLength: nsRange.length,
+                    literal: literal, value: value)
+            }
+        }
+    }
+
+    func validate(assetSHA256 expectedHash: Data?) throws {
+        guard assetSHA256.count == 32, expectedHash.map({ $0 == assetSHA256 }) ?? true,
+              date.timeIntervalSince1970.isFinite, revision > 0,
+              field.needsLine == (lineID != nil), !observations.isEmpty,
+              observations.count <= Self.maximumObservations,
+              Set(observations.map(\.id)).count == observations.count,
+              previousValue.utf8.count <= 8_192,
+              currency.map({ $0 == ExactInput.currency($0.code) }) ?? true else {
+            throw ReceiptValidationError.invalidEvidence
+        }
+        try ReceiptReadingPass(lines: observations, revision: revision, usesLanguageCorrection: false).validate()
+        for observation in observations {
+            guard let box = observation.boundingBox,
+                  box.x >= region.x - 0.000_001, box.y >= region.y - 0.000_001,
+                  box.x + box.width <= region.x + region.width + 0.000_001,
+                  box.y + box.height <= region.y + region.height + 0.000_001 else {
+                throw ReceiptValidationError.invalidEvidence
+            }
+        }
+        guard Self.choices(lines: observations, field: field, currency: currency).contains(choice) else {
+            throw ReceiptValidationError.invalidEvidence
+        }
+    }
+}
+
+extension ReceiptReviewDraft {
+    func assistedValue(field: ReceiptAssistedField, lineID: UUID? = nil) -> String? {
+        guard field.needsLine == (lineID != nil) else { return nil }
+        switch field {
+        case .merchant: return merchant
+        case .date: return date
+        case .subtotal: return subtotal
+        case .total: return total
+        case .description: return lines.first { $0.id == lineID }?.name
+        case .amount: return lines.first { $0.id == lineID }?.amount
+        case .quantity: return lines.first { $0.id == lineID }?.quantity
+        }
+    }
+
+    func validateAssistedReadings(assetSHA256: Data? = nil) throws {
+        guard let history = assistedReadings else { return }
+        guard history.count <= ReceiptAssistedReading.maximumEvents,
+              Set(history.map(\.id)).count == history.count else { throw ReceiptValidationError.invalidEvidence }
+        var bytes = 0
+        var hash = assetSHA256
+        for event in history {
+            try event.validate(assetSHA256: hash)
+            hash = event.assetSHA256
+            bytes += event.previousValue.utf8.count + event.choice.literal.utf8.count + event.choice.value.utf8.count
+            bytes += event.observations.reduce(0) { $0 + $1.text.utf8.count }
+            guard bytes <= ReceiptAssistedReading.maximumTextBytes else { throw ReceiptValidationError.invalidEvidence }
+        }
+    }
+
+    mutating func useAssistedReading(_ reading: ReceiptAssistedReading) throws {
+        guard assistedValue(field: reading.field, lineID: reading.lineID) == reading.previousValue,
+              !reading.field.isMoney || ExactInput.currency(currency) == reading.currency else {
+            throw ReceiptValidationError.invalidEvidence
+        }
+        // Work transactionally: validation/cap failures never partially change a field.
+        var next = self
+        next.assistedReadings = (assistedReadings ?? []) + [reading]
+        try next.validateAssistedReadings()
+        switch reading.field {
+        case .merchant: next.merchant = reading.value
+        case .date: next.date = reading.value
+        case .subtotal: next.subtotal = reading.value; next.subtotalNotPrinted = false
+        case .total: next.total = reading.value
+        case .description, .amount, .quantity:
+            guard let index = next.lines.firstIndex(where: { $0.id == reading.lineID }) else {
+                throw ReceiptValidationError.invalidEvidence
+            }
+            switch reading.field {
+            case .description: next.lines[index].name = reading.value
+            case .amount: next.lines[index].amount = reading.value
+            case .quantity: next.lines[index].quantity = reading.value
+            default: break
+            }
+        }
+        next.sourceChecked = false
+        self = next
     }
 }

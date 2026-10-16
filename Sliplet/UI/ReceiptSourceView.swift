@@ -53,6 +53,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
     let reduceMotion: Bool
     let zoomTarget: UUID
     let rasterID: String
+    var selection: Binding<ReceiptOCRBox>? = nil
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> UIScrollView {
         let view = ReceiptZoomScrollView()
@@ -62,6 +63,11 @@ struct ZoomReceiptImage: UIViewRepresentable {
         view.maximumZoomScale = 8; view.minimumZoomScale = 0.01
         let coordinator = context.coordinator
         coordinator.scrollView = view
+        coordinator.selection = selection
+        view.panGestureRecognizer.minimumNumberOfTouches = selection == nil ? 1 : 2
+        let draw = UIPanGestureRecognizer(target: coordinator, action: #selector(Coordinator.selectArea(_:)))
+        draw.maximumNumberOfTouches = 1; draw.isEnabled = selection != nil
+        view.addGestureRecognizer(draw); coordinator.selectionGesture = draw
         let imageView = coordinator.imageView
         imageView.contentMode = .scaleAspectFit
         imageView.accessibilityLabel = "Original receipt image"
@@ -96,6 +102,9 @@ struct ZoomReceiptImage: UIViewRepresentable {
     }
     func updateUIView(_ view: UIScrollView, context: Context) {
         context.coordinator.reduceMotion = reduceMotion; context.coordinator.zoomTarget = zoomTarget
+        context.coordinator.selection = selection
+        context.coordinator.selectionGesture?.isEnabled = selection != nil
+        view.panGestureRecognizer.minimumNumberOfTouches = selection == nil ? 1 : 2
         context.coordinator.update(bytes: bytes, boxes: boxes)
         context.coordinator.fit(view)
     }
@@ -113,6 +122,9 @@ struct ZoomReceiptImage: UIViewRepresentable {
         var reduceMotion = false
         var boxes: [ReceiptOCRBox] = []
         var zoomTarget = UUID()
+        var selection: Binding<ReceiptOCRBox>?
+        weak var selectionGesture: UIPanGestureRecognizer?
+        private var selectionStart: CGPoint?
         private var tokens: [NSObjectProtocol] = []
         private var displayTask: Task<Void, Never>?
         private var loadedBytes: Data?
@@ -122,7 +134,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
             let differentBoxes = self.boxes != boxes
             self.boxes = boxes
             guard loadedBytes != bytes else {
-                if differentBoxes, imageView.image != nil { drawHighlights(); focus() }
+                if differentBoxes, imageView.image != nil { drawHighlights(); if selection == nil { focus() } }
                 return
             }
             loadedBytes = bytes; generation = UUID(); let token = generation
@@ -145,6 +157,28 @@ struct ZoomReceiptImage: UIViewRepresentable {
                 self.fitted = false; self.viewport = .zero
                 self.drawHighlights(); self.fit(view)
             }
+        }
+        @objc func selectArea(_ gesture: UIPanGestureRecognizer) {
+            guard let selection, imageView.image != nil else { return }
+            let size = imageView.bounds.size
+            guard size.width > 0, size.height > 0 else { return }
+            let raw = gesture.location(in: imageView)
+            let point = CGPoint(x: min(max(0, raw.x), size.width), y: min(max(0, raw.y), size.height))
+            if gesture.state == .began {
+                // A pan begins only after its movement threshold. Recover the original
+                // touch so the selected rectangle starts where the user put their finger.
+                let translation = gesture.translation(in: imageView)
+                selectionStart = CGPoint(x: min(max(0, raw.x - translation.x), size.width),
+                                         y: min(max(0, raw.y - translation.y), size.height))
+            }
+            guard let start = selectionStart else { return }
+            let rect = CGRect(x: min(start.x, point.x), y: min(start.y, point.y), width: abs(start.x-point.x), height: abs(start.y-point.y))
+            if rect.width / size.width >= 0.02, rect.height / size.height >= 0.01,
+               let box = try? ReceiptOCRBox(x: rect.minX/size.width, y: 1-rect.maxY/size.height,
+                                           width: rect.width/size.width, height: rect.height/size.height) {
+                selection.wrappedValue = box
+            }
+            if gesture.state == .ended || gesture.state == .cancelled { selectionStart = nil }
         }
         func drawHighlights() {
             imageView.subviews.forEach { $0.removeFromSuperview() }

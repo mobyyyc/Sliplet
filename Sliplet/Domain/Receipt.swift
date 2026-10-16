@@ -286,6 +286,11 @@ struct ReceiptRecord: Codable, Equatable, Sendable, Identifiable {
         var previous = createdAt
         for revision in revisions {
             try revision.fields.validate()
+            if let input = revision.reviewInput {
+                guard input.count <= 2 * 1024 * 1024 else { throw ReceiptValidationError.invalidEvidence }
+                let draft = try JSONDecoder().decode(ReceiptReviewDraft.self, from: input)
+                try draft.validateAssistedReadings(assetSHA256: asset.sha256)
+            }
             let references = revision.fields.items.flatMap(\.sourceLineIDs) + revision.fields.adjustments.flatMap(\.sourceLineIDs)
             guard references.allSatisfy(sourceIDs.contains) else { throw ReceiptValidationError.invalidEvidence }
             guard revision.createdAt >= previous else { throw ReceiptValidationError.invalidTimestamp }

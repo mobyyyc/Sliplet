@@ -13,6 +13,7 @@ struct ReceiptFocusedCorrectionView: View {
     @State private var sourceIndex = 0
     @State private var showReadText = false
     @State private var expanded = false
+    @State private var rereading = false
     @State private var zoomTarget = UUID()
     @State private var expandedZoomTarget = UUID()
     @State private var groupChecked = false
@@ -31,7 +32,12 @@ struct ReceiptFocusedCorrectionView: View {
     }
     private var currentSource: ReceiptOCRLine? { sources.indices.contains(sourceIndex) ? sources[sourceIndex] : nil }
     private var isSourceGroup: Bool { if case .source = check.target { return sources.count > 1 }; return false }
+    private var currentAssistance: ReceiptAssistedReading? {
+        input.assistedReadings?.last { rereadFields.contains($0.field) && (!$0.field.needsLine || $0.lineID == lineID)
+            && input.assistedValue(field: $0.field, lineID: $0.lineID) == $0.value }
+    }
     private var boxes: [ReceiptOCRBox] {
+        if let assistance = currentAssistance { return [assistance.region] }
         if case .source = check.target { return currentSource?.boundingBox.map { [$0] } ?? [] }
         return sources.compactMap(\.boundingBox)
     }
@@ -58,6 +64,8 @@ struct ReceiptFocusedCorrectionView: View {
                                 .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
                                 .accessibilityIdentifier("expandFocusedOriginal")
                         }
+                        Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
+                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("focusedReread")
                         if sources.count > 1, case .source = check.target {
                             HStack {
                                 Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
@@ -133,9 +141,15 @@ struct ReceiptFocusedCorrectionView: View {
                         } header: { Text("Focused line") }
                     }
                 }
+                if let assistance = currentAssistance {
+                    Section("Reread used for this value") {
+                        LabeledContent(assistance.field.title, value: assistance.value)
+                        Text("The highlight shows the area you reread. Initial OCR remains unchanged.").font(.footnote)
+                    }.accessibilityIdentifier("focusedRereadEvidence")
+                }
                 if let currentSource {
                     Section {
-                        DisclosureGroup("Read text", isExpanded: $showReadText) {
+                        DisclosureGroup("Initial read text", isExpanded: $showReadText) {
                             Text(currentSource.text).font(.callout).textSelection(.enabled)
                         }.accessibilityIdentifier("focusedReadText")
                     }
@@ -165,6 +179,18 @@ struct ReceiptFocusedCorrectionView: View {
                             .modifier(ReceiptActionBarLayout())
                     }
                 }
+                .sheet(isPresented: $rereading) {
+                    if let image = workspace.image {
+                        ReceiptRereadView(workspace: workspace, image: image, boxes: boxes, fields: rereadFields, lineID: lineID, input: input) { event in
+                            guard workspace.draft == baseline, workspace.active, !workspace.privacyCovered else { return false }
+                            do {
+                                try input.useAssistedReading(event)
+                                if event.field == .date, let date = ReceiptDateSelection.date(input.date) { purchaseDate = date }
+                                return true
+                            } catch { return false }
+                        }
+                    }
+                }
                 .sheet(isPresented: $expanded) {
                     NavigationStack {
                         if workspace.active && !workspace.privacyCovered, let image = workspace.image {
@@ -180,6 +206,15 @@ struct ReceiptFocusedCorrectionView: View {
             #if DEBUG
             .dynamicTypeSize(SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize)
             #endif
+    }
+    private var rereadFields: [ReceiptAssistedField] {
+        switch check.target {
+        case .receipt: [.merchant]
+        case .date: [.date]
+        case .subtotal: [.subtotal, .total]
+        case .total: [.total, .subtotal]
+        case .line, .source: lineID == nil ? [.merchant, .subtotal, .total] : [.amount, .description, .quantity]
+        }
     }
     private func apply() {
         editing = nil
