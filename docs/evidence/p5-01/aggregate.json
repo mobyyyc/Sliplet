@@ -1,0 +1,146 @@
+{
+  "by_field": {
+    "amount": {
+      "ambiguous_identity": 10,
+      "correct": 47,
+      "missing": 15,
+      "wrong": 1
+    },
+    "currency": {
+      "unscorable": 5
+    },
+    "date": {
+      "correct": 5
+    },
+    "description": {
+      "ambiguous_identity": 10,
+      "correct": 48,
+      "missing": 15
+    },
+    "kind": {
+      "ambiguous_identity": 10,
+      "correct": 48,
+      "missing": 15
+    },
+    "merchant": {
+      "correct": 5
+    },
+    "quantity": {
+      "ambiguous_identity": 10,
+      "unscorable": 56
+    },
+    "rate": {
+      "unscorable": 7
+    },
+    "sku": {
+      "ambiguous_identity": 10,
+      "unscorable": 56
+    },
+    "subtotal": {
+      "correct": 4,
+      "unscorable": 1
+    },
+    "taxMarker": {
+      "ambiguous_identity": 10,
+      "unscorable": 56
+    },
+    "total": {
+      "correct": 3,
+      "missing": 2
+    },
+    "unit": {
+      "ambiguous_identity": 10,
+      "unscorable": 56
+    },
+    "unitPrice": {
+      "ambiguous_identity": 10,
+      "unscorable": 56
+    }
+  },
+  "checked_text": {
+    "amount_corrections": 1,
+    "correct_totals": 1,
+    "item_amounts_correct": 33,
+    "items_expected": 37,
+    "line_amounts_correct": 37,
+    "lines_expected": 44,
+    "omitted_lines": 6,
+    "receipts": 2
+  },
+  "development_receipts": 5,
+  "draft_roundtrips_preserved": 5,
+  "field_stage_inventory": {
+    "identity_unresolved_no_verified_region": 80,
+    "parser_field_unresolved": 2,
+    "reference_not_checked": 293,
+    "source_amount_not_found_ocr_or_association_unresolved": 1,
+    "unpaired_line_requires_source_identity": 45
+  },
+  "held_out_receipts": 0,
+  "limitations": [
+    "Text containment is not verified source identity.",
+    "Unpaired and ambiguous rows cannot establish OCR versus grouping versus classification fault without source review.",
+    "Legacy and strict pairing metrics are not interchangeable.",
+    "No new recognition, timings, phone checks or human corrections."
+  ],
+  "line_diagnostic_clues": {
+    "ambiguous_reference_lines": 10,
+    "currency_default_receipts": 3,
+    "name_clue_has_linked_output": 1,
+    "name_clue_has_no_linked_output": 7,
+    "name_clue_issue_source_review_required": 8,
+    "name_clue_issue_unpaired_amount": 2,
+    "name_clue_issue_unpriced_source_row": 5,
+    "name_clue_output_description_differs": 1,
+    "typed_money_absent_before_default": 43,
+    "typed_money_restored_by_default": 43,
+    "unpaired_name_not_exactly_present_ocr_or_reference_unresolved": 7,
+    "unpaired_name_present_in_interpreted_row": 8
+  },
+  "mode": "frozen_capture_diagnostic_no_new_imports",
+  "noncorrect_field_outcomes": {
+    "ambiguous_identity": 80,
+    "missing": 47,
+    "unscorable": 293,
+    "wrong": 1
+  },
+  "parser_issue_counts": {
+    "currency_missing": 3,
+    "date_order_check": 4,
+    "negative_summary_check_source": 1,
+    "quantity_association_uncertain": 5,
+    "source_review_required": 5,
+    "total_missing": 2,
+    "unpaired_amount": 6,
+    "unpriced_source_row": 56
+  },
+  "reference_coverage": {
+    "printed_verified": 238,
+    "unreviewed": 343
+  },
+  "structured_counts": {
+    "actual_lines": 65,
+    "actual_purchases": 61,
+    "ambiguous_group_count_mismatch": 0,
+    "ambiguous_identity": 80,
+    "correct": 160,
+    "exact_purchase_pairs": 43,
+    "expected_purchases": 66,
+    "missing": 47,
+    "missing_line_proxies": 15,
+    "reference_lines": 73,
+    "unmatched_actual_line_proxies": 17,
+    "unrelated_unmatched_actual_lines": 7,
+    "unscorable": 293,
+    "wrong": 1
+  },
+  "summary_keyword_audit": {
+    "anchored": 10,
+    "keyword_rows": 10,
+    "missing_total_label_rows": 3,
+    "missing_total_label_with_decimal": 1,
+    "missing_total_label_without_decimal": 2,
+    "used_as_purchase": 0
+  },
+  "task": "P5-01"
+}
