@@ -2,7 +2,7 @@
 
 ## Phase 5 · 2026-10-16
 
-P5-01 was approved in Main and is complete as a frozen-evidence diagnostic task. Production recognition is unchanged. The failure map inventories all strict field discrepancies and explicitly separates source/identity uncertainty from confirmed parser omissions. Existing five receipt references and two checked Costco transcripts are retained; no repeat labeling required to proceed. [Phase 5 plan](docs/PHASE5_RECOGNITION.md) · [Findings and verification](docs/PHASE5_FAILURE_MAP.md). P5-02 is next and awaits separate approval; P5-03 through P5-06 are not dispatched.
+P5-01 was approved in Main and is complete as a frozen-evidence diagnostic task. Production recognition is unchanged. The failure map inventories all strict field discrepancies and explicitly separates source/identity uncertainty from confirmed parser omissions. Existing five receipt references and two checked Costco transcripts are retained; no repeat labeling required to proceed. [Phase 5 plan](docs/PHASE5_RECOGNITION.md) · [Findings and verification](docs/PHASE5_FAILURE_MAP.md). P5-02 is approved and complete as bounded summary-label/boundary hardening, with no measured accuracy gain on the five exposed receipts. [Results](docs/PHASE5_SUMMARIES.md). P5-03 purchase assembly is next and awaits separate approval; P5-03 through P5-06 are not dispatched.
 
 ## Current direction · 2026-10-15
 

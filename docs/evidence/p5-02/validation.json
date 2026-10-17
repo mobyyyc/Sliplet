@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-17",
+  "focused_native_tests_passed": 91,
+  "frozen_run": "p5-02-final-v3",
+  "independent_draft_fields_and_source_membership_equal": 5,
+  "new_summary_tests": 13,
+  "phone_updated": false,
+  "private_hosted_methods_passed": 2,
+  "recognizer_changed": false,
+  "review": "Main reviewed boundary, amount syntax and unknown-store price competition; no new amount or source guesses",
+  "scorer_tests_passed": 18,
+  "sources": {
+    "Sliplet/Parsing/Parsing.swift": "15322e3eb6c17d9cb76d3f451ea3e7371adc045dbca5bc9a04d8afc398dbc50a",
+    "SlipletTests/ReceiptSummaryParserTests.swift": "b96b5c7c14c6491c97425c8148ed4619ba817916affd2629d8bf4340aad1d91a",
+    "evaluation/receipt-summary/run.py": "f20633ee7aa2d4ea24e90b98966dec7a4ee9e83a875c8e7698098656390888bf"
+  }
+}

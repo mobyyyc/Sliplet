@@ -103,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p4-04-deterministic-0.4.0"
+    static let version = "p5-02-summary-0.5.0"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -188,13 +188,47 @@ enum ReceiptParser {
         return try? ReceiptDecimal(coefficient: coefficient, scale: UInt8(scale + 2))
     }
     static let quantityPattern = #"\b\d+(?:\.\d+)?\s*(?:(?:KG|LB|LBS|X)\b|@)"#
-    static let summaryPattern = #"^(?:(?:GRAND\s+)?TOTAL|SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#
-    static let metadataPattern = #"^(?:CASH|VISA|MASTERCARD|DEBIT|CREDIT|CHANGE|TENDER|BALANCE|SAVINGS|YOU SAVED|MEMBER|REGISTER|AUTH|TRANSACTION|STORE|TERMINAL|TEL|PHONE|DATE|TIME|ITEMS SOLD|TOTAL ITEMS|TOTAL SAVINGS|TOTAL DISCOUNT)\b"#
+    static let metadataPattern = #"^(?:CASH|VISA|MASTERCARD|DEBIT|CREDIT|CHANGE|TENDER|BALANCE|SAVINGS|YOU SAVED|MEMBER|REGISTER|AUTH|TRANSACTION|STORE|TERMINAL|TEL|PHONE|DATE|TIME|ITEMS SOLD|TOTAL ITEMS|TOTAL NUMBER OF ITEMS|TOTAL SAVINGS|TOTAL DISCOUNT)\b"#
 
     /// Strip decoration for field classification only; purchase descriptions/SKUs stay intact.
     static func fieldText(_ text: String) -> String {
         text.replacingOccurrences(of: #"^[\s*:=]+"#, with: "", options: .regularExpression).uppercased()
     }
+    enum SummaryKind { case subtotal, total }
+
+    /// Match a complete field label, not a product that happens to begin with TOTAL.
+    /// Only label decoration is normalized; financial characters are never repaired.
+    static func summaryLabel(_ text: String) -> (kind: SummaryKind, remainder: String)? {
+        let value = text.replacingOccurrences(of: #"^[\s*:=#•·_]+"#, with: "", options: .regularExpression).uppercased()
+        let labels: [(SummaryKind, String)] = [
+            (.subtotal, #"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#),
+            (.total, #"^(?:GRAND\s+TOTAL|TOTAL(?:\s+(?:DUE|[ÀA]\s+PAYER|TTC))?|AMOUNT\s+DUE)\b"#)
+        ]
+        for (kind, pattern) in labels {
+            guard let prefix = first(pattern, value) else { continue }
+            let rest = String(value.dropFirst(prefix.count))
+            // A label may contain a currency, numeric evidence or separators, but
+            // additional words establish a different role (e.g. TOTAL CEREAL).
+            // Words before the amount distinguish a product. Stray text after an
+            // amount leaves a summary unresolved; it must not turn into a purchase.
+            let amountRange = monetaryTokens(rest).first.flatMap { Range($0.range, in: rest) }
+            let beforeAmount = amountRange.map { String(rest[..<$0.lowerBound]) } ?? rest
+            let withoutCurrency = beforeAmount.replacingOccurrences(of: #"\b(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\b"#, with: "", options: .regularExpression)
+            guard first(#"\p{L}"#, withoutCurrency) == nil else { return nil }
+            return (kind, rest)
+        }
+        return nil
+    }
+
+    static func summaryAmountSyntaxIsClear(_ text: String) -> Bool {
+        guard let label = summaryLabel(text) else { return false }
+        var rest = label.remainder.replacingOccurrences(of: moneyPattern, with: "", options: .regularExpression)
+        rest = rest.replacingOccurrences(of: #"\b(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\b\$?"#, with: "", options: .regularExpression)
+        // Bars, parentheses, separated signs and stray digits are not decoration:
+        // they could change an amount. Keep them unresolved rather than guessing.
+        return first(#"^[\s:*=]*$"#, rest) != nil
+    }
+
     static func merchant(_ text: String) -> String? {
         guard let token = first(#"NO\s*FRILLS\b|\bCOSTCO\b|\bT\s*&\s*T\b"#, text) else { return nil }
         // Fictional test identities remain visibly fictional in the normal wallet.
@@ -240,14 +274,22 @@ enum ReceiptParser {
     /// Interpret an unpriced description and a separate single printed amount only when geometry
     /// gives a unique local pair. Existing priced rows and original grouping remain untouched.
     static func interpretationRows(_ input: [Row], knownRetailer: Bool) -> [Row] {
-        guard knownRetailer, input.allSatisfy({ $0.height > 0 }) else { return input }
+        guard input.allSatisfy({ $0.height > 0 }) else { return input }
         func isPrice(_ r: Row) -> Bool {
             guard matches(moneyPattern, r.text).count == 1, let token = first(moneyPattern, r.text) else { return false }
             let rest = r.text.replacingOccurrences(of: token, with: "").trimmingCharacters(in: .whitespaces)
             return rest.isEmpty || first(#"^[AEHN]$"#, rest) != nil
         }
+        func isSummaryPrice(_ r: Row) -> Bool {
+            guard monetaryTokens(r.text).count == 1, let token = first(moneyPattern, r.text) else { return false }
+            let rest = r.text.replacingOccurrences(of: token, with: "").trimmingCharacters(in: .whitespaces)
+            return rest.isEmpty || first(#"^(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\s*\$?$"#, rest.uppercased()) != nil
+        }
         func isDescription(_ r: Row) -> Bool {
             let t = fieldText(r.text)
+            if let label = summaryLabel(r.text) {
+                return matches(moneyPattern, r.text).isEmpty && first(#"\d|[|()+-]"#, label.remainder) == nil
+            }
             return matches(moneyPattern, r.text).isEmpty && first(#"\p{L}"#, t) != nil
                 && first(quantityPattern, t) == nil && first(metadataPattern, t) == nil
                 // Detached numeric-leading text can be a product code or quantity; retain uncertainty.
@@ -255,13 +297,15 @@ enum ReceiptParser {
                 && merchant(r.text) == nil && dateCandidates(r.text).isEmpty
                 && first(#"\bCAD\b|CA\$|^\d+\s+(?:ST|AVE|ROAD|RD)\b"#, t) == nil
         }
-        let prices = input.indices.filter { isPrice(input[$0]) }
+        let prices = input.indices.filter { isPrice(input[$0]) || isSummaryPrice(input[$0]) }
         let descriptions = input.indices.filter { isDescription(input[$0]) }
         func distance(_ d: Int, _ p: Int) -> Double? {
             let a = input[d], b = input[p]
+            let summary = summaryLabel(a.text) != nil
+            guard summary ? isSummaryPrice(b) : isPrice(b) else { return nil }
             guard let right = a.parts.compactMap(\.boundingBox).map({ $0.x + $0.width }).max(),
                   let left = b.parts.compactMap(\.boundingBox).map(\.x).min(), left > right,
-                  abs(a.center - b.center) <= min(a.height, b.height) else { return nil }
+                  abs(a.center - b.center) <= min(a.height, b.height) * (summary ? 1.75 : 1) else { return nil }
             if input.indices.contains(where: { $0 != d && $0 != p && input[$0].center > min(a.center, b.center)
                 && input[$0].center < max(a.center, b.center) }) { return nil }
             return abs(a.center - b.center) / min(a.height, b.height)
@@ -276,6 +320,9 @@ enum ReceiptParser {
         var merged: [Int: Row] = [:], consumed = Set<Int>()
         for p in prices {
             guard let d = nearest(p, descriptions, reversed: false), nearest(d, prices, reversed: true) == p else { continue }
+            // Unknown-store product labels still compete for nearby prices, but
+            // only explicit summary labels may be merged without a retailer profile.
+            guard knownRetailer || summaryLabel(input[d].text) != nil else { continue }
             var row = input[d]; row.text += " " + input[p].text; row.ids += input[p].ids; row.parts += input[p].parts
             merged[d] = row; consumed.insert(p)
         }
@@ -323,7 +370,7 @@ enum ReceiptParser {
             // Codes in an unpriced header/footer or explicit summary/currency row are
             // evidence. A priced product named CAD/USD must not select the currency.
             let currencyContext = matches(moneyPattern, text).isEmpty
-                || first(summaryPattern, upper) != nil || first(#"^CURRENCY\b"#, upper) != nil
+                || summaryLabel(text) != nil || first(#"^CURRENCY\b"#, upper) != nil
                 || first(#"^(?:CAD|USD|HKD|EUR|GBP|CNY|JPY)\s*\$?\s*[^\p{L}]*$"#, upper) != nil
             // A currency/amount observation can share a grouped row with a payment
             // label. Inspect that self-contained observation without borrowing meaning
@@ -351,11 +398,18 @@ enum ReceiptParser {
             }
             if (merchant(text) != nil && matches(moneyPattern, text).isEmpty) || !candidates.isEmpty { continue }
             let tokens = monetaryTokens(text)
-            let summary = first(summaryPattern, upper) != nil && first(#"^TOTAL\s+(?:SAVINGS|ITEMS|DISCOUNT)"#, upper) == nil
+            let summaryField = summaryLabel(text)
+            let summary = summaryField != nil
             let tax = first(#"^(?:HST|GST|PST|QST|TPS|TVQ|TAX|TAXES)\b"#, upper) != nil
             let adjustment = first(#"^(?:DISCOUNT|COUPON|DEPOSIT|ADJUSTMENT)\b"#, upper) != nil
-            if summary && !tokens.isEmpty { finished = true }
-            if first(metadataPattern, upper) != nil { continue }
+            // A complete final-total label establishes the footer boundary even
+            // when its amount needs review. Subtotals can precede another department.
+            if summaryField?.kind == .total && !tokens.isEmpty { finished = true }
+            if first(metadataPattern, upper) != nil {
+                // Payment is a terminal boundary even if the total itself is unreadable.
+                if !tokens.isEmpty, first(#"^(?:CASH|VISA|MASTERCARD|DEBIT|CREDIT|CHANGE|TENDER)(?:\s+(?:CARD|PAID|TENDERED))?\s*[:$\d., -]+$"#, upper) != nil { finished = true }
+                continue
+            }
             if finished && !summary && !tax && !adjustment { continue }
             guard let last = tokens.last, let range = Range(last.range, in: text),
                   let amount = printedMoney(String(text[range])) else {
@@ -372,18 +426,27 @@ enum ReceiptParser {
                 let decimalComma = String(text[range]).contains(",") && !String(text[range]).contains(".")
                 guard !decimalComma || amount >= 0 else {
                     issue("negative_summary_check_source", row.ids)
-                    if first(#"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#, upper) != nil { subtotalAmbiguous = true }
+                    if summaryField?.kind == .subtotal { subtotalAmbiguous = true }
                     else { totalAmbiguous = true }
                     continue
                 }
                 guard tokens.count == 1 else {
                     issue("summary_amount_ambiguous", row.ids)
-                    if first(#"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#, upper) != nil { subtotalAmbiguous = true }
+                    if summaryField?.kind == .subtotal { subtotalAmbiguous = true }
                     else { totalAmbiguous = true }
                     continue
                 }
-                if first(#"^(?:SUB\s*TOTAL|SOUS[- ]?TOTAL)\b"#, upper) != nil { subtotals.append((amount, row.ids)) }
-                else { totals.append((amount, row.ids)) }
+                guard summaryAmountSyntaxIsClear(text) else {
+                    issue("summary_amount_ambiguous", row.ids)
+                    if summaryField?.kind == .subtotal { subtotalAmbiguous = true }
+                    else { totalAmbiguous = true }
+                    continue
+                }
+                if summaryField?.kind == .subtotal { subtotals.append((amount, row.ids)) }
+                else {
+                    totals.append((amount, row.ids))
+                    finished = true
+                }
                 continue
             }
             // A standalone rate never supplies a purchase or a calculated extension.
