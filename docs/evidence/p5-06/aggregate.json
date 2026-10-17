@@ -1,0 +1,247 @@
+{
+  "attempts": 10,
+  "baseline_comparison": {
+    "1": {
+      "same_scored_counts": true
+    },
+    "2": {
+      "same_scored_counts": true
+    },
+    "3": {
+      "same_scored_counts": true
+    },
+    "4": {
+      "same_scored_counts": false
+    },
+    "5": {
+      "same_scored_counts": true
+    }
+  },
+  "candidate_coverage": {
+    "complete_after_human_assistance": null,
+    "counts": {
+      "attempts": 62,
+      "correct_amount_available": 43,
+      "current_amount_incorrect_or_missing": 1,
+      "offers_other_amounts": 39,
+      "paired_scored_purchases": 44,
+      "potential_amount_recovery": 0,
+      "reference_purchases": 66,
+      "successful_reads": 62,
+      "unpaired_purchases": 22
+    },
+    "human_choices": 0,
+    "human_review_seconds": null,
+    "max_ms": 736.1220000020694,
+    "median_ms": 370.4392916552024,
+    "scope": "suggested regions for existing purchase amounts; no missing-row recovery; candidates are not applied",
+    "stores": {
+      "Costco": {
+        "attempts": 37,
+        "correct_amount_available": 23,
+        "current_amount_incorrect_or_missing": 1,
+        "offers_other_amounts": 24,
+        "paired_scored_purchases": 24,
+        "potential_amount_recovery": 0,
+        "reference_purchases": 37,
+        "successful_reads": 37,
+        "unpaired_purchases": 13
+      },
+      "No Frills": {
+        "attempts": 23,
+        "correct_amount_available": 18,
+        "current_amount_incorrect_or_missing": 0,
+        "offers_other_amounts": 15,
+        "paired_scored_purchases": 18,
+        "potential_amount_recovery": 0,
+        "reference_purchases": 26,
+        "successful_reads": 23,
+        "unpaired_purchases": 8
+      },
+      "T&T": {
+        "attempts": 2,
+        "correct_amount_available": 2,
+        "current_amount_incorrect_or_missing": 0,
+        "offers_other_amounts": 0,
+        "paired_scored_purchases": 2,
+        "potential_amount_recovery": 0,
+        "reference_purchases": 3,
+        "successful_reads": 2,
+        "unpaired_purchases": 1
+      }
+    }
+  },
+  "checked_text": {
+    "1": {
+      "legacy": {
+        "amount_corrections": 1,
+        "correction_operations": 8,
+        "date_correct": 1,
+        "date_expected": 1,
+        "detected_lines": 18,
+        "field_corrections": 1,
+        "invented_lines": 3,
+        "item_amounts_correct": 14,
+        "items_expected": 17,
+        "line_amounts_correct": 17,
+        "lines_expected": 21,
+        "merchant_correct": 1,
+        "merchant_expected": 1,
+        "omitted_lines": 3,
+        "receipts_scored": 1,
+        "subtotal_correct": 1,
+        "subtotal_expected": 1,
+        "total_correct": 0,
+        "total_expected": 1
+      },
+      "regressions": {
+        "gained_exact_lines": 0,
+        "lost_correct_summary_fields": 0,
+        "lost_previously_exact_lines": 0,
+        "new_unmatched_line_proxies": 0
+      }
+    },
+    "2": {
+      "legacy": {
+        "amount_corrections": 0,
+        "correction_operations": 3,
+        "date_correct": 1,
+        "date_expected": 1,
+        "detected_lines": 20,
+        "field_corrections": 0,
+        "invented_lines": 0,
+        "item_amounts_correct": 19,
+        "items_expected": 20,
+        "line_amounts_correct": 20,
+        "lines_expected": 23,
+        "merchant_correct": 1,
+        "merchant_expected": 1,
+        "omitted_lines": 3,
+        "receipts_scored": 1,
+        "subtotal_correct": 1,
+        "subtotal_expected": 1,
+        "total_correct": 1,
+        "total_expected": 1
+      },
+      "regressions": {
+        "gained_exact_lines": 0,
+        "lost_correct_summary_fields": 0,
+        "lost_previously_exact_lines": 0,
+        "new_unmatched_line_proxies": 0
+      }
+    }
+  },
+  "currency_defaults": 3,
+  "development_purchases": 5,
+  "draft_roundtrips": 5,
+  "first_median_ms": 1146.045541681815,
+  "held_out": 0,
+  "legacy": {
+    "amount_corrections": 1,
+    "correction_operations": 26,
+    "date_correct": 5,
+    "date_expected": 5,
+    "detected_lines": 58,
+    "field_corrections": 2,
+    "invented_lines": 8,
+    "item_amounts_correct": 53,
+    "items_expected": 66,
+    "line_amounts_correct": 57,
+    "lines_expected": 73,
+    "merchant_correct": 5,
+    "merchant_expected": 5,
+    "omitted_lines": 15,
+    "receipts_scored": 5,
+    "subtotal_correct": 4,
+    "subtotal_expected": 4,
+    "total_correct": 3,
+    "total_expected": 5
+  },
+  "regressions": {
+    "new_unmatched_line_proxies": 1
+  },
+  "repeat_max_ms": 1206.2289166497067,
+  "repeat_median_ms": 1095.9576666646171,
+  "stable_repeats": 5,
+  "stores": {
+    "Costco": {
+      "amount_corrections": 1,
+      "correction_operations": 12,
+      "date_correct": 2,
+      "date_expected": 2,
+      "detected_lines": 38,
+      "field_corrections": 2,
+      "invented_lines": 3,
+      "item_amounts_correct": 33,
+      "items_expected": 37,
+      "line_amounts_correct": 37,
+      "lines_expected": 44,
+      "merchant_correct": 2,
+      "merchant_expected": 2,
+      "omitted_lines": 6,
+      "receipts_scored": 2,
+      "subtotal_correct": 2,
+      "subtotal_expected": 2,
+      "total_expected": 2
+    },
+    "No Frills": {
+      "correction_operations": 13,
+      "date_correct": 2,
+      "date_expected": 2,
+      "detected_lines": 18,
+      "invented_lines": 5,
+      "item_amounts_correct": 18,
+      "items_expected": 26,
+      "line_amounts_correct": 18,
+      "lines_expected": 26,
+      "merchant_correct": 2,
+      "merchant_expected": 2,
+      "omitted_lines": 8,
+      "receipts_scored": 2,
+      "subtotal_correct": 2,
+      "subtotal_expected": 2,
+      "total_correct": 2,
+      "total_expected": 2
+    },
+    "T&T": {
+      "correction_operations": 1,
+      "date_correct": 1,
+      "date_expected": 1,
+      "detected_lines": 2,
+      "item_amounts_correct": 2,
+      "items_expected": 3,
+      "line_amounts_correct": 2,
+      "lines_expected": 3,
+      "merchant_correct": 1,
+      "merchant_expected": 1,
+      "omitted_lines": 1,
+      "receipts_scored": 1,
+      "total_correct": 1,
+      "total_expected": 1
+    }
+  },
+  "structured_counts": {
+    "actual_lines": 66,
+    "actual_purchases": 62,
+    "ambiguous_identity": 80,
+    "correct": 160,
+    "exact_purchase_pairs": 43,
+    "expected_purchases": 66,
+    "missing": 47,
+    "missing_line_proxies": 15,
+    "reference_lines": 73,
+    "unmatched_actual_line_proxies": 18,
+    "unrelated_unmatched_actual_lines": 8,
+    "unscorable": 293,
+    "wrong": 1
+  },
+  "successful": 10,
+  "task": "P5-06",
+  "unscored_populated_attributes": {
+    "sku": 56,
+    "taxMarker": 6
+  },
+  "verdicts": {
+    "incorrect": 5
+  }
+}

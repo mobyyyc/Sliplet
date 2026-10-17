@@ -2,7 +2,7 @@
 
 ## Current direction · 2026-10-17
 
-Phase 5 P5-01 through P5-05 are approved and complete as bounded tasks. P5-05 connects uncertain evidence to focused corrections, preserves Apply/Cancel and independent full review, and passes 60 native, 18 scorer, three UI and two private hosted tests. Five existing drafts retain their fields and source memberships; automatic accuracy is unchanged. No held-out or human-assisted accuracy claim. [P5-05 report](docs/PHASE5_CORRECTIONS.md). P5-06 full evaluation awaits separate Main approval. No phone or normal Simulator wallet update. Older entries below are historical.
+Phase 5 P5-01 through P5-06 are approved and complete as bounded implementation/development-evaluation tasks. P5-05 connects uncertain evidence to focused corrections, preserves Apply/Cancel and independent full review, and passes 60 native, 18 scorer, three UI and two private hosted tests. Five existing drafts retain their fields and source memberships; automatic accuracy is unchanged. No held-out or human-assisted accuracy claim. [P5-05 report](docs/PHASE5_CORRECTIONS.md). P5-06 passes 87 native, 18 scorer, three private hosted and five fictional UI methods. Strict pairs remain 43/66, totals 3/5 and fully correct receipts 0/5; 62 region rereads provide zero additional paired amount recoveries. The accuracy goal is not met. [Phase 5 evaluation](docs/PHASE5_ACCEPTANCE.md). Further implementation awaits separate approval. No phone or normal Simulator wallet update. Older entries below are historical.
 
 ## Historical direction · 2026-10-13
 
