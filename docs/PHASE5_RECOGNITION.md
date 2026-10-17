@@ -1,6 +1,6 @@
 # Phase 5 — Reliable receipt interpretation
 
-2026-10-16. Main coordinates one approved task at a time. P5-01 through P5-04 approved and complete as bounded tasks; P5-05 and P5-06 remain proposals awaiting individual approval. No phase-wide implementation authorization.
+2026-10-16. Main coordinates one approved task at a time. P5-01 through P5-05 approved and complete as bounded tasks; P5-06 remains a proposal awaiting individual approval. No phase-wide implementation authorization.
 
 Goal: improve automatic interpretation and reduce correction work using on-device Vision, source-backed logic and focused assistance. No Apple Intelligence/cloud dependency. Keep existing merchant/date successes, provenance, independent full-source review, exact reconciliation and transactional Apply/Cancel. No guessing financial values from totals. Existing five checked receipts and two checked Costco transcripts are retained; additional manual annotation is scoped to genuinely unresolved evidence.
 

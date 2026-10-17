@@ -16,6 +16,7 @@ import Vision
     private struct Row: Encodable { let text: String; let ids: [UUID] }
     private struct Response: Encodable {
         let status: String
+        let guidanceCounts: [String: Int]
         let nonce: String
         let slot: Int
         let pass: Int
@@ -122,7 +123,20 @@ import Vision
                             && reloaded.original.rawOCR == extraction.rawOCR && reloaded.original.readingEvidence == extraction.readingEvidence && reloaded.current.review == .draft
                         reviewEqual = model.readerInput == draft
                     }
-                    let response = Response(status: "ok", nonce: request.nonce, slot: slot.slot, pass: pass,
+                    let checks = ReceiptReviewGuidance.checks(draft: draft, extraction: extraction)
+                    let actionable = extraction.issues.filter {
+                        !["geometry_incomplete", "merchant_missing", "date_missing", "currency_missing", "total_missing", "source_review_required"].contains($0.code)
+                    }
+                    let guidanceCounts = [
+                        "checks": checks.count,
+                        "highlighted_checks": checks.filter { !$0.sourceLineIDs.isEmpty }.count,
+                        "required_highlighted_checks": checks.filter { $0.requiresCorrection && !$0.sourceLineIDs.isEmpty }.count,
+                        "actionable_warnings": actionable.count,
+                        "warnings_with_all_sources_guided": actionable.filter { issue in
+                            !issue.sourceLineIDs.isEmpty && checks.contains { Set(issue.sourceLineIDs).isSubset(of: Set($0.sourceLineIDs)) }
+                        }.count
+                    ]
+                    let response = Response(status: "ok", guidanceCounts: guidanceCounts, nonce: request.nonce, slot: slot.slot, pass: pass,
                         readingEvidence: extraction.readingEvidence, observations: extraction.rawOCR, groupedRowIDs: grouped.map(\.ids), interpretedRowIDs: interpreted.map(\.ids),
                         groupedRows: grouped.map { Row(text: $0.text, ids: $0.ids) }, interpretedRows: interpreted.map { Row(text: $0.text, ids: $0.ids) },
                         parsed: parsed, fields: extraction.fields, draftFields: fields, draft: draft,

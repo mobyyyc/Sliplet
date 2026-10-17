@@ -5,12 +5,15 @@ import UIKit
 @MainActor enum SyntheticCorrectionPreview {
     static func fixture(_ mode: String) throws -> (Data, ReceiptExtraction, ReceiptReviewDraft) {
         let count = mode == "correction-long" ? 36 : 1
-        var text = ["FICTIONAL NO FRILLS CORRECTION CAD", "2026-10-09"]
+        var text = ["FICTIONAL NO FRILLS CAD", "2026-10-09"]
         text += (0..<count).map { "FICTIONAL ITEM \($0 + 1) 1.00" }
         if mode == "correction-difficult" { text += ["TEST OMITTED ITEM", "2.00"] }
         if mode == "correction-source" { text += ["TEST WRAPPED FIRST", "TEST WRAPPED LAST"] }
         text += ["SUBTOTAL " + ExactInput.format(Int64(count * 100 + (mode == "correction-difficult" ? 200 : 0))),
                  "TOTAL " + ExactInput.format(Int64(count * 100 + (mode == "correction-difficult" ? 200 : 0)))]
+        if mode == "correction-summaries" {
+            text = ["FICTIONAL COSTCO CAD", "2026-10-09", "FICTIONAL ITEM 1 1.00", "SUBTOTAL -1,00", "TOTAL -1,00"]
+        }
         let width: CGFloat = 800, height = CGFloat(text.count * 72 + 80)
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let data = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).pngData { _ in
@@ -25,7 +28,7 @@ import UIKit
         }
         let extraction = try ReceiptParser.extraction(OCRResult(lines: observations, revision: 3))
         var draft = ReceiptReviewDraft(fields: extraction.fields)
-        if !["correction-difficult", "correction-source"].contains(mode), !draft.lines.isEmpty { draft.lines[draft.lines.count - 1].amount = "" }
+        if !["correction-difficult", "correction-source", "correction-summaries"].contains(mode), !draft.lines.isEmpty { draft.lines[draft.lines.count - 1].amount = "" }
         return (data, extraction, draft)
     }
 }

@@ -10,6 +10,38 @@ import XCTest
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "P405-unreachable-control"; shot.lifetime = .keepAlways; add(shot)
         XCTAssertTrue(element.isHittable)
     }
+    func testUnassignedRowRequiresLineBeforeRereadAndCancelDiscardsNewLine() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "correction-difficult", "--t05-light", "--t05-reduce-motion"]
+        app.launch(); XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
+        let check = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Check unassigned amounts'")).firstMatch
+        reveal(check, in: app); check.tap()
+        let reread = app.buttons["focusedReread"]; reveal(reread, in: app)
+        XCTAssertFalse(reread.isEnabled)
+        let addPurchase = app.buttons["focusedAddPurchase"]
+        app.swipeDown(); reveal(addPurchase, in: app); addPurchase.tap()
+        reveal(reread, in: app); XCTAssertTrue(reread.isEnabled); reread.tap()
+        XCTAssertTrue(app.buttons["rereadRun"].waitForExistence(timeout: 10))
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "P505-unassigned-line-reread"; shot.lifetime = .keepAlways; add(shot)
+        XCTAssertTrue(app.staticTexts["Line amount"].exists)
+        app.buttons["rereadCancel"].tap(); app.buttons["cancelFocusedCorrection"].tap()
+        reveal(check, in: app); check.tap(); reveal(reread, in: app)
+        XCTAssertFalse(reread.isEnabled, "Outer Cancel must discard the selected new line")
+        app.buttons["cancelFocusedCorrection"].tap(); XCTAssertFalse(app.buttons["finishSave"].isEnabled)
+    }
+    func testMissingSignedSubtotalOpensHighlightedFocusedEditorInDarkMode() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "correction-summaries", "--t05-dark", "--t05-reduce-motion"]
+        app.launch(); XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
+        let check = app.buttons["reviewCheck-subtotal"]; reveal(check, in: app); check.tap()
+        XCTAssertTrue(app.buttons["focusedReread"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["No position is available for this check. Compare the full original."].exists)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "P505-signed-summary-focused"; shot.lifetime = .keepAlways; add(shot)
+        app.buttons["focusedReread"].tap()
+        XCTAssertTrue(app.buttons["rereadRun"].waitForExistence(timeout: 10)); XCTAssertTrue(app.staticTexts["Subtotal"].exists)
+        app.buttons["rereadCancel"].tap(); app.buttons["cancelFocusedCorrection"].tap()
+        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
+    }
     func testRegionReadingNestedCancelAndExplicitApply() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "correction-normal", "--t05-light", "--t05-reduce-motion"]

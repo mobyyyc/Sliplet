@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-17",
+  "focused_native_tests_passed": 60,
+  "focused_ui_tests_passed": 3,
+  "frozen_run": "p5-05-final-v3",
+  "held_out": 0,
+  "human_assisted_real_receipt_sessions": 0,
+  "no_phone_update": true,
+  "private_hosted_methods_passed": 2,
+  "scorer_tests_passed": 18,
+  "sources": {
+    "Sliplet/Diagnostics/SyntheticCorrectionPreview.swift": "4720e369d06427b3c4bf512029b7c36fdc7b921671808e91624d85cdca3275c6",
+    "Sliplet/Domain/ReceiptReviewGuidance.swift": "88ab2af9edaf3fcf97ff907d4afee0f1fbf6886a655b70282bfacad7b2cc3e2b",
+    "Sliplet/UI/ReceiptFocusedCorrectionView.swift": "4db38126f8c6fa0efafcb52ee24108c1f325e3cc124598ea42c08c67ea6163fc",
+    "SlipletTests/ReceiptFocusedGuidanceTests.swift": "0b76f337ddc527d156acd74205cac842eb641e18b45202d7bd4dc5bfa66c0d1d",
+    "SlipletTests/ReceiptRecognitionLabTests.swift": "f0d353462159af0722170559c8ecab35f69e5f46de2334a462af7e1e736358a3",
+    "SlipletUITests/ReceiptRereadUITests.swift": "1e182f4198382c2393476d055a4723c777f5efe3864812fcaa800988310af65a",
+    "evaluation/receipt-corrections/run.py": "ff04f061a40df505eef05d810ead3bf884f921adbdc75e9bf04235213905030b"
+  }
+}

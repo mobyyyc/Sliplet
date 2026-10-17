@@ -53,6 +53,27 @@ struct ReceiptFocusedCorrectionView: View {
         NavigationStack {
             Form {
                 Section { Text(check.message).font(.footnote) }
+                if case .source = check.target {
+                    Section {
+                        Picker("Existing line", selection: $lineID) {
+                            Text("Choose a line").tag(UUID?.none)
+                            ForEach(input.lines) { line in Text(line.name.nilIfEmpty ?? "Unnamed line").tag(Optional(line.id)) }
+                        }.accessibilityIdentifier("focusedExistingLine")
+                        Button("Add purchase from this row", systemImage: "plus") {
+                            var line = EditableReceiptLine.blank()
+                            line.sourceLineIDs = currentSource.map { [$0.id] } ?? []
+                            input.lines.append(line); lineID = line.id
+                        }.accessibilityIdentifier("focusedAddPurchase")
+                        if lineID != nil, let source = currentSource {
+                            Button("Link this row to selected line") {
+                                if let i = input.lines.firstIndex(where: { $0.id == lineID }), !input.lines[i].sourceLineIDs.contains(source.id) {
+                                    input.lines[i].sourceLineIDs.append(source.id)
+                                }
+                            }.accessibilityIdentifier("focusedLinkRow")
+                        }
+                    } header: { Text("Missing or wrapped line") }
+                }
+
                 Section {
                     if workspace.active && !workspace.privacyCovered, let image = workspace.image {
                         ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
@@ -65,7 +86,11 @@ struct ReceiptFocusedCorrectionView: View {
                                 .accessibilityIdentifier("expandFocusedOriginal")
                         }
                         Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
-                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("focusedReread")
+                            .buttonStyle(ReceiptSecondaryStyle()).disabled(rereadFields.isEmpty).accessibilityIdentifier("focusedReread")
+                        if rereadFields.isEmpty {
+                            Text("Choose an existing line or add a purchase above, then reread its amount or description.")
+                                .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("focusedChooseLineHint")
+                        }
                         if sources.count > 1, case .source = check.target {
                             HStack {
                                 Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
@@ -109,26 +134,6 @@ struct ReceiptFocusedCorrectionView: View {
                         Text("For a difference, check purchases and adjustments in the full review. Do not change a correct total just to make it match.").font(.footnote)
                     } header: { Text("Printed totals") }
                 case .line, .source:
-                    if case .source = check.target {
-                        Section {
-                            Picker("Existing line", selection: $lineID) {
-                                Text("Choose a line").tag(UUID?.none)
-                                ForEach(input.lines) { line in Text(line.name.nilIfEmpty ?? "Unnamed line").tag(Optional(line.id)) }
-                            }.accessibilityIdentifier("focusedExistingLine")
-                            Button("Add purchase from this row", systemImage: "plus") {
-                                var line = EditableReceiptLine.blank()
-                                line.sourceLineIDs = currentSource.map { [$0.id] } ?? []
-                                input.lines.append(line); lineID = line.id
-                            }.accessibilityIdentifier("focusedAddPurchase")
-                            if lineID != nil, let source = currentSource {
-                                Button("Link this row to selected line") {
-                                    if let i = input.lines.firstIndex(where: { $0.id == lineID }), !input.lines[i].sourceLineIDs.contains(source.id) {
-                                        input.lines[i].sourceLineIDs.append(source.id)
-                                    }
-                                }.accessibilityIdentifier("focusedLinkRow")
-                            }
-                        } header: { Text("Missing or wrapped line") }
-                    }
                     if lineID != nil {
                         Section {
                             LabeledContent("Line amount") { TextField("Missing", text: lineField(\.amount)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "lineAmount").accessibilityIdentifier("focusedLineAmount") }
@@ -150,7 +155,11 @@ struct ReceiptFocusedCorrectionView: View {
                 if let currentSource {
                     Section {
                         DisclosureGroup("Initial read text", isExpanded: $showReadText) {
-                            Text(currentSource.text).font(.callout).textSelection(.enabled)
+                            if case .source = check.target {
+                                Text(currentSource.text).font(.callout).textSelection(.enabled)
+                            } else {
+                                ForEach(sources) { source in Text(source.text).font(.callout).textSelection(.enabled) }
+                            }
                         }.accessibilityIdentifier("focusedReadText")
                     }
                 }
@@ -180,7 +189,7 @@ struct ReceiptFocusedCorrectionView: View {
                     }
                 }
                 .sheet(isPresented: $rereading) {
-                    if let image = workspace.image {
+                    if let image = workspace.image, !rereadFields.isEmpty {
                         ReceiptRereadView(workspace: workspace, image: image, boxes: boxes, fields: rereadFields, lineID: lineID, input: input) { event in
                             guard workspace.draft == baseline, workspace.active, !workspace.privacyCovered else { return false }
                             do {
@@ -208,14 +217,9 @@ struct ReceiptFocusedCorrectionView: View {
             #endif
     }
     private var rereadFields: [ReceiptAssistedField] {
-        switch check.target {
-        case .receipt: [.merchant]
-        case .date: [.date]
-        case .subtotal: [.subtotal, .total]
-        case .total: [.total, .subtotal]
-        case .line, .source: lineID == nil ? [.merchant, .subtotal, .total] : [.amount, .description, .quantity]
-        }
+        check.rereadFields(lineID: lineID)
     }
+
     private func apply() {
         editing = nil
         guard workspace.draft == baseline else { error = "The receipt changed. Cancel and reopen this check."; return }

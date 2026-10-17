@@ -1,10 +1,14 @@
 # Progress
 
-## Current direction · 2026-10-13
+## Current direction · 2026-10-17
+
+Phase 5 P5-01 through P5-05 are approved and complete as bounded tasks. P5-05 connects uncertain evidence to focused corrections, preserves Apply/Cancel and independent full review, and passes 60 native, 18 scorer, three UI and two private hosted tests. Five existing drafts retain their fields and source memberships; automatic accuracy is unchanged. No held-out or human-assisted accuracy claim. [P5-05 report](docs/PHASE5_CORRECTIONS.md). P5-06 full evaluation awaits separate Main approval. No phone or normal Simulator wallet update. Older entries below are historical.
+
+## Historical direction · 2026-10-13
 
 The user accepts Phase 3 based on their Simulator check and moves on; a Phase 3 phone update/walkthrough is no longer the next prerequisite. Phase 4 **P4-01 is approved and verified**, with primarily Simulator-based receipt-accuracy testing and a read-only planning subagent explicitly requested. Follow [the Phase 4 proposal](docs/PHASE4_RECOGNITION.md). P4-01 completed the actual Simulator import baseline and failure map. P4-02 through P4-06 remain unstarted and each needs separate approval. Existing five receipts are development data. Main remains the sole user coordination point, with on-device recognition and private evidence preserved. Historical phone-measurement limitations below remain limitations, not failed prerequisites or newly passed checks. P4-01: 10 successful imports, five stable repeat pairs and preserved draft round trips; parser purchase recovery 53/66, three currency-unresolved receipts, zero fully correct receipts and zero held-out purchases. [Measured report](docs/RECOGNITION_LAB.md). Production app source is unchanged.
 
-## Current milestone
+## Historical milestone
 Phase 3 — whole-app UX audit and native interaction repairs, authorized in Main on 2026-10-12. [Current plan and verification](docs/PHASE3_UX.md). The following Phase 1/2 entries are historical; Phase 2 implementations are accepted and archived. Initial phone open/unlock/retained-original checks passed, while backup, fresh offline recognition and human correction timings remain pending.
 
 ## Historical milestones

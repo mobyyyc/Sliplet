@@ -10,18 +10,29 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
     let sourceLineIDs: [UUID]
     let requiresCorrection: Bool
 
+
+    func rereadFields(lineID: UUID?) -> [ReceiptAssistedField] {
+        switch target {
+        case .receipt: [.merchant]
+        case .date: [.date]
+        case .subtotal: [.subtotal, .total]
+        case .total: [.total, .subtotal]
+        case .line, .source: lineID == nil ? [] : [.amount, .description, .quantity]
+        }
+    }
+
     private static var encoder: JSONEncoder { let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys; return encoder }
     func signature(in draft: ReceiptReviewDraft) -> String {
         switch target {
         case .date: return draft.date
-        case .subtotal: return draft.subtotal + "|" + String(draft.subtotalNotPrinted) + "|" + draft.total
-        case .total: return draft.total + "|" + draft.subtotal + "|" + String(draft.subtotalNotPrinted)
+        case .subtotal: return draft.currency + "|" + draft.subtotal + "|" + String(draft.subtotalNotPrinted) + "|" + draft.total
+        case .total: return draft.currency + "|" + draft.total + "|" + draft.subtotal + "|" + String(draft.subtotalNotPrinted)
         case .receipt: return draft.merchant + "|" + draft.date + "|" + draft.currency
         case .line(let id):
-            return draft.lines.first { $0.id == id }.flatMap { try? Self.encoder.encode($0).base64EncodedString() } ?? "removed"
+            return draft.currency + "|" + (draft.lines.first { $0.id == id }.flatMap { try? Self.encoder.encode($0).base64EncodedString() } ?? "removed")
         case .source:
             // An unassigned row could be added or attached to any purchase. Any line edit reopens its check.
-            return (try? Self.encoder.encode(draft.lines).base64EncodedString()) ?? ""
+            return draft.currency + "|" + ((try? Self.encoder.encode(draft.lines).base64EncodedString()) ?? "")
         }
     }
     func isChecked(in draft: ReceiptReviewDraft) -> Bool {
@@ -51,24 +62,42 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
             }
         }
         if draft.lines.isEmpty { append("purchases", "Add missing purchases", "Read each purchase from the original; recognition may have missed lines.", .source) }
+        func summaryTarget(_ ids: [UUID]) -> Target? {
+            let labels = (extraction?.rawOCR ?? []).filter { ids.contains($0.id) }
+                .compactMap { ReceiptParser.summaryLabel($0.text)?.kind }
+            guard !labels.isEmpty else { return nil }
+            return labels.allSatisfy { $0 == .subtotal } ? .subtotal : .total
+        }
         // Group warnings by action and linked line, conserving every issue source ID while avoiding header-by-header alerts.
         var groups: [Self] = []
         for issue in extraction?.issues ?? [] {
             let title: String, message: String, target: Target
             switch issue.code {
+            case "merchant_conflicting":
+                title = "Verify the merchant"; message = "Different store names were read. Compare the receipt header and choose the merchant shown there."; target = .receipt
+            case "currency_conflicting":
+                title = "Verify the currency"; message = "Different currencies were read. Choose the printed currency; a default is not proof of what was printed."; target = .receipt
+            case "negative_summary_check_source":
+                title = "Check the signed summary"; message = "A negative summary amount was read. Check its label and sign in the original; do not remove the sign to make the numbers match."; target = summaryTarget(issue.sourceLineIDs) ?? .total
             case "date_order_check", "date_conflicting", "date_ambiguous":
                 title = "Verify the printed date"; message = "Check the year and month/day order. Recognition found uncertain date evidence."; target = .date
             case "subtotal_conflicting":
                 title = "Verify the printed subtotal"; message = "More than one subtotal was read. Compare the printed subtotal."; target = .subtotal
             case "total_conflicting", "summary_amount_ambiguous":
-                title = "Verify printed totals"; message = "The summary amounts are uncertain. Compare subtotal and total with the original."; target = .total
+                title = "Verify printed totals"; message = "The summary amounts are uncertain. Compare subtotal and total with the original."; target = summaryTarget(issue.sourceLineIDs) ?? .total
             case "quantity_association_check", "quantity_association_uncertain":
                 title = "Check quantity and line amount"; message = "Check which item this quantity belongs to. Use the printed extension; leave unknown quantities blank."; target = .source
             case "adjustment_sign_check":
                 title = "Check the adjustment"; message = "Verify whether this is a discount, tax or fee and check its printed sign."; target = .source
             case "unpriced_source_row":
                 title = "Check unassigned text"; message = "Some text has no linked amount. Check for a missing purchase or wrapped description; store headers need no purchase."; target = .source
-            case "unpaired_amount", "amount_unparsed_check_source", "item_amount_ambiguous", "extension_missing":
+            case "amount_unparsed_check_source":
+                if let summary = summaryTarget(issue.sourceLineIDs) {
+                    title = "Check the printed summary"; message = "The printed summary amount could not be read. Compare its label, digits and sign with the original."; target = summary
+                } else {
+                    title = "Check unassigned amounts"; message = "Check the printed item and its full line amount. A unit price must not replace a missing line amount."; target = .source
+                }
+            case "unpaired_amount", "item_amount_ambiguous", "extension_missing":
                 title = "Check unassigned amounts"; message = "Check the printed item and its full line amount. A unit price must not replace a missing line amount."; target = .source
             case "geometry_incomplete": continue // Source viewer truthfully explains missing coordinates.
             default: continue
@@ -80,7 +109,7 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
             let linkedID = linked?.0
             let eligibleID = linkedID.flatMap { id in draft.lines.contains { $0.id == id } ? id : nil }
             let actualTarget = target == .source && issue.code != "unpriced_source_row" ? eligibleID.map { Target.line($0) } ?? target : target
-            let targetKey = target == .source && issue.code != "unpriced_source_row" ? linkedID?.uuidString ?? "source" : "source"
+            let targetKey = target == .source && issue.code != "unpriced_source_row" ? linkedID?.uuidString ?? "source" : (target == .subtotal ? "subtotal" : "source")
             let key = "evidence-" + title + "-" + targetKey
             if let i = groups.firstIndex(where: { $0.id == key }) {
                 let old = groups[i]
@@ -91,7 +120,17 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
                     sourceLineIDs: issue.sourceLineIDs, requiresCorrection: false))
             }
         }
-        result += groups
+        // Missing fields and their extraction warning lead to one editor, with
+        // the warning's evidence retained instead of a duplicate unhighlighted task.
+        for group in groups {
+            if let i = result.firstIndex(where: { $0.target == group.target && $0.requiresCorrection }) {
+                let required = result[i]
+                result[i] = Self(id: required.id, title: required.title,
+                    message: required.message + "\n" + group.message, target: required.target,
+                    sourceLineIDs: Array(Set(required.sourceLineIDs + group.sourceLineIDs)).sorted { $0.uuidString < $1.uuidString },
+                    requiresCorrection: true)
+            } else { result.append(group) }
+        }
         if let difference = draft.reconciliation.difference, difference != 0 {
             append("difference", "Check the difference", "Compare every purchase and adjustment with the original. Matching totals alone never confirms accuracy.", .total)
         }
