@@ -103,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p5-03-purchases-0.5.0"
+    static let version = "p5-04-merchants-0.6.0"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -230,12 +230,7 @@ enum ReceiptParser {
     }
 
     static func merchant(_ text: String) -> String? {
-        guard let token = first(#"NO\s*FRILLS\b|\bCOSTCO\b|\bT\s*&\s*T\b"#, text) else { return nil }
-        // Fictional test identities remain visibly fictional in the normal wallet.
-        if first(#"\b(?:DEMO|SYNTHETIC|FICTIONAL)\b"#, text) != nil { return text }
-        if first(#"NO\s*FRILLS"#, token) != nil { return "NOFRILLS" }
-        if first("COSTCO", token) != nil { return "COSTCO" }
-        return "T&T SUPERMARKET"
+        ReceiptMerchantDirectory.match(text)?.displayName
     }
     static func dateCandidates(_ text: String, noFrills: Bool = false) -> [(ReceiptDate, Bool)] {
         let pattern = #"\b(?:20\d{2}[-/]\d{2}[-/]\d{2}|\d{1,2}/\d{1,2}/(?:20)?\d{2}|\d{1,2}-[A-Za-z]{3}-20\d{2})\b"#
@@ -393,7 +388,22 @@ enum ReceiptParser {
     static func parse(_ observations: [ReceiptOCRLine]) -> ParsedReceipt {
         var result = ParsedReceipt()
         let grouped = rows(observations)
-        result.merchant = grouped.prefix { matches(moneyPattern, $0.text).isEmpty }.compactMap { merchant($0.text) }.first
+        // Only the early, unpriced header can select a retailer. Never search a
+        // payment footer or let a conflicting header select a parsing policy.
+        let header = grouped.prefix(12).prefix {
+            matches(moneyPattern, $0.text).isEmpty && summaryLabel($0.text) == nil
+                && first(#"^(?:DEBIT|CREDIT|PAYMENT|THANK\s+YOU)\b"#, fieldText($0.text)) == nil
+        }
+        let merchantEvidence = header.compactMap { row in
+            ReceiptMerchantDirectory.match(row.text).map { (match: $0, ids: row.ids) }
+        }
+        let identities = Set(merchantEvidence.map { $0.match.identity })
+        let merchantMatch = identities.count == 1 ? merchantEvidence.first?.match : nil
+        result.merchant = merchantMatch?.displayName
+        if identities.count > 1 {
+            result.issues.append(.init(code: "merchant_conflicting",
+                sourceLineIDs: merchantEvidence.flatMap(\.ids), detail: nil))
+        }
         var finished = false, pendingQuantity: Row?
         var totals: [(Int64, [UUID])] = [], subtotals: [(Int64, [UUID])] = []
         var totalAmbiguous = false, subtotalAmbiguous = false
@@ -403,7 +413,7 @@ enum ReceiptParser {
         if observations.contains(where: { $0.boundingBox == nil }) {
             issue("geometry_incomplete", observations.filter { $0.boundingBox == nil }.map(\.id))
         }
-        for row in interpretationRows(grouped, knownRetailer: result.merchant != nil) {
+        for row in interpretationRows(grouped, knownRetailer: merchantMatch != nil) {
             let text = row.text.trimmingCharacters(in: .whitespacesAndNewlines), upper = fieldText(text)
             // Pending quantity belongs only to the next purchase; every intervening boundary clears it.
             let previousQuantity = pendingQuantity; pendingQuantity = nil
@@ -434,7 +444,7 @@ enum ReceiptParser {
                     if first(symbol, upper) != nil, let currency = ExactInput.currency(code) { currencies.append((currency, row.ids)) }
                 }
             }
-            let candidates = dateCandidates(text, noFrills: result.merchant.map { first("NO\\s*FRILLS", $0) != nil } ?? false)
+            let candidates = dateCandidates(text, noFrills: merchantMatch?.identity == .noFrills)
             for (date, orderCheck) in candidates {
                 dates.append((date, row.ids)); if orderCheck { issue("date_order_check", row.ids) }
             }

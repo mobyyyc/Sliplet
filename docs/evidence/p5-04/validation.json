@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-17",
+  "focused_native_tests_passed": 105,
+  "frozen_run": "p5-04-final-v2",
+  "new_merchant_test_methods": 6,
+  "no_phone_update": true,
+  "private_hosted_methods_passed": 2,
+  "review": "Main reviewed identity/display separation, header boundaries, conflicts, alias tolerance, private field/source equality and unchanged exact scores.",
+  "scorer_tests_passed": 18,
+  "sources": {
+    "Sliplet/Parsing/Parsing.swift": "e510083d13cfe323dc03cea94dd2825a2eff28f4f7a349cd68170c3381d631c4",
+    "Sliplet/Parsing/ReceiptMerchantDirectory.swift": "be26424186cb2c6560a8c64445be7c53a131122c8a2c07e1a1b8d447c6e50e4b",
+    "SlipletTests/ReceiptMerchantTests.swift": "c13800dd9384e159621401db24e202d6e190a4217e5708e3600fa0dda2ef8e2b",
+    "evaluation/receipt-merchants/run.py": "b30b3b6fc703a3941b304e6d9a5423861ef385dbfd3c6cfe798524242d39261f"
+  }
+}

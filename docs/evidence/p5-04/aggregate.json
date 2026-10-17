@@ -1,0 +1,56 @@
+{
+  "development_receipts": 5,
+  "draft_roundtrips": 5,
+  "first_median_ms": 827.4767083348706,
+  "held_out": 0,
+  "interpretation": "Merchant coverage and safeguards expanded; all prior draft fields and source memberships preserved; no measured accuracy gain on five exposed receipts.",
+  "legacy_purchase_pairs": {
+    "correct": 53,
+    "expected": 66
+  },
+  "merchant_correct": 5,
+  "merchant_expected": 5,
+  "p503_comparison": {
+    "gained_exact_lines": 0,
+    "identical_draft_fields_and_sources": 5,
+    "lost_correct_summary": 0,
+    "lost_correct_summary_fields": 0,
+    "lost_previously_exact_lines": 0,
+    "new_unmatched_line_proxies": 0,
+    "new_wrong_summary": 0,
+    "same_checked_observations": 2,
+    "same_merchant": 5,
+    "same_raw_observations": 0,
+    "same_raw_text_geometry": 5
+  },
+  "repeat_max_ms": 893.9680416660849,
+  "repeat_median_ms": 829.9681666539982,
+  "stable_repeats": 5,
+  "structured_counts": {
+    "actual_lines": 66,
+    "actual_purchases": 62,
+    "ambiguous_identity": 80,
+    "correct": 160,
+    "exact_purchase_pairs": 43,
+    "expected_purchases": 66,
+    "missing": 47,
+    "missing_line_proxies": 15,
+    "reference_lines": 73,
+    "unmatched_actual_line_proxies": 18,
+    "unrelated_unmatched_actual_lines": 8,
+    "unscorable": 293,
+    "wrong": 1
+  },
+  "successful": 10,
+  "summary_comparison": {
+    "checked_subtotal_after_correct": 2,
+    "checked_subtotal_before_correct": 2,
+    "checked_total_after_correct": 1,
+    "checked_total_before_correct": 1,
+    "subtotal_after_correct": 4,
+    "subtotal_before_correct": 4,
+    "total_after_correct": 3,
+    "total_before_correct": 3
+  },
+  "task": "P5-04"
+}
