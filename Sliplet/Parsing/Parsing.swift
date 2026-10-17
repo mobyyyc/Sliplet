@@ -103,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p5-02-summary-0.5.0"
+    static let version = "p5-03-purchases-0.5.0"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -271,10 +271,51 @@ enum ReceiptParser {
         }
     }
 
+    /// Join only an explicit SKU description with its immediately following,
+    /// indented priced continuation. Unanchored wrapping remains reviewable.
+    static func purchaseContinuationRows(_ input: [Row]) -> [Row] {
+        var result: [Row] = []
+        var index = 0
+        while index < input.count {
+            let head = input[index]
+            guard index + 1 < input.count,
+                  printedSKU(fieldText(head.text)) != nil,
+                  matches(moneyPattern, head.text).isEmpty,
+                  first(quantityPattern, head.text) == nil else {
+                result.append(head); index += 1; continue
+            }
+            let tail = input[index + 1]
+            let text = fieldText(tail.text)
+            let distance = head.center - tail.center
+            let height = min(head.height, tail.height)
+            guard distance > height * 0.45, distance <= height * 1.75,
+                  monetaryTokens(tail.text).count == 1,
+                  first(#"^\p{L}"#, text) != nil,
+                  printedSKU(text) == nil, summaryLabel(text) == nil,
+                  first(metadataPattern, text) == nil,
+                  first(#"^(?:HST|GST|PST|QST|TPS|TVQ|TAX|TAXES|DISCOUNT|COUPON|DEPOSIT|ADJUSTMENT)\b"#, text) == nil,
+                  merchant(text) == nil, dateCandidates(text).isEmpty,
+                  first(quantityPattern, text) == nil,
+                  let left = head.parts.compactMap(\.boundingBox).map(\.x).min(),
+                  let continuationLeft = tail.parts.compactMap(\.boundingBox).map(\.x).min(),
+                  continuationLeft >= left + height * 0.5,
+                  continuationLeft <= left + height * 4 else {
+                result.append(head); index += 1; continue
+            }
+            var joined = head
+            joined.text += " " + tail.text
+            joined.ids += tail.ids
+            joined.parts += tail.parts
+            result.append(joined); index += 2
+        }
+        return result
+    }
+
     /// Interpret an unpriced description and a separate single printed amount only when geometry
     /// gives a unique local pair. Existing priced rows and original grouping remain untouched.
     static func interpretationRows(_ input: [Row], knownRetailer: Bool) -> [Row] {
         guard input.allSatisfy({ $0.height > 0 }) else { return input }
+        let input = knownRetailer ? purchaseContinuationRows(input) : input
         func isPrice(_ r: Row) -> Bool {
             guard matches(moneyPattern, r.text).count == 1, let token = first(moneyPattern, r.text) else { return false }
             let rest = r.text.replacingOccurrences(of: token, with: "").trimmingCharacters(in: .whitespaces)
@@ -292,8 +333,9 @@ enum ReceiptParser {
             }
             return matches(moneyPattern, r.text).isEmpty && first(#"\p{L}"#, t) != nil
                 && first(quantityPattern, t) == nil && first(metadataPattern, t) == nil
-                // Detached numeric-leading text can be a product code or quantity; retain uncertainty.
-                && first(#"^\d"#, t) == nil
+                // Long explicit product-code prefixes are evidence; short numbers
+                // and unlabelled quantity-like prefixes remain unresolved.
+                && (first(#"^\d"#, t) == nil || printedSKU(t) != nil)
                 && merchant(r.text) == nil && dateCandidates(r.text).isEmpty
                 && first(#"\bCAD\b|CA\$|^\d+\s+(?:ST|AVE|ROAD|RD)\b"#, t) == nil
         }

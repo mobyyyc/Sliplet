@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-17",
+  "focused_native_tests_passed": 99,
+  "frozen_run": "p5-03-final",
+  "new_purchase_tests": 8,
+  "no_phone_update": true,
+  "private_hosted_methods_passed": 2,
+  "review": "Main verified all old draft values and source memberships; added row paired diagnostically by unique exact source name, not by amount; strict scores unchanged",
+  "scorer_tests_passed": 18,
+  "sources": {
+    "Sliplet/Parsing/Parsing.swift": "60e0df4e8814a30551fe7cd7ce34d6456ecd529221ef3ab08806035a6a63b8a6",
+    "SlipletTests/ReceiptPurchaseAssemblyTests.swift": "e1900f47b34ca6de01bd68d0c16ed68275d4b31f55571295e528c45010fe73d9",
+    "evaluation/receipt-purchases/run.py": "f95c4867eea1bbca052d7bb29f0f28181b1446650ad12270c33f96a579c594e0"
+  }
+}
