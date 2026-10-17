@@ -221,3 +221,7 @@ P2-05 Main acceptance: password-only decryption verified independently with 12 c
 - Dependency: P2-05 accepted and pushed as `e419d15`.
 - Scope: existing iPhone 15 Pro in-place update, retained-wallet check, password backup/duplicate preview, offline capture and timed focused corrections. No uninstall/reset or new feature phase.
 - Guide: [One-step-at-a-time phone walkthrough](docs/PHONE_WALKTHROUGH.md). User observations, real accuracy, correction time and lifecycle outcomes remain pending; do not mark this task complete from a build/install alone.
+
+## Phase 6 — Verified recovery and correction effort
+
+Planning approved on 2026-10-17; [plan](docs/PHASE6_RECOGNITION.md) saved. P6-01 specific failure evidence is next and awaits individual approval. P6-02 summary recovery, P6-03 item recovery, P6-04 correction-effort evaluation and P6-05 final decision are proposals only. No Phase 6 implementation, new-model work or device update is authorized by the planning approval. Main remains the coordination point.
