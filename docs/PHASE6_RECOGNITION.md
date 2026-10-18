@@ -1,6 +1,6 @@
 # Phase 6 — Verified recovery and less correction work
 
-2026-10-17. **P6-01 diagnosis and P6-02 experiment complete; P6-02 proof gate failed. Production implementation stopped.** Main coordinates one separately approved task at a time. This plan follows the negative accuracy result of [P5-06](PHASE5_ACCEPTANCE.md). It does not authorize new models, cloud processing, broad parser rewrites or phone installation.
+2026-10-17. **Closed early after approved P6-07 assessment: accuracy goal unmet. P6-01/P6-02/P6-02B/P6-07 complete; P6-03–P6-06 not executed.** [Decision and proposed next task](PHASE6_DECISION.md). Main coordinates one separately approved task at a time. This plan follows the negative accuracy result of [P5-06](PHASE5_ACCEPTANCE.md). It does not authorize new models, cloud processing, broad parser rewrites or phone installation.
 
 ## Starting point and goal
 
@@ -30,7 +30,7 @@ If source information is truly absent or unreadable, say so and offer manual ent
 
 **Execution order:** P6-01 → P6-02 → decision gate → P6-03 → P6-04 → decision gate → P6-05 → optional P6-06 → P6-07. Each task requires its own Main approval. This planning revision does not start any task.
 
-P6-01 is complete: [two-total diagnosis](PHASE6_TOTAL_DIAGNOSIS.md). Both failures begin in saved OCR (one missing amount, one spurious sign); the shared dark total bar motivates a bounded reading experiment but is not yet proved causal. P6-02 was approved and completed with **zero total recoveries; gate failed**. [Experiment report](PHASE6_TOTAL_PROBE.md). P6-03 and the normal sequence are stopped. The separately approved P6-02B also completed with zero recoveries; [report](PHASE6_ANCHORED_TOTAL_PROBE.md). No P6-02C is authorized. An early P6-07 decision report is proposed next, pending approval. If P6-02 fails, produce an early decision report explaining the failed hypotheses, remaining evidence gap and whether a different approach merits a separately approved proposal. Do not automatically continue with item work or correction UI as if the accuracy gate passed. If item proof later fails, retain any independently verified total gain and stop item integration. Main reports measured changes, limits, commit and next approval after every task.
+P6-01 is complete: [two-total diagnosis](PHASE6_TOTAL_DIAGNOSIS.md). Both failures begin in saved OCR (one missing amount, one spurious sign); the shared dark total bar motivates a bounded reading experiment but is not yet proved causal. P6-02 was approved and completed with **zero total recoveries; gate failed**. [Experiment report](PHASE6_TOTAL_PROBE.md). P6-03 and the normal sequence are stopped. The separately approved P6-02B also completed with zero recoveries; [report](PHASE6_ANCHORED_TOTAL_PROBE.md). No P6-02C is authorized. The approved early P6-07 decision report is complete; Phase 6 is closed with its accuracy goal unmet. If P6-02 fails, produce an early decision report explaining the failed hypotheses, remaining evidence gap and whether a different approach merits a separately approved proposal. Do not automatically continue with item work or correction UI as if the accuracy gate passed. If item proof later fails, retain any independently verified total gain and stop item integration. Main reports measured changes, limits, commit and next approval after every task.
 
 ## Evidence and scoring rules
 
