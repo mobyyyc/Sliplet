@@ -1,5 +1,9 @@
 # Progress
 
+## P7-01 deployment stop · 2026-10-18
+
+Pinned sample cannot link for arm64 iOS Simulator: OpenCV 4.3.0 supplies a physical-iOS arm64 slice and excludes Simulator arm64. Default x86_64 compilation passes but the installed destination rejects it. No fictional/private inference; accuracy remains untested. [Report](docs/PHASE7_INDEPENDENT_OCR.md). P7-01A compatibility repair is proposed and unstarted pending approval. Production and phone unchanged.
+
 ## Phase 6 closed · 2026-10-18
 
 P6-07 early decision assessment is complete. Automatic accuracy goal unmet: totals 3/5, strict item pairs 43/66, fully correct receipts 0/5. Both isolated total policies failed; no production change. P6-03 through P6-06 remain unexecuted. [Decision and researched alternatives](docs/PHASE6_DECISION.md). Proposed next task: P7-01 isolated, offline, one-engine OCR benchmark; requires separate approval for public model/runtime downloads and local evaluation. No integration, phone update or new model experiment has started.

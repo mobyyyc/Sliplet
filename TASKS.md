@@ -230,3 +230,8 @@ Planning and revision approved on 2026-10-17; [full agenda](docs/PHASE6_RECOGNIT
 ## P6-07 early phase decision — complete · 2026-10-18
 
 [Decision report](docs/PHASE6_DECISION.md): Phase 6 accuracy goal unmet; no production change. P6-03–P6-06 not executed. Proposed P7-01 isolated offline OCR comparison is unstarted and awaits separate approval; no automatic P6-02C or integration.
+
+
+## P7-01 — deployment gate failed · 2026-10-18
+
+Approved independent OCR comparison stopped before inference: pinned OpenCV 4.3.0 is incompatible with arm64 Simulator. No accuracy result. [Report](docs/PHASE7_INDEPENDENT_OCR.md). Proposed P7-01A isolated same-version OpenCV source build and resumed benchmark requires separate approval. No production change or device update.

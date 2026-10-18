@@ -1,0 +1,24 @@
+Public build evidence; no receipt inputs were used.
+
+1. pod install --deployment initially refused only the CocoaPods version metadata:
+   New Lockfile: 1.17.0; Old Lockfile: 1.16.2.
+   Updated that metadata only; locked dependency versions/checksums unchanged.
+   Retry: Pod installation complete; 3 dependencies, 4 total pods.
+2. Initial Xcode 27.1 build rejected dependency deployment targets 9.0 and 11.0.
+   Applied build-only IPHONEOS_DEPLOYMENT_TARGET=16.0.
+3. Models were still downloading; the resource folder was absent.
+   Created the empty resource folder for compile/link diagnosis only.
+   Default generic Simulator test build succeeded, producing x86_64 only.
+   This was NOT a model-loaded or runnable OCR test.
+4. OpenCV generated build configuration:
+   EXCLUDED_ARCHS[sdk=iphonesimulator*] = arm64
+   Dedicated iPhone 15 Pro / iOS 27.0 destination reports arch:arm64 and rejects
+   the default build's supported platform/architecture combination.
+5. Diagnostic build forced ARCHS=arm64 EXCLUDED_ARCHS= ONLY_ACTIVE_ARCH=YES:
+   ld: building for 'iOS-simulator', but linking in object file
+   (opencv2.framework/Versions/A/opencv2[arm64][40](alloc.o)) built for 'iOS'
+   clang++: error: linker command failed with exit code 1
+   TEST BUILD FAILED (exit 65).
+
+No private inference, fictional inference, model-load success, performance result
+or receipt-accuracy result is claimed. Disposable device removed without booting.

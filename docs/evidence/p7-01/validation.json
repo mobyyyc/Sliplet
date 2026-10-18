@@ -1,0 +1,31 @@
+{
+  "accuracy_gate": "not evaluated",
+  "cocoapods": "1.17.0",
+  "date": "2026-10-18",
+  "deployment_gate": "failed",
+  "execution_provider": "CPU",
+  "fictional_inferences": 0,
+  "model_asset_hashes_pinned_for_inference": false,
+  "model_assets_complete": false,
+  "model_preset": "PP-OCRv5_mobile",
+  "normal_wallet_or_phone_updated": false,
+  "opencv": "4.3.0",
+  "private_receipts_processed": 0,
+  "production_modified": false,
+  "recognition_model_download": "interrupted; retained as .tar.partial; never used",
+  "runtime": "onnxruntime 1.24.3",
+  "simulator_runtime": "iOS 27.0 (24A434)",
+  "task": "P7-01",
+  "upstream_file_hashes": {
+    "LICENSE": "3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e",
+    "deploy/ios_demo/NOTICE": "5f228c47d624ff0b4ee28dc7d102ec02b9f2ff4e01302c0b1464a489c7a86e26",
+    "deploy/ios_demo/PaddleOCRDemo/Engine/OCREngine.swift": "abe344838d81835ab0a2d72fc32501f4b712f231b862c984e3d13b0b3c227c1b",
+    "deploy/ios_demo/PaddleOCRDemo/Engine/OCRParameterResolver.swift": "56dafd7a6b82baba1233d39218931b2903b7cd204927eb6a5459f185e0d63852",
+    "deploy/ios_demo/PaddleOCRDemo/Engine/Preprocessing.swift": "71b8fc073591faf7f4815f4224a81bccc23287e39c931b6fda43f040091f110e",
+    "deploy/ios_demo/Podfile.lock": "47a2dd320ef5da8803f58948627e23ef382210a4ad3e77e87a332beffdb9e092",
+    "deploy/ios_demo/scripts/fetch_ios_demo_models.sh": "21e4fd0297d362c1d9ae8ea1f24503a599f7bca8a7435acf667da404a90ddc26"
+  },
+  "upstream_revision": "dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf",
+  "xcode": "27.1 (27A9275)",
+  "yams": "5.0.6"
+}
