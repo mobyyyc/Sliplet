@@ -1,0 +1,13 @@
+{
+  "baseline_totals_correct": 3,
+  "held_out_purchases": 0,
+  "lost_correct_totals": 0,
+  "new_wrong_totals": 0,
+  "production_integrated": false,
+  "proof_gate_passed": false,
+  "proposed_totals_correct": 3,
+  "recovered_totals": 0,
+  "region_reads": 20,
+  "stable_proposed_totals": 5,
+  "unchanged_baseline_fields_and_sources": 5
+}

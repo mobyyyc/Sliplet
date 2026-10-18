@@ -1,0 +1,15 @@
+{
+  "actual_baseline_imports": 10,
+  "date": "2026-10-18",
+  "frozen_run": "p6-02b-final",
+  "gate_passed": false,
+  "private_hosted_methods_passed": 3,
+  "production_changes": false,
+  "scorer_tests_passed": 18,
+  "sources": {
+    "SlipletTests/ReceiptAnchoredTotalProbeTests.swift": "7b85d634f35acf215ee895249e56bc64e7db0642e7ef914654e2d2d9f8061329",
+    "evaluation/receipt-anchored-total/run.py": "825b0dff6818cabb5551de1896a132bf4e8186fa111ee287b89ad4867c519145"
+  },
+  "synthetic_methods_passed": 3,
+  "task": "P6-02B"
+}
