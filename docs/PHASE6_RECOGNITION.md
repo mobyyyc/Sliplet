@@ -1,6 +1,6 @@
 # Phase 6 — Verified recovery and less correction work
 
-2026-10-17. **Planning approved; implementation not started.** Main coordinates one separately approved task at a time. This plan follows the negative accuracy result of [P5-06](PHASE5_ACCEPTANCE.md). It does not authorize new models, cloud processing, broad parser rewrites or phone installation.
+2026-10-17. **P6-01 diagnosis approved and complete; implementation not started.** Main coordinates one separately approved task at a time. This plan follows the negative accuracy result of [P5-06](PHASE5_ACCEPTANCE.md). It does not authorize new models, cloud processing, broad parser rewrites or phone installation.
 
 ## Starting point and goal
 
@@ -30,7 +30,7 @@ If source information is truly absent or unreadable, say so and offer manual ent
 
 **Execution order:** P6-01 → P6-02 → decision gate → P6-03 → P6-04 → decision gate → P6-05 → optional P6-06 → P6-07. Each task requires its own Main approval. This planning revision does not start any task.
 
-P6-01 is next and is **not yet approved**. Before its investigation, the two causes remain partly unresolved; this agenda is not a promise that either can be fixed. If P6-02 fails, produce an early decision report explaining the failed hypotheses, remaining evidence gap and whether a different approach merits a separately approved proposal. Do not automatically continue with item work or correction UI as if the accuracy gate passed. If item proof later fails, retain any independently verified total gain and stop item integration. Main reports measured changes, limits, commit and next approval after every task.
+P6-01 is complete: [two-total diagnosis](PHASE6_TOTAL_DIAGNOSIS.md). Both failures begin in saved OCR (one missing amount, one spurious sign); the shared dark total bar motivates a bounded reading experiment but is not yet proved causal. P6-02 is next and **awaits approval**. No recovery is promised. If P6-02 fails, produce an early decision report explaining the failed hypotheses, remaining evidence gap and whether a different approach merits a separately approved proposal. Do not automatically continue with item work or correction UI as if the accuracy gate passed. If item proof later fails, retain any independently verified total gain and stop item integration. Main reports measured changes, limits, commit and next approval after every task.
 
 ## Evidence and scoring rules
 

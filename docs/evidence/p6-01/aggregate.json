@@ -1,0 +1,43 @@
+{
+  "cases": [
+    {
+      "case": "A",
+      "checked_total_fragment_edit_only_removes_trailing_minus": false,
+      "checked_transcript_total_correct": false,
+      "expected_digits_present_anywhere_checked": false,
+      "expected_digits_present_anywhere_raw": false,
+      "expected_digits_present_in_total_row": false,
+      "first_confirmed_failure": "amount_absent_from_saved_ocr",
+      "matching_digit_fragment_has_trailing_minus": false,
+      "negative_summary_guard_triggered": false,
+      "original_and_checked_geometry_equal": true,
+      "parser_total_missing": true,
+      "storage_preserved_fields": true,
+      "total_label_recognized_in_rows": true,
+      "total_source_fragment_count": 1
+    },
+    {
+      "case": "B",
+      "checked_total_fragment_edit_only_removes_trailing_minus": true,
+      "checked_transcript_total_correct": true,
+      "expected_digits_present_anywhere_checked": true,
+      "expected_digits_present_anywhere_raw": true,
+      "expected_digits_present_in_total_row": true,
+      "first_confirmed_failure": "spurious_sign_in_saved_total_ocr_confirmed_by_checked_text_and_visual_inspection",
+      "matching_digit_fragment_has_trailing_minus": true,
+      "negative_summary_guard_triggered": true,
+      "original_and_checked_geometry_equal": true,
+      "parser_total_missing": true,
+      "storage_preserved_fields": true,
+      "total_label_recognized_in_rows": true,
+      "total_source_fragment_count": 2
+    }
+  ],
+  "failed_totals": 2,
+  "mode": "frozen_evidence_diagnosis",
+  "new_accuracy_claim": false,
+  "new_ocr_runs": 0,
+  "production_changes": false,
+  "reference_changes": false,
+  "task": "P6-01"
+}

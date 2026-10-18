@@ -1,0 +1,20 @@
+{
+  "automatic_accuracy_improvement": false,
+  "checked_references_unchanged": true,
+  "date": "2026-10-17",
+  "existing_image_bytes_verified": true,
+  "failed_totals_traced": 2,
+  "independent_p506_verifier_passed": true,
+  "new_app_test_runs": 0,
+  "new_ocr_runs": 0,
+  "p506_verifier_passed": true,
+  "production_changes": false,
+  "production_source_manifest_verified": true,
+  "sources": {
+    "Sliplet/Parsing/Parsing.swift": "e510083d13cfe323dc03cea94dd2825a2eff28f4f7a349cd68170c3381d631c4",
+    "Sliplet/Recognition/VisionTextRecognizer.swift": "8ae222b52452cfe4c1bff570728fcac907df0f5a32471ce5eca118b186375297",
+    "evaluation/receipt-total-diagnosis/run.py": "c719952fb4af0cfd9fcdc1d9ddb449a57e89fb54e960adee36535b88eff7be58"
+  },
+  "task": "P6-01",
+  "visual_inspection": "Analyst viewed both originals using temporary decoded copies; dark total bar shared; visual cause remains a hypothesis."
+}
