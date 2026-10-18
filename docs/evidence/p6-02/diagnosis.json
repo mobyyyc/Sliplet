@@ -1,0 +1,51 @@
+{
+  "cases": [
+    {
+      "case": 1,
+      "modes": [
+        {
+          "exact_reference_money_token_present": false,
+          "mode": "original",
+          "parsed_total_missing": true,
+          "reference_digits_present": true,
+          "total_word_has_unaccepted_prefix": false,
+          "total_word_linked_as_purchase": false,
+          "total_word_present": true
+        },
+        {
+          "exact_reference_money_token_present": true,
+          "mode": "inverted",
+          "parsed_total_missing": true,
+          "reference_digits_present": true,
+          "total_word_has_unaccepted_prefix": true,
+          "total_word_linked_as_purchase": true,
+          "total_word_present": true
+        }
+      ]
+    },
+    {
+      "case": 2,
+      "modes": [
+        {
+          "exact_reference_money_token_present": false,
+          "mode": "original",
+          "parsed_total_missing": true,
+          "reference_digits_present": false,
+          "total_word_has_unaccepted_prefix": false,
+          "total_word_linked_as_purchase": false,
+          "total_word_present": true
+        },
+        {
+          "exact_reference_money_token_present": false,
+          "mode": "inverted",
+          "parsed_total_missing": true,
+          "reference_digits_present": false,
+          "total_word_has_unaccepted_prefix": false,
+          "total_word_linked_as_purchase": false,
+          "total_word_present": false
+        }
+      ]
+    }
+  ],
+  "scope": "post-hoc first-pass explanation; no rule tuning or recovery claim"
+}

@@ -1,0 +1,19 @@
+{
+  "actual_baseline_imports": 10,
+  "date": "2026-10-17",
+  "frozen_run": "p6-02-final",
+  "gate_passed": false,
+  "held_out_purchases": 0,
+  "new_native_synthetic_methods_passed": 3,
+  "private_hosted_methods_passed": 3,
+  "private_region_reads": 20,
+  "production_changes": false,
+  "production_integrated": false,
+  "scorer_tests_passed": 18,
+  "sources": {
+    "SlipletTests/ReceiptTotalProbeTests.swift": "6acaad43efa08f5a00e0c8f93ab86a6ea8da47059e8a16008079464ace6a9227",
+    "evaluation/receipt-total-probe/diagnose.py": "fc83ef671511479dd6b3dda4fe3bbd7a9d2fec1a6fe9828c7c278d8dc05ba8ff",
+    "evaluation/receipt-total-probe/run.py": "009e55b64ba7316d0312a2bc49f8c2561406bcf7defd258c6233dbce98d3ae75"
+  },
+  "task": "P6-02"
+}

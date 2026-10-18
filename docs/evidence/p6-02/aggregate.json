@@ -1,0 +1,275 @@
+{
+  "attempts": 10,
+  "checked_text": {
+    "1": {
+      "legacy": {
+        "amount_corrections": 1,
+        "correction_operations": 8,
+        "date_correct": 1,
+        "date_expected": 1,
+        "detected_lines": 18,
+        "field_corrections": 1,
+        "invented_lines": 3,
+        "item_amounts_correct": 14,
+        "items_expected": 17,
+        "line_amounts_correct": 17,
+        "lines_expected": 21,
+        "merchant_correct": 1,
+        "merchant_expected": 1,
+        "omitted_lines": 3,
+        "receipts_scored": 1,
+        "subtotal_correct": 1,
+        "subtotal_expected": 1,
+        "total_correct": 0,
+        "total_expected": 1
+      },
+      "regressions": {
+        "gained_exact_lines": 0,
+        "lost_correct_summary_fields": 0,
+        "lost_previously_exact_lines": 0,
+        "new_unmatched_line_proxies": 0
+      }
+    },
+    "2": {
+      "legacy": {
+        "amount_corrections": 0,
+        "correction_operations": 3,
+        "date_correct": 1,
+        "date_expected": 1,
+        "detected_lines": 20,
+        "field_corrections": 0,
+        "invented_lines": 0,
+        "item_amounts_correct": 19,
+        "items_expected": 20,
+        "line_amounts_correct": 20,
+        "lines_expected": 23,
+        "merchant_correct": 1,
+        "merchant_expected": 1,
+        "omitted_lines": 3,
+        "receipts_scored": 1,
+        "subtotal_correct": 1,
+        "subtotal_expected": 1,
+        "total_correct": 1,
+        "total_expected": 1
+      },
+      "regressions": {
+        "gained_exact_lines": 0,
+        "lost_correct_summary_fields": 0,
+        "lost_previously_exact_lines": 0,
+        "new_unmatched_line_proxies": 0
+      }
+    }
+  },
+  "currency_defaults": 3,
+  "development_purchases": 5,
+  "draft_roundtrips": 5,
+  "first_median_ms": 1111.8777499941643,
+  "held_out": 0,
+  "legacy": {
+    "amount_corrections": 1,
+    "correction_operations": 26,
+    "date_correct": 5,
+    "date_expected": 5,
+    "detected_lines": 58,
+    "field_corrections": 2,
+    "invented_lines": 8,
+    "item_amounts_correct": 53,
+    "items_expected": 66,
+    "line_amounts_correct": 57,
+    "lines_expected": 73,
+    "merchant_correct": 5,
+    "merchant_expected": 5,
+    "omitted_lines": 15,
+    "receipts_scored": 5,
+    "subtotal_correct": 4,
+    "subtotal_expected": 4,
+    "total_correct": 3,
+    "total_expected": 5
+  },
+  "probe": {
+    "cases": [
+      {
+        "baseline_correct": false,
+        "case": 1,
+        "decision": "no_agreement",
+        "proposed_correct": false,
+        "read_correctness_by_mode": {
+          "inverted": [
+            false,
+            false
+          ],
+          "original": [
+            false,
+            false
+          ]
+        }
+      },
+      {
+        "baseline_correct": false,
+        "case": 2,
+        "decision": "preserve_conflict",
+        "proposed_correct": false,
+        "read_correctness_by_mode": {
+          "inverted": [
+            false,
+            false
+          ],
+          "original": [
+            false,
+            false
+          ]
+        }
+      },
+      {
+        "baseline_correct": true,
+        "case": 3,
+        "decision": "preserve_existing",
+        "proposed_correct": true,
+        "read_correctness_by_mode": {
+          "inverted": [
+            true,
+            true
+          ],
+          "original": [
+            true,
+            true
+          ]
+        }
+      },
+      {
+        "baseline_correct": true,
+        "case": 4,
+        "decision": "preserve_existing",
+        "proposed_correct": true,
+        "read_correctness_by_mode": {
+          "inverted": [
+            false,
+            false
+          ],
+          "original": [
+            true,
+            true
+          ]
+        }
+      },
+      {
+        "baseline_correct": true,
+        "case": 5,
+        "decision": "preserve_existing",
+        "proposed_correct": true,
+        "read_correctness_by_mode": {
+          "inverted": [
+            true,
+            true
+          ],
+          "original": [
+            true,
+            true
+          ]
+        }
+      }
+    ],
+    "counts": {
+      "baseline_totals_correct": 3,
+      "lost_correct_totals": 0,
+      "new_wrong_totals": 0,
+      "proposed_totals_correct": 3,
+      "recovered_totals": 0,
+      "region_reads": 20,
+      "stable_proposed_totals": 5,
+      "unchanged_baseline_fields_and_sources": 5
+    },
+    "max_read_ms": 860.1586666482035,
+    "median_read_ms": 435.7295833324315,
+    "production_integrated": false,
+    "scope": "proposed total substitution only; baseline fields unchanged; no candidate draft saved"
+  },
+  "proof_gate_passed": false,
+  "regressions": {
+    "new_unmatched_line_proxies": 1
+  },
+  "repeat_max_ms": 1258.5410000174306,
+  "repeat_median_ms": 1084.0129583375528,
+  "stable_repeats": 5,
+  "stores": {
+    "Costco": {
+      "amount_corrections": 1,
+      "correction_operations": 12,
+      "date_correct": 2,
+      "date_expected": 2,
+      "detected_lines": 38,
+      "field_corrections": 2,
+      "invented_lines": 3,
+      "item_amounts_correct": 33,
+      "items_expected": 37,
+      "line_amounts_correct": 37,
+      "lines_expected": 44,
+      "merchant_correct": 2,
+      "merchant_expected": 2,
+      "omitted_lines": 6,
+      "receipts_scored": 2,
+      "subtotal_correct": 2,
+      "subtotal_expected": 2,
+      "total_expected": 2
+    },
+    "No Frills": {
+      "correction_operations": 13,
+      "date_correct": 2,
+      "date_expected": 2,
+      "detected_lines": 18,
+      "invented_lines": 5,
+      "item_amounts_correct": 18,
+      "items_expected": 26,
+      "line_amounts_correct": 18,
+      "lines_expected": 26,
+      "merchant_correct": 2,
+      "merchant_expected": 2,
+      "omitted_lines": 8,
+      "receipts_scored": 2,
+      "subtotal_correct": 2,
+      "subtotal_expected": 2,
+      "total_correct": 2,
+      "total_expected": 2
+    },
+    "T&T": {
+      "correction_operations": 1,
+      "date_correct": 1,
+      "date_expected": 1,
+      "detected_lines": 2,
+      "item_amounts_correct": 2,
+      "items_expected": 3,
+      "line_amounts_correct": 2,
+      "lines_expected": 3,
+      "merchant_correct": 1,
+      "merchant_expected": 1,
+      "omitted_lines": 1,
+      "receipts_scored": 1,
+      "total_correct": 1,
+      "total_expected": 1
+    }
+  },
+  "structured_counts": {
+    "actual_lines": 66,
+    "actual_purchases": 62,
+    "ambiguous_identity": 80,
+    "correct": 160,
+    "exact_purchase_pairs": 43,
+    "expected_purchases": 66,
+    "missing": 47,
+    "missing_line_proxies": 15,
+    "reference_lines": 73,
+    "unmatched_actual_line_proxies": 18,
+    "unrelated_unmatched_actual_lines": 8,
+    "unscorable": 293,
+    "wrong": 1
+  },
+  "successful": 10,
+  "task": "P6-02",
+  "unscored_populated_attributes": {
+    "sku": 56,
+    "taxMarker": 6
+  },
+  "verdicts": {
+    "incorrect": 5
+  }
+}
