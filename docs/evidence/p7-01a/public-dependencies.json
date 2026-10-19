@@ -1,0 +1,121 @@
+{
+  "compiled_opencv_sha256": "f64c3578a04c310bc353e2aa84a2f8b4999fc4f15c53ff6713d9a94098e93865",
+  "model_assets": {
+    "PaddleOCRDemo/Models/det/.cache/huggingface/.gitignore": {
+      "bytes": 1,
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/.gitattributes.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/.gitattributes.metadata": {
+      "bytes": 100,
+      "sha256": "9ad7f73a7e4afbdf57fc7a1b5966394759b1042270c15391bf1e094bd4b7703c"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/README.md.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/README.md.metadata": {
+      "bytes": 101,
+      "sha256": "735b7f63b5f6fe5fe29e5c4c2ad86defc3b5f227d701bf37a65102aac058ebbe"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/inference.onnx.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/inference.onnx.metadata": {
+      "bytes": 124,
+      "sha256": "23972da7d63eb99e72816ac667b911ce7ac5bc8b1bebc384f6cd472228c0a09b"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/inference.yml.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/det/.cache/huggingface/download/inference.yml.metadata": {
+      "bytes": 101,
+      "sha256": "45aff103eb0dba715e8b905cdbf76499fe083e5252ea3a93eadf616871a62a40"
+    },
+    "PaddleOCRDemo/Models/det/.gitattributes": {
+      "bytes": 1519,
+      "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+    },
+    "PaddleOCRDemo/Models/det/README.md": {
+      "bytes": 28,
+      "sha256": "98b45ea81164d1e1a1dd82255207053b15cd6c69d922a1c5cf3387ce604d4b74"
+    },
+    "PaddleOCRDemo/Models/det/inference.onnx": {
+      "bytes": 4826518,
+      "sha256": "a431985659dc921974177a95adcfbb90fd9e51989a5e04d70d0b75f597b6e61d"
+    },
+    "PaddleOCRDemo/Models/det/inference.yml": {
+      "bytes": 903,
+      "sha256": "98069072e1b6b37d727fd9d9f11725faa46d6ea0de012f2ed26caea011c37699"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/.gitignore": {
+      "bytes": 1,
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/.gitattributes.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/.gitattributes.metadata": {
+      "bytes": 100,
+      "sha256": "33f75e6400a8f5b94a3808d85ac5870d9cc23e28641e0c66951c3f7001484a33"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/README.md.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/README.md.metadata": {
+      "bytes": 101,
+      "sha256": "b519926084cb471d6c69a4b1a40e8d71e7fb52d1693682aad06b964e1a852a50"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/inference.onnx.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/inference.onnx.metadata": {
+      "bytes": 125,
+      "sha256": "28800feac2e21fb5bf69e7d5e7169398e3fc61935a86a9653397e619c531753c"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/inference.yml.lock": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "PaddleOCRDemo/Models/rec/.cache/huggingface/download/inference.yml.metadata": {
+      "bytes": 101,
+      "sha256": "b91dc80aa06ae0bff5bdf363f4bf1528a2181924d1ad35d1205031de01fa88b7"
+    },
+    "PaddleOCRDemo/Models/rec/.gitattributes": {
+      "bytes": 1519,
+      "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+    },
+    "PaddleOCRDemo/Models/rec/README.md": {
+      "bytes": 28,
+      "sha256": "98b45ea81164d1e1a1dd82255207053b15cd6c69d922a1c5cf3387ce604d4b74"
+    },
+    "PaddleOCRDemo/Models/rec/inference.onnx": {
+      "bytes": 16534782,
+      "sha256": "da72dc72ca4dc220df0dfde68c1dedc31c58d3e76a25871122e5056227d50092"
+    },
+    "PaddleOCRDemo/Models/rec/inference.yml": {
+      "bytes": 148345,
+      "sha256": "5dfeb2777f6d0db8177d8128a8acfcf6e6276dc4ac73ea3bf0dc06d6a5e85d8e"
+    }
+  },
+  "modules": [
+    "core",
+    "imgproc"
+  ],
+  "opencv_source_edits": false,
+  "opencv_source_revision": "01b2c5a77ca6dbef3baef24ebc0a5984579231d9",
+  "opencv_version": "4.3.0",
+  "paddle_source_revision": "dab3fe35379033fdcb2d0e9572fac0b36c9a9ebf",
+  "preset": "PP-OCRv5_mobile",
+  "runtime": "ONNX Runtime 1.24.3 CPU",
+  "upstream_settings": "noOverrides",
+  "zlib": "iOS SDK system library; bundled old zlib excluded"
+}

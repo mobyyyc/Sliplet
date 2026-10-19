@@ -235,3 +235,8 @@ Planning and revision approved on 2026-10-17; [full agenda](docs/PHASE6_RECOGNIT
 ## P7-01 — deployment gate failed · 2026-10-18
 
 Approved independent OCR comparison stopped before inference: pinned OpenCV 4.3.0 is incompatible with arm64 Simulator. No accuracy result. [Report](docs/PHASE7_INDEPENDENT_OCR.md). Proposed P7-01A isolated same-version OpenCV source build and resumed benchmark requires separate approval. No production change or device update.
+
+
+## P7-01A — completed · 2026-10-18
+
+Approved repair kept OpenCV 4.3.0 and PP-OCRv5_mobile fixed. Deployment passed; private comparison complete; accuracy gate failed. [Results](docs/PHASE7_COMPATIBILITY_AND_RESULTS.md). No production integration. P7-02 one-item interpretation proof proposed only, pending approval.

@@ -1,5 +1,9 @@
 # Progress
 
+## P7-01A completed · 2026-10-18
+
+Same-version OpenCV repair passed deployment; PP-OCRv5_mobile benchmark failed accuracy promotion. Fresh comparable full-image results: Vision 42/66 strict item pairs, Paddle 25/66; totals both 3/5, zero recoveries. Historical baseline remains 43/66; input/runtime differences are disclosed. No production change. [Results and next decision](docs/PHASE7_COMPATIBILITY_AND_RESULTS.md). P7-02 one-item interpretation proof is proposed only, pending approval; no further model sweep/integration.
+
 ## P7-01 deployment stop · 2026-10-18
 
 Pinned sample cannot link for arm64 iOS Simulator: OpenCV 4.3.0 supplies a physical-iOS arm64 slice and excludes Simulator arm64. Default x86_64 compilation passes but the installed destination rejects it. No fictional/private inference; accuracy remains untested. [Report](docs/PHASE7_INDEPENDENT_OCR.md). P7-01A compatibility repair is proposed and unstarted pending approval. Production and phone unchanged.

@@ -1,0 +1,83 @@
+{
+  "app_bundle_bytes": 65243066,
+  "counts": {
+    "paddle_full": {
+      "date_correct": 4,
+      "exact_purchase_pairs": 25,
+      "fully_correct_receipts": 0,
+      "merchant_correct": 2,
+      "receipts": 5,
+      "subtotal_correct": 4,
+      "total_correct": 3,
+      "unrelated_unmatched_lines": 33,
+      "wrong_field_outcomes": 0
+    },
+    "paddle_strip": {
+      "date_correct": 0,
+      "exact_purchase_pairs": 0,
+      "fully_correct_receipts": 0,
+      "merchant_correct": 0,
+      "receipts": 5,
+      "subtotal_correct": 2,
+      "total_correct": 3,
+      "unrelated_unmatched_lines": 1,
+      "wrong_field_outcomes": 0
+    },
+    "vision_full": {
+      "date_correct": 5,
+      "exact_purchase_pairs": 42,
+      "fully_correct_receipts": 0,
+      "merchant_correct": 5,
+      "receipts": 5,
+      "subtotal_correct": 4,
+      "total_correct": 3,
+      "unrelated_unmatched_lines": 9,
+      "wrong_field_outcomes": 1
+    },
+    "vision_strip": {
+      "date_correct": 0,
+      "exact_purchase_pairs": 0,
+      "fully_correct_receipts": 0,
+      "merchant_correct": 0,
+      "receipts": 5,
+      "subtotal_correct": 1,
+      "total_correct": 3,
+      "unrelated_unmatched_lines": 1,
+      "wrong_field_outcomes": 0
+    }
+  },
+  "held_out": 0,
+  "max_sampled_resident_bytes": 12455641088,
+  "model_asset_bytes": 21514497,
+  "model_load_ms": 123.7836666405201,
+  "private_reads": 40,
+  "production_changed": false,
+  "promotion_gate_passed": false,
+  "regressions": {
+    "added_unrelated_output_proxies": 24,
+    "lost_correct_line_fields": 59,
+    "lost_correct_summary_fields": 4,
+    "new_wrong_line_fields": 0,
+    "new_wrong_summary_fields": 0,
+    "recovered_totals": 0
+  },
+  "stable_read_pairs": 20,
+  "timing_ms": {
+    "paddle_full": {
+      "max": 5538.885583344381,
+      "median": 4086.669979180442
+    },
+    "paddle_strip": {
+      "max": 240.5179999768734,
+      "median": 177.89550000452437
+    },
+    "vision_full": {
+      "max": 1075.1065000076778,
+      "median": 710.3532082983293
+    },
+    "vision_strip": {
+      "max": 367.1702499850653,
+      "median": 314.80879164882936
+    }
+  }
+}

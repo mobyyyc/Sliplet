@@ -1,0 +1,28 @@
+{
+  "accuracy_gate": "failed",
+  "collector_amendment": "Raw Vision boxes outside unit bounds normalized using existing production rule; original manifest/script and raw outputs preserved; no OCR rerun or monetary-text changes. Confidence mapped to existing engineConfidence field.",
+  "date": "2026-10-18",
+  "dedicated_simulator_removed": true,
+  "deployment_gate": "passed",
+  "earlier_native_fictional_tests_passed": 1,
+  "fictional_parser_checks_passed": 4,
+  "final_native_fictional_tests_passed": 2,
+  "fresh_vision_baseline_equivalent_to_historical": false,
+  "fresh_vision_receipts_with_changed_ocr_text": 3,
+  "fresh_vision_receipts_with_changed_pair_score": 1,
+  "fresh_vision_strict_pairs": 42,
+  "historical_strict_pairs": 43,
+  "independent_checks": {
+    "normalized_boxes": 4,
+    "parser_replays_equal": 40,
+    "preserved_text_and_ids": 1584,
+    "unchanged_original_images": 5
+  },
+  "native_private_test_methods_passed": 1,
+  "phone_update": false,
+  "production_changes": false,
+  "sampling_limit": "Whole-process RSS after reads, not peak, per-engine or physical-device memory.",
+  "scorer_tests_passed": 18,
+  "source_mapped_lost_amount_rows_with_changed_text": 1,
+  "task": "P7-01A"
+}
