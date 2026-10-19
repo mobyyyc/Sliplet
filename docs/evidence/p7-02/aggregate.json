@@ -1,0 +1,21 @@
+{
+  "task": "P7-02",
+  "receipts": 5,
+  "held_out": 0,
+  "checks": {
+    "fictional_tests_passed": 11,
+    "exact_pairs_before": 43,
+    "exact_pairs_after": 43,
+    "raw_observations_preserved": 5,
+    "lost_correct_line_fields": 0,
+    "lost_correct_summary_fields": 0,
+    "source_linked_candidate_lines_added": 3,
+    "repeat_parser_runs_equal": 5,
+    "added_line_amount_equals_unique_contained_reference": 2,
+    "checked_transcripts_unchanged": 2
+  },
+  "strict_gain": 0,
+  "promotion": "rejected",
+  "actual_app_candidate_run": false,
+  "production_changed": false
+}
