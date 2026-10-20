@@ -103,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p5-04-merchants-0.6.0"
+    static let version = "p7-04-count-extensions-0.7.0"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -385,6 +385,54 @@ enum ReceiptParser {
         return q
     }
 
+    /// Recover only the verified split count/rate/extension layout. Original OCR is immutable.
+    private static func recoverExplicitCountExtensions(_ parsed: inout ParsedReceipt, rows: [Row]) {
+        guard let merchant = parsed.merchant, ReceiptMerchantDirectory.match(merchant) != nil else { return }
+        guard rows.count > 1 else { return }
+        let order = Dictionary(rows.enumerated().flatMap { index, row in row.ids.map { ($0, index) } }, uniquingKeysWith: min)
+        for index in 0..<(rows.count - 1) {
+            let head = rows[index], tail = rows[index + 1]
+            // Explicit repeated count and long SKU, followed immediately by a complete printed extension.
+            // A multi-observation head can contain an unrelated row absorbed by grouping.
+            guard head.parts.count == 1, let countPrefix = ReceiptParser.first(#"^\(\d+\)\s*"#, head.text),
+                 let countText = ReceiptParser.first(#"\d+"#, countPrefix),
+                 let quantity = ExactInput.decimal(countText),
+                 ReceiptParser.monetaryTokens(head.text).isEmpty,
+                 ReceiptParser.printedSKU(String(head.text.dropFirst(countPrefix.count))) != nil,
+                 ReceiptParser.first(#"^\d+\s*@\s*\$?\d+\.\d{2}\s+\$?\d+\.\d{2}\s*$"#, tail.text) == tail.text,
+                 ReceiptParser.first(#"^\d+"#, tail.text) == countText,
+                 head.height > 0, tail.height > 0,
+                 head.center > tail.center,
+                 head.center - tail.center <= min(head.height, tail.height) * 1.5,
+                 let hx = head.parts.compactMap(\.boundingBox).map(\.x).min(),
+                 let tx = tail.parts.compactMap(\.boundingBox).map(\.x).min(), tx > hx else { continue }
+            let tokens = ReceiptParser.monetaryTokens(tail.text)
+            guard tokens.count == 2,
+                 let rr = Range(tokens[0].range, in: tail.text), let ar = Range(tokens[1].range, in: tail.text),
+                 let rate = ReceiptParser.printedMoney(String(tail.text[rr])),
+                 let amount = ReceiptParser.printedMoney(String(tail.text[ar])),
+                 ReceiptParser.extensionMatches(quantity, rate: rate, amount: amount) else { continue }
+            let ids = head.ids + tail.ids
+            guard !parsed.lines.contains(where: { !Set($0.sourceLineIDs).isDisjoint(with: ids) }) else { continue }
+            // The repeated count is a separate quantity field; retain all product text and trailing codes.
+            // Original text remains in the linked OCR evidence.
+            var line = ParsedReceipt.Line(kind: "purchase", description: String(head.text.dropFirst(countPrefix.count)), amount: amount,
+                                         quantity: quantity, sourceLineIDs: ids)
+            line.sku = ReceiptParser.printedSKU(String(head.text.dropFirst(countPrefix.count)))
+            line.unitPrice = rate
+            // Insert at the source position without reordering any existing purchases.
+            let position = parsed.lines.firstIndex { existing in
+                existing.sourceLineIDs.compactMap { order[$0] }.min().map { $0 > index } ?? false
+            } ?? parsed.lines.endIndex
+            parsed.lines.insert(line, at: position)
+            let resolved = Set(ids)
+            parsed.issues.removeAll { issue in
+                ["unpriced_source_row", "quantity_association_uncertain"].contains(issue.code)
+                    && !issue.sourceLineIDs.isEmpty && Set(issue.sourceLineIDs).isSubset(of: resolved)
+            }
+        }
+    }
+
     static func parse(_ observations: [ReceiptOCRLine]) -> ParsedReceipt {
         var result = ParsedReceipt()
         let grouped = rows(observations)
@@ -560,6 +608,7 @@ enum ReceiptParser {
         if let date = dates.first?.0 {
             if dates.allSatisfy({ $0.0 == date }) { result.date = date } else { issue("date_conflicting", Array(Set(dates.flatMap { $0.1 })).sorted { $0.uuidString < $1.uuidString }) }
         }
+        recoverExplicitCountExtensions(&result, rows: grouped)
         for (missing, code) in [(result.merchant == nil, "merchant_missing"), (result.date == nil, "date_missing"), (result.currency == nil, "currency_missing"), (result.total == nil, "total_missing")] where missing { issue(code, []) }
         issue("source_review_required", observations.map(\.id))
         return result

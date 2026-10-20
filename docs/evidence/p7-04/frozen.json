@@ -1,0 +1,11 @@
+{
+  "task": "P7-04",
+  "counts": {
+    "before": 43,
+    "after": 45,
+    "added_purchases": 2,
+    "checked_transcripts_unchanged": 2
+  },
+  "lost_correct_fields": 0,
+  "held_out": 0
+}

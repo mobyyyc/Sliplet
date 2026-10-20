@@ -1,0 +1,25 @@
+{
+  "task": "P7-04",
+  "passes": [
+    {
+      "before": 43,
+      "after": 45
+    },
+    {
+      "before": 43,
+      "after": 45
+    }
+  ],
+  "checks": {
+    "originalBytesEqual": 10,
+    "replayEqual": 10,
+    "draftCanSave": 10,
+    "storeRoundtripEqual": 10,
+    "reviewInputEqual": 10,
+    "draft_finish_blocked": 10,
+    "fields_saved_and_reloaded_equal": 10,
+    "added_purchases_across_imports": 4
+  },
+  "lost_correct_fields": 0,
+  "held_out": 0
+}
