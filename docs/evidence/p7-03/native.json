@@ -1,0 +1,27 @@
+{
+  "task": "P7-03",
+  "type": "fresh_actual_app_imports_with_evaluation_only_candidate",
+  "passes": [
+    {
+      "baseline": 43,
+      "candidate": 45,
+      "historical_baseline": 43,
+      "historical_candidate": 43
+    },
+    {
+      "baseline": 43,
+      "candidate": 45,
+      "historical_baseline": 43,
+      "historical_candidate": 43
+    }
+  ],
+  "checks": {
+    "paired_inputs_equal": 10,
+    "lost_correct_line_fields": 0,
+    "lost_correct_summary_fields": 0,
+    "native_candidate_matches_host_replay": 10,
+    "repeat_raw_text_geometry_equal": 5
+  },
+  "held_out": 0,
+  "production_changed": false
+}
