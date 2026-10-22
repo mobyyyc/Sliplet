@@ -1,0 +1,89 @@
+{
+  "task": "P7-05 planning audit",
+  "counts": {
+    "unmatched_output_proxies": 8,
+    "purchases": 66,
+    "name_not_exactly_contained_cause_unresolved": 5,
+    "exact": 45,
+    "duplicate_identity_unverified": 10,
+    "paired_wrong_amount": 1,
+    "duplicate_groups": 5,
+    "duplicate_groups_with_equal_amount_multiset": 5,
+    "duplicate_rows_in_equal_multiset_groups": 10,
+    "contained_name_unparsed": 3,
+    "linked_description_differs": 2
+  },
+  "field_scores": {
+    "currency": {
+      "unscorable": 5
+    },
+    "date": {
+      "correct": 5
+    },
+    "merchant": {
+      "correct": 5
+    },
+    "subtotal": {
+      "correct": 4,
+      "unscorable": 1
+    },
+    "total": {
+      "missing": 2,
+      "correct": 3
+    },
+    "amount": {
+      "missing": 13,
+      "correct": 49,
+      "ambiguous_identity": 10,
+      "wrong": 1
+    },
+    "description": {
+      "missing": 13,
+      "correct": 50,
+      "ambiguous_identity": 10
+    },
+    "kind": {
+      "missing": 13,
+      "correct": 50,
+      "ambiguous_identity": 10
+    },
+    "quantity": {
+      "unscorable": 56,
+      "ambiguous_identity": 10
+    },
+    "sku": {
+      "unscorable": 56,
+      "ambiguous_identity": 10
+    },
+    "taxMarker": {
+      "unscorable": 56,
+      "ambiguous_identity": 10
+    },
+    "unit": {
+      "unscorable": 56,
+      "ambiguous_identity": 10
+    },
+    "unitPrice": {
+      "unscorable": 56,
+      "ambiguous_identity": 10
+    },
+    "rate": {
+      "unscorable": 7
+    }
+  },
+  "reference_coverage": {
+    "unreviewed": 343,
+    "printed_verified": 238
+  },
+  "held_out": 0,
+  "target": {
+    "exact_purchase_pairs_required": 60,
+    "total_purchase_pairs": 66
+  },
+  "notes": [
+    "Duplicate amount-set equality is diagnostic only, not verified identity or recovered accuracy.",
+    "Name containment is not proof of OCR correctness.",
+    "Unmatched output proxies are not proven fabricated purchases.",
+    "No production or reference changes."
+  ]
+}
