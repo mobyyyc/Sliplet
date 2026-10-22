@@ -1,0 +1,105 @@
+{
+  "cases": 23,
+  "held_out": 0,
+  "fresh_OCR": false,
+  "production_changed": false,
+  "amendments": 2,
+  "passes": [
+    {
+      "counts": {
+        "exact_purchase_pairs": 56,
+        "expected_purchases": 65,
+        "unrelated_unmatched_actual_lines": 1
+      },
+      "fields": {
+        "merchant": {
+          "correct": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        }
+      }
+    },
+    {
+      "counts": {
+        "exact_purchase_pairs": 56,
+        "expected_purchases": 65,
+        "unrelated_unmatched_actual_lines": 1
+      },
+      "fields": {
+        "merchant": {
+          "correct": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        }
+      }
+    }
+  ],
+  "scoped_text_diagnostics": [
+    {
+      "case": 1,
+      "verified_rows": 1,
+      "replaced_observations": 2,
+      "before": {
+        "kind": "correct",
+        "description": "wrong",
+        "amount": "correct"
+      },
+      "after": {
+        "kind": "correct",
+        "description": "wrong",
+        "amount": "correct"
+      },
+      "complete_oracle": false
+    },
+    {
+      "case": 21,
+      "verified_rows": 1,
+      "replaced_observations": 2,
+      "before": {
+        "kind": "missing",
+        "description": "missing",
+        "amount": "missing"
+      },
+      "after": {
+        "kind": "missing",
+        "description": "missing",
+        "amount": "missing"
+      },
+      "complete_oracle": false
+    },
+    {
+      "case": 23,
+      "verified_rows": 1,
+      "replaced_observations": 2,
+      "before": {
+        "kind": "missing",
+        "description": "missing",
+        "amount": "missing"
+      },
+      "after": {
+        "kind": "missing",
+        "description": "missing",
+        "amount": "missing"
+      },
+      "complete_oracle": false
+    }
+  ]
+}

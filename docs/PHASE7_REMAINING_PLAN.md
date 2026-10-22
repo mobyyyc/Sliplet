@@ -1,85 +1,85 @@
-# Phase 7 remaining agenda — accuracy on the current receipts
+# Phase 7 remaining agenda — general receipt interpretation
 
-2026-10-22. Planning and analysis only. Supersedes the P7-04 proposal to test unseen receipts next. No recognition changes or reference edits are authorized by this document; Main requests approval for each implementation milestone.
+Revised 2026-10-22 after the focused human review. This is a design update, not authorization to implement every remaining task. P7-01 through P7-04 remain completed; P7-05 is complete; P7-06 awaits approval. Main requests approval before each subsequent milestone.
 
-## What the current evidence establishes
+## Evidence and scope
 
-Rebuilt the expired temporary parser tools from retained sources and reran the P7-04 offline verifier. The current parser reproduces the retained frozen and fresh-import results. This task did not take new photos or rerun Vision. The retained two fresh import passes, ten save/reopen checks and 88 passing tests remain the P7-04 evidence.
+The export contains 23 cases, all with source markings, amounts and notes. Optional following lines were absent in twenty cases; the review tool incorrectly blocked their checkboxes. Preserve the raw export and the user's explicit completion statement separately. No repeat of the whole review is required.
 
-Exact purchase-name/price pairs are **45/66 (68.2%)**. The 21 uncredited purchases partition as follows:
+Source anchors resolve ten repeated-name identities: both retained app-import passes measure 55/66 exact purchase-description/amount pairs (83.3%), compared with 45/66 historically. This is a measurement correction, not an algorithm gain or a new OCR run. Remaining diagnostic cases are seven description mismatches, one wrong amount, two missing weight/rate purchases, and one reference purchase identified by the user as a discount. One description amendment also needs incorporation. Merchant/date remain 5/5, checked subtotals 4/4, totals 3/5 in retained evidence. Unreviewed metadata must not be credited as correct.
 
-| Category | Count | Meaning |
-|---|---:|---|
-| Duplicate descriptions with unresolved identity | 10 | Five duplicate groups have matching output counts and amount multisets, but no verified row anchors. The scorer deliberately does not use prices to choose identity. These are not ten demonstrated recognition errors. |
-| Names not exactly contained in interpreted rows | 5 | OCR alteration, fragmentation or reference convention differences remain unresolved. Do not label all five as OCR failures without source inspection. |
-| Name present but no parsed purchase | 3 | Two are followed by weight × rate and a printed extension. The remaining association needs its own trace. |
-| Name present in an output with a different description | 2 | Investigate grouping and description boundaries against the original; do not strip codes to match labels. |
-| Matched description, wrong amount | 1 | Trace the linked amount observation; distinguish misread digits from wrong association. |
+Recognition remains on-device. Use the five existing receipts first. No new model installation, cloud service, phone deployment or new-photo requirement is included. The target is at least 90% exact purchase pairs on the frozen corrected reference set, not a claim of 90% accuracy across every field or future receipts.
 
-There are also eight unrelated unmatched-output proxies across purchases/adjustments. They require source reconciliation and are not automatically invented items. The error partition above counts purchases only.
+## General rules to investigate
 
-Merchant and date are correct on 5/5; checked subtotals are correct on 4/4, with one unscorable; totals are correct on 3/5. The two totals have established OCR-level failure causes: an omitted amount and a spurious trailing sign. The earlier checked transcript for the omitted amount does not contain that observation, so it cannot serve as complete-text parser evidence for that total.
+| Human finding | General mechanism | Guard against |
+|---|---|---|
+| A name appears on separate purchase lines | Preserve each spatial occurrence and source identity; aggregate only as an optional display operation | Deduplicating identical names/prices, or copying the number of repeated lines into every line's quantity |
+| An item has quantity/weight, unit price and a printed extension | Assemble an item group from compatible text roles, reading order, columns and units; retain distinct quantity, unit price and line amount | Using the unit price as the line amount, borrowing another item's extension, or calculating a missing printed amount |
+| A discount follows an item | Recognize adjustment role from label/sign/layout, then link only with sufficient item evidence; retain unassigned discounts when ambiguous | Turning every negative line into a discount, assuming every following line belongs to the previous item, or treating a discount as a purchase |
+| Department headers sit beside purchases | Identify section boundaries and prevent headers entering descriptions or crossing item associations | Removing genuine product words that resemble department names |
+| Product codes and trailing letters are printed | Preserve source-backed description text; separate SKU/tax markers only when positional and syntactic evidence supports that role | Dropping suffixes to match expected names, or correcting unfamiliar names from a merchant dictionary |
+| Some lines have explicit tax markers | Store printed markers and their evidence; use a documented receipt legend when available | Assuming all items at a merchant/department are taxable, assuming no marker means tax-free, or assigning a discount's tax solely from proximity |
+| Subtotal, tax, total and payment rows differ | Classify summary roles using label tokens, layout and section context; distinguish subtotal from total and payment/change from purchase totals | Substring-only total detection, mistaking product names for summaries, or substituting payment amounts |
+| Text is missing or misread | Retain bounded OCR alternatives and source coordinates; retry only objectively detected uncertain regions | Selecting candidates from checked answers, removing a sign to balance totals, or guessing a missing price |
 
-Current labels leave 343 field outcomes unreviewed, including quantity, unit, SKU, unit price, tax marker, tax rate and currency. Consequently, this data cannot establish a 90% claim across every receipt field. Keep automatic recognition and user-assisted correction results separate.
+These are hypotheses to prove, not universal assumptions derived from five receipts. Merchant-specific rules may describe a demonstrable format convention, never exact item names, amounts, dates, image identities or fixed photo coordinates. Unknown formats retain the generic path and explicit uncertainty. Runtime extraction must not access evaluation labels or human-marked regions; those may be used only in separately reported assisted diagnostics.
 
-## Target and measurement rules
+## P7-05 — Finalize evidence and freeze the measurement contract
 
-Primary target: **at least 60/66 exact item description plus printed amount pairs (90.9%)**, using fixed, source-verified row identities. The numerator must not be inflated by correctly recognizing easy merchant/date fields or by accepting fuzzy product names.
+Finish the already approved task. Reconcile the discount's reference kind and parent association, incorporate the explicit description amendment and preserve verified repeated-item anchors. Retain old references and record every amendment. Freeze references before tuning candidates.
 
-Separate financial gates: keep every previously correct field; aim for all five totals and all four checked subtotals correct; account for each purchase, tax and discount without duplicates, dropped rows or invented amounts. Report unmatched output and false additions explicitly. Five receipts are too few for a general accuracy claim, even if the target is met.
+Trace each remaining failure through OCR, grouping, semantic role assignment, association, draft conversion and scoring. Use supplied literal transcripts for scoped correct-text replays only; mark missing transcripts unavailable. Do not manufacture a complete-text oracle from expected answers. Ask one focused clarification only if a real unresolved source fact blocks a decision.
 
-If the ten duplicate rows are confirmed individually, the baseline could reach 55/66 (83.3%) without any algorithm change. This is only a conditional measurement correction. Under that scenario, five additional true recoveries are needed to reach 60/66. Do not report the extra duplicate credits as ten recognition improvements.
+Deliver: versioned references, unchanged production baseline on those references, case-level private error ledger, aggregate public report, and a hypothesis/test matrix. Keep historical 45/66 and anchor-only 55/66 visible. If one purchase becomes a discount, report the revised denominator and separate discount accuracy rather than claiming a recognition gain.
 
-Freeze revised references once, then run the unchanged `c716c18` parser and every candidate against those same references. Also retain the original 45/66 historical metric. Revisions must record the exact human clarification; do not alter expected answers after inspecting a candidate to make it pass.
+## P7-06 — Generalize structural interpretation and item association
 
-No honest guarantee of 90% can be made before the experiments. If raw evidence remains inadequate, record the ceiling and propose a targeted user-assisted region read, reporting it separately from fully automatic performance.
+Within this approved milestone, evaluate bounded candidates independently before combining them:
 
-## Manual review needed
+1. Classify line roles: item descriptions, quantity/rate, printed extensions, adjustments, section headers and financial summaries. Preserve raw text and source geometry.
+2. Associate item groups using relative geometry, reading order, compatible roles and boundaries. An amount cannot be consumed by two independent purchases. Ambiguous associations stay unresolved. Arithmetic corroborates an already printed extension; it does not create one.
+3. Preserve repeated purchase occurrences; distinguish them from duplicate OCR observations using source overlap and reading provenance, not name equality.
+4. Classify and conservatively link discounts. Separate description content from surrounding metadata while retaining printed suffixes. Trace and fix the wrong-amount case only after establishing its cause; if it is OCR, route it to P7-07.
 
-No whole-corpus reannotation. Preserve all five checked receipts, both checked Costco transcripts and the two confirmed trailing-code amendments.
+Start with the two missed weight/rate purchases and demonstrated description boundaries, then test the adjustment and summary guards. Do not redesign unrelated app architecture. Require a measurable current-corpus improvement with no lost correct fields, false additions or source reuse. Reject neutral or regressive candidates. Record each candidate's individual contribution.
 
-Prepare one local focused review covering:
+Deliver: tested generic parsing candidates, synthetic positive/negative fixtures, frozen-OCR before/after results and a remaining OCR-only error list. No automatic application of manual edits as reusable facts about other receipts.
 
-- The ten duplicate-name occurrences: confirm which original row each reference describes, without using expected prices as the matching shortcut.
-- The eleven remaining failed items: show original row(s), existing checked values and current recognition side by side; request only unresolved transcription or boundary corrections. Some will need no new typing.
-- The two total regions: reuse checked amounts and prior source findings, confirm locations, and add the entirely missing observation to a separately versioned complete-text diagnostic transcript. Do not replace the user's old transcript.
+## P7-07 — Recover text using evidence-driven local OCR
 
-These are at most 23 focused checks before consolidating overlapping regions, not 23 full receipts. Optional quantity/tax/SKU verification is needed only if making broader field-accuracy claims; otherwise mark those fields unverified rather than treating them as correct.
+For failures that persist with missing/incorrect source text, evaluate a small predeclared set of alternatives: retained text candidates and narrowly targeted rereads located from OCR/layout uncertainty. Establish whether the correct reading is available, then independently test how the app could safely select it without labels.
 
-## Revised tasks
+Prioritize incorrect descriptions and the two missing totals. Preserve signs, printed extensions and observation provenance. Support Unicode/spacing variation only with explicit normalization rules; do not replace product text with known answers. Separate automatically located regions from human-marked diagnostic crops. If correct text cannot be selected safely, retain uncertainty and offer a focused assisted correction, scored separately.
 
-### P7-05 — Finish the error map and focused reference refresh
+Do not repeat failed broad crop/inversion or unchanged Paddle experiments. A new model or adapter needs a distinct hypothesis and approval. Deliver per-case availability versus selection results, actual accuracy gain, retry cost and a clear stopping decision.
 
-Build the local review for the cases above. Record verified source anchors and a versioned reference amendment. Establish a fixed automatic baseline and a separate complete-correct-text replay for failed regions. For each case, identify the earliest divergence: image reading, grouping, interpretation, draft conversion or scoring/reference ambiguity. Stop treating a partially checked transcript as a complete oracle.
+## P7-08 — Integrate winners and verify everyday behavior
 
-Deliverable: a fixed case ledger, old/new-reference baseline scores, human review coverage and ranked repair opportunities. No parser tuning while the references are being clarified. Requires approval to start.
+Integrate only passing candidates. Exercise actual Files imports, focused review, Apply/Cancel, draft save/reopen, and Finish using current originals. Preserve raw OCR, originals, source coordinates and user edits. Show targeted review requests for ambiguous associations instead of asking users to recheck every field unnecessarily; retain the independent source-review gate for finalization.
 
-### P7-06 — Recover source-backed item associations and boundaries
+Measure import latency and retry frequency against the baseline on the same Simulator. No OCR on the UI thread or unbounded retries. Report Simulator timing separately from phone performance. Verify corrections never silently overwrite an existing saved edit, including after recognition retries.
 
-Prioritize the two weighted-item layouts plus the other unparsed item and two boundary mismatches where P7-05 proves the text is available. Extend the proven P7-04 approach only for explicitly supported layouts. Separate quantity/rate metadata from descriptions while retaining printed product codes and trailing letters. Copy printed extensions; arithmetic may corroborate a printed price but may not create one. Enforce unique geometric association, source conservation and source order.
+Deliver: usable Simulator build, repeated import results, regression results and separate automatic/assisted accuracy. Phone installation remains separately requested.
 
-Test each hypothesis on fictional ambiguous/negative examples, then the fixed five-receipt replay. Integrate only measured improvements without any lost correct fields or false additions. A candidate with zero gain does not become a production change. Do not assume all five cases are recoverable.
+## P7-09 — Final accuracy and generalization audit
 
-### P7-07 — Target the remaining OCR failures, including totals
+Run repeated fresh imports on all five originals with frozen references and build. Primary target: ceil(0.90 × verified purchase count) exact description/printed-amount pairs. For 66 purchases that is 60; if corrected to 65 it is 59. Report the denominator change, reference-only gains and algorithm-only gains separately.
 
-Use P7-05's complete-text replay to identify cases where the parser succeeds with correct text. The current full-image and region readers retain only `topCandidates(1)`. Evaluate a bounded local experiment retaining alternate text candidates with their original observation geometry and reading provenance, plus a source-defined tight region that separates text from the dark-bar border where appropriate. Predeclare a small set of variants before evaluating; do not select variants or strings using checked answers.
+Financial gates: all five checked totals and all four checked subtotals correct, no loss of previously correct fields, no fabricated monetary values, and no duplicated or dropped source-backed purchases/adjustments. Report discount detection/linking separately and keep unverified metadata outside accuracy claims. If a gate is missed, report partial results rather than call Phase 7 accepted.
 
-Distinguish candidate availability from a safe automatic selection rule. Agreement between readings can support a candidate but is not independent ground truth. Preserve monetary signs; never substitute a payment amount, remove a minus or choose an amount because the receipt balances. If a safe selection rule cannot be established, keep the value unresolved and offer a separately measured assisted region read/correction.
+Generalization checks for each structural rule:
 
-Do not repeat the already-failed broad crop/inversion or unchanged Paddle benchmark. Paddle's tested configuration was worse under the existing parser; a new model/adapter would need a distinct hypothesis and approval.
+- Fictional fixtures with different names, prices, units, counts and merchant labels; no dependency on the five receipts' literal values.
+- Geometry variation: translated/scaled boxes, different spacing, wrapped names and column shifts that preserve the underlying layout.
+- Negative cases: ambiguous neighboring prices, missing extensions, returns versus discounts, multiple adjustments, repeated identical purchases, summary words within product names and section boundaries.
+- Source-order/provenance checks and unchanged handling of unrelated receipts; isolate rules to show which one caused each gain or regression.
+- Existing originals re-imported independently; transformed copies remain the same purchases and are not held-out data.
 
-### P7-08 — Integrate winners and verify the full app flow
+Five exposed receipts and synthetic tests cannot establish accuracy on unseen purchases. No generalization claim beyond this evidence. Defer collection of unseen receipts until the user approves it; do not delay this phase on new photos. Stop after reporting the actual gain and residual ceiling rather than extend Phase 7 with unproductive experiments.
 
-Integrate only the P7-06/P7-07 candidates that passed their gates. Test the actual Files import, review, focused Apply/Cancel, draft save/reopen and Finish flow on the current originals. Preserve raw OCR, source coordinates, originals, typed fields and manual edits. Surface genuinely unresolved fields without confirming review automatically. Keep automatic versus assisted outcomes and latency separate.
+## Workflow and next action
 
-Deliverable: a usable Simulator build and paired before/after results; no phone installation unless requested.
+P7-05 completed with a frozen 56/65 baseline (86.2%). The next acceptance threshold is 59/65, requiring three actual recoveries; totals remain a separate gate. Request approval for P7-06. The remaining order is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main owns review, commit/push and the next-task approval. No new chats or subagents are needed. This agenda changes the implementation strategy, not production recognition code.
 
-### P7-09 — Final Phase 7 acceptance and decision
-
-Freeze the integrated build and score all five current receipts in repeated fresh imports against the same final references. Report exact item pairs, summary fields, false/missing rows, manual corrections needed and validation coverage separately. Keep the historical-reference score beside the clarified-reference score.
-
-Pass only if the primary 60/66 target and agreed financial/no-regression gates are met. If not, report the achieved score, remaining cases and whether the limit is OCR evidence or interpretation. Do not extend Phase 7 indefinitely with neutral work. Testing unseen receipts is deferred until the user is satisfied with this current-receipt result and approves it separately.
-
-## Workflow
-
-P7-01 through P7-04 remain completed. P7-05 is no longer the final task or an unseen-receipt test: the remaining sequence is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main reports evidence, commit, next task and asks for approval after each milestone. No new subagents or chats are required for this plan.
+P7-05 completion details and limitations are recorded in `PHASE7_FOCUSED_REVIEW.md`; its final results supersede the intermediate 55/66 measurement above.
