@@ -1,6 +1,6 @@
 # Phase 8 — optional vision AI with personal API connections
 
-Redesigned 2026-10-23. **Plan only; implementation awaits individual milestone approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
+Redesigned 2026-10-23. **P8-01 approved and in progress; later milestones await individual approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
 
 ## Outcome and scope
 
@@ -88,6 +88,8 @@ Cancellation, app lock/backgrounding, provider changes and disconnected keys inv
 
 Mac inference starts as a private Simulator evaluation tool on loopback with cloud features disabled. Shipping a phone-to-Mac connection is conditional on meaningful local results and user demand: it requires explicit pairing, local-network permission, authenticated encrypted transport and a reachable awake Mac. Do not expose unauthenticated Ollama or add a public tunnel. Without the Mac, local iPhone OCR remains available. This is not an on-iPhone LLM or an Apple Intelligence dependency.
 
+P8-01 implementation findings and current gates: `PHASE8_AI_LAB.md`. In particular, Groq native consumer BYOK eligibility remains unresolved; documentation of an HTTP API does not itself approve this distribution model.
+
 ## Ordered milestones
 
 ### P8-01 — Freeze the contract and prepare a safe AI lab
@@ -140,4 +142,4 @@ Classify the result honestly: all gates met on the exposed corpus; useful partia
 
 Main is the only required coordination chat. One explicitly approved milestone at a time; Main reviews, commits/pushes, reports what finished/current milestone/commit/next task and asks approval. No new task chats or subagents are created by this plan. External privacy approval can be needed inside an approved milestone because it authorizes a specific transfer, not routine implementation choices.
 
-This revision changes documentation only. No models installed, credentials collected, cloud receipt uploads, production changes or phone installations are included. No Phase 3 visual redesign, new PaddleOCR sweep, paid provider subscription, cloud wallet sync, automatic original-review checks, hosted developer key, or unrestricted custom model endpoint is in scope.
+The original redesign changed documentation only. Approved P8-01 now adds an isolated fictional-only lab; see its status report for verification results. No models installed, private receipt uploads, production changes or phone installations are included in this preparation. No Phase 3 visual redesign, new PaddleOCR sweep, paid provider subscription, cloud wallet sync, automatic original-review checks, hosted developer key, or unrestricted custom model endpoint is in scope.

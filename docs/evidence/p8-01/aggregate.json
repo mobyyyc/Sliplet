@@ -1,0 +1,19 @@
+{
+  "task": "P8-01",
+  "status": "prepared_awaiting_live_access_and_privacy",
+  "offline_tests_passed": 27,
+  "fictional_images": 11,
+  "baseline_reverified": true,
+  "exposed_receipts": 5,
+  "held_out_receipts": 0,
+  "baseline_exact_purchases": 57,
+  "baseline_purchase_count": 65,
+  "production_changed": false,
+  "private_cloud_uploads": 0,
+  "live_capability_verified": false,
+  "last_observed_live_state": "access_denied",
+  "free_account_user_confirmed": true,
+  "account_privacy_verified": false,
+  "native_consumer_byok_eligibility": "unresolved",
+  "local_model_installed": false
+}

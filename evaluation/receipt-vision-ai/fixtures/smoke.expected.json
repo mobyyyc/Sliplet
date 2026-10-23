@@ -1,0 +1,124 @@
+{
+  "schema_version": "p801-v1",
+  "merchant": {
+    "value": "FICTIONAL MARKET",
+    "evidence": [
+      {
+        "image_id": "image-0",
+        "quote": "FICTIONAL MARKET",
+        "box": null
+      }
+    ]
+  },
+  "date": {
+    "value": "2030-01-15",
+    "evidence": [
+      {
+        "image_id": "image-0",
+        "quote": "2030-01-15",
+        "box": null
+      }
+    ]
+  },
+  "currency": {
+    "value": "CAD",
+    "evidence": [
+      {
+        "image_id": "image-0",
+        "quote": "CAD",
+        "box": null
+      }
+    ]
+  },
+  "subtotal": {
+    "value": "5.00",
+    "evidence": [
+      {
+        "image_id": "image-0",
+        "quote": "SUBTOTAL 5.00",
+        "box": null
+      }
+    ]
+  },
+  "total": {
+    "value": "5.25",
+    "evidence": [
+      {
+        "image_id": "image-0",
+        "quote": "TOTAL 5.25",
+        "box": null
+      }
+    ]
+  },
+  "lines": [
+    {
+      "id": "1",
+      "kind": "purchase",
+      "description": "APPLE",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "amount": "2.00",
+      "parent_id": null,
+      "evidence": [
+        {
+          "image_id": "image-0",
+          "quote": "APPLE 2.00",
+          "box": null
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "kind": "purchase",
+      "description": "BREAD",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "amount": "3.00",
+      "parent_id": null,
+      "evidence": [
+        {
+          "image_id": "image-0",
+          "quote": "BREAD 3.00",
+          "box": null
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "kind": "tax",
+      "description": "TAX",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "amount": "0.25",
+      "parent_id": null,
+      "evidence": [
+        {
+          "image_id": "image-0",
+          "quote": "TAX 0.25",
+          "box": null
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "kind": "payment",
+      "description": "CARD",
+      "quantity": null,
+      "unit": null,
+      "unit_price": null,
+      "amount": "5.25",
+      "parent_id": null,
+      "evidence": [
+        {
+          "image_id": "image-0",
+          "quote": "CARD 5.25",
+          "box": null
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}
