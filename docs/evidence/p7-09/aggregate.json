@@ -1,0 +1,123 @@
+{
+  "task": "P7-09",
+  "status": "complete_partial_accuracy_not_accepted",
+  "exposed_receipts": 5,
+  "held_out_receipts": 0,
+  "fresh_imports_reused": 10,
+  "passes": [
+    {
+      "counts": {
+        "exact_purchase_pairs": 57,
+        "expected_purchases": 65,
+        "unrelated_unmatched_actual_lines": 1,
+        "missing_line_proxies": 4,
+        "ambiguous_group_count_mismatch": 0
+      },
+      "summary_fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        }
+      },
+      "purchase_failures": {
+        "description": 7,
+        "amount": 1
+      },
+      "adjustments": {
+        "expected": 8,
+        "exact_kind_description_amount": 4,
+        "kind_correct": 4,
+        "description_correct": 4,
+        "amount_correct": 4,
+        "kind_missing": 4,
+        "description_missing": 4,
+        "amount_missing": 4
+      },
+      "required_exact_pairs": 59,
+      "purchase_gate": false,
+      "summary_gate": false
+    },
+    {
+      "counts": {
+        "exact_purchase_pairs": 57,
+        "expected_purchases": 65,
+        "unrelated_unmatched_actual_lines": 1,
+        "missing_line_proxies": 4,
+        "ambiguous_group_count_mismatch": 0
+      },
+      "summary_fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        }
+      },
+      "purchase_failures": {
+        "description": 7,
+        "amount": 1
+      },
+      "adjustments": {
+        "expected": 8,
+        "exact_kind_description_amount": 4,
+        "kind_correct": 4,
+        "description_correct": 4,
+        "amount_correct": 4,
+        "kind_missing": 4,
+        "description_missing": 4,
+        "amount_missing": 4
+      },
+      "required_exact_pairs": 59,
+      "purchase_gate": false,
+      "summary_gate": false
+    }
+  ],
+  "production_changed": false,
+  "workflow_verification_passed": true,
+  "previously_correct_fields_lost": 0,
+  "human_correction_time_measured": false,
+  "all_fields_accuracy_claim": false,
+  "reference_frozen_algorithm_gain": {
+    "before": 56,
+    "after": 57,
+    "denominator": 65
+  },
+  "historical_reference_only_scores": [
+    {
+      "exact": 45,
+      "denominator": 66
+    },
+    {
+      "exact": 55,
+      "denominator": 66
+    },
+    {
+      "exact": 56,
+      "denominator": 65
+    }
+  ]
+}
