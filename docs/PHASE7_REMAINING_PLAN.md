@@ -92,4 +92,4 @@ P7-08 completion: `PHASE7_WORKFLOW_VERIFICATION.md` confirms repeated actual imp
 
 P7-09 completion: `PHASE7_ACCEPTANCE.md` records verified repeated 57/65 exact purchases, 3/5 totals, 4/4 checked subtotals and 4/8 exact adjustments. No new production changes. The final audit reused hash-verified P7-08 imports; Phase 7 work is complete but recognition acceptance failed. Further accuracy work requires a separately approved plan.
 
-Next-phase planning completed: `PHASE8_PLAN.md` defines six gated tasks, with P8-01 evidence triage awaiting approval. No Phase 8 implementation has started.
+Next-phase plan redesigned 2026-10-23: `PHASE8_PLAN.md` now defines seven gated milestones for optional vision AI, personal API connections and private local alternatives. It supersedes the unstarted targeted-OCR agenda. P8-01 safe AI lab preparation awaits approval; no Phase 8 implementation has started.

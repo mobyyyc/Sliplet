@@ -1,113 +1,143 @@
-# Phase 8 — targeted accuracy recovery
+# Phase 8 — optional vision AI with personal API connections
 
-Designed 2026-10-23. **Planning approved; no implementation milestone started.** Main requests approval for each task. No new chats, agents, downloads, phone installation or production changes are included in this planning approval.
+Redesigned 2026-10-23. **Plan only; implementation awaits individual milestone approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
 
-## Objective and starting point
+## Outcome and scope
 
-Improve actual automatic receipt fields while reducing the manual effort for failures that cannot be recovered safely. Automatic and assisted results are separate. Keep recognition on-device and usable without Apple Intelligence. Use the five existing checked receipts first; no whole-corpus manual review or new-photo prerequisite.
+Make receipt import substantially more accurate and easier to review by letting a vision-language model read the image and produce structured receipt fields directly. Keep the existing iPhone recognition path available and offline. AI is optional and independent of Apple Intelligence, including on the user's China-market iPhone 15 Pro.
 
-P7-09 verified two passes at 57/65 exact purchase pairs, merchant/date 5/5 each, checked subtotals 4/4 and totals 3/5. Four of eight checked adjustments are exact: two discounts and two tax rows; four discounts are unresolved. Seven purchase descriptions and one purchase amount mismatch. One unmatched-output proxy remains. Currency and other unreviewed metadata do not support an all-fields score. These are exposed development receipts, with zero held-out data.
+The primary cloud product is bring-your-own-key: each user connects a supported provider in Settings and uses their own account allowance. No developer-funded shared key, Sliplet account requirement, receipt backend or mandatory subscription. Prefer direct HTTPS from the iPhone to the chosen provider, subject to confirming provider support and terms. Do not quietly introduce a proxy if direct access is unsuitable.
 
-Success target remains at least 59/65 exact purchase pairs, all five checked totals and all four checked subtotals, and complete checked adjustment accounting with no unsupported money or regression. A purchase-score pass alone does not mean financial accuracy passed. No promise that this phase will meet those targets.
+Development remains strictly $0 in provider charges: use verified free accounts/quotas and local Mac inference, without paid upgrades, automatic recharge or billing-backed trials. Local inference uses hardware, electricity and storage, rather than an API fee. Free quotas can change and may be exhausted. A user's own paid account could incur charges; the app must explain this and must not promise to enforce a provider-wide spending cap.
 
-## What changes in the approach
+Latest privacy decision: redacted real receipts may be tested only after the specific provider, endpoint, settings and disclosure have been checked and approved. This planning permission is not permission to upload originals now or to every provider. Until that gate passes, cloud experiments use fictional receipts and private experiments stay on the Mac. Gemini's unpaid service remains fictional-only in this phase.
 
-1. Distinguish reference conventions, OCR characters, grouping/association and adjustment semantics before choosing code changes. Seven description mismatches are not seven proven OCR failures.
-2. Reuse retained observations before buying another round of expensive inference. Inspect what each engine actually read separately from what the parser accepted.
-3. Test discounts separately from OCR. Correct numeric text can still be assigned the wrong role; a new reader cannot repair that automatically.
-4. If a text experiment is justified, separate recognition of a known region from full-image detection. The earlier fixed Paddle-plus-parser configuration failed; this is not permission to rerun it unchanged or choose models by private scores.
-5. Ship only an independently useful candidate. If automatic recovery fails, report the limit and seek approval for a narrowly assisted fallback, rather than disguise human corrections as recognition gains.
+Use the five existing checked receipts and stored manual annotations first. No repeated full annotation exercise or new-photo prerequisite. Ask only about a particular unresolved printed fact or boundary convention. Simulator-first development; physical-phone acceptance is a separate scope, and installation requires a request.
 
-## P8-01 — Resolve the remaining causal questions
+## Baseline and acceptance contract
 
-**Scope:** an offline evidence audit of the existing residuals, not a fresh OCR sweep or another full annotation tool.
+P7-09: 57/65 exact purchase kind/description/printed-amount matches (87.7%), merchant/date 5/5 each, subtotals 4/4 checked, totals 3/5, adjustments 4/8. Seven description mismatches, one wrong purchase amount, two missing totals and four unresolved discounts remain. Description mismatches include reference conventions, not just OCR mistakes. One unmatched-output proxy needs accounting; it is not automatically proof of hallucination.
 
-Use P7-09's eight purchase mismatches, two total failures, four unresolved discounts and unmatched-output proxy as the case list. Trace original pixels, retained Vision observations, retained Paddle observations where available, grouping, parsing and persisted draft values. Preserve original-coordinate/source identity. Record the earliest demonstrated divergence and mark uncertain causes explicitly.
+Targets on the frozen benchmark: at least 59/65 exact purchases (90.8%), 5/5 totals, 4/4 checked subtotals and 8/8 checked adjustments, with no loss of previously correct fields, invented money or duplicate/dropped source occurrences. Preserve merchant/date results. These are separate gates, not a blended percentage. Currency and other unchecked fields remain outside claims. A visible editable CAD default is not recognized printed currency.
 
-For each case answer:
+Measure raw model output, validated automatic draft and user-corrected result separately. Matching totals is not proof of correctness. Existing labels never enter inference requests. Keep the frozen score; any justified reference amendment needs a separate version and a baseline/candidate rerun against the same version. No deleting printed suffixes to improve the score.
 
-- Does the exact checked text/amount exist as a literal observation or a defensible sequence of source fragments?
-- Is the difference a printed suffix or description-boundary convention, a missed/misread character/sign, or a field/association error?
-- For discounts, is the sign and adjustment role printed, what context establishes it, and is parent identity actually known?
-- Did the prior automatic reread cover the relevant region? Was alternative-engine text correct but rejected or misgrouped?
+Five exposed receipts and zero held-out receipts cannot establish general accuracy. Fictional cases provide structural stress tests, not unseen-real-receipt validation. New receipts and human correction-time trials remain optional later inputs.
 
-Existing human transcripts/notes remain authoritative within their checked scope. Do not manufacture a complete transcript or assume omitted follow-up text was absent. Ask one small batch of focused questions only when a specific unresolved source fact affects the experiment. The user need not identify every receipt again.
+## Model and provider strategy
 
-**Deliverable:** private case matrix; aggregate cause counts; one predeclared protocol for P8-02 and one eligibility decision for P8-03. No recognition code change. Keep this bounded to the existing residual list.
+See PHASE8_MODEL_RESEARCH.md for dated sources and limits. No model has yet demonstrated an improvement on Sliplet's receipts.
 
-**Reference policy:** retain the original frozen v3 benchmark and 57/65 baseline. If a source check proves an annotation correction, create a separate version with a recorded reason; rerun both old and candidate parsers on that same version. Report reference-only movement separately, never as algorithm improvement. Keep old-benchmark results alongside it. Unresolved convention differences remain visible.
+- First free-cloud candidate: Groq's image-capable Qwen3.8 27B, contingent on current free access, model capability and verified account data controls. Its preview status makes availability/version changes a real constraint.
+- Free-cloud reserve: Cloudflare Workers AI, contingent on eligible model access and account/privacy checks. Test only if the first route is unsuitable; do not upload to several services by default.
+- Private Mac candidate: quantized Qwen3-VL 8B through local Ollama. The previously inspected M5 Pro / 24 GB Mac makes a bounded trial plausible; actual memory, latency and accuracy must be measured. No raw Ollama port on the public network, no cloud-tag fallback.
+- Gemini free tier: optional fictional-image comparator, not a route for this phase's private receipts.
+- Paid APIs are outside the development budget. Provider adapters should be extensible, but Phase 8 does not build an exhaustive model marketplace or arbitrary custom-endpoint interface.
 
-**Exit:** if no defensible candidate exists for a workstream, mark it blocked by evidence and propose skipping it. Do not create generic cleanup tasks as substitutes.
+Prove one cloud candidate and one local candidate at most in the initial experiment. Test a reserve only when a documented failure justifies it and Main approves the change. If neither yields a safe improvement, stop before building the full AI interface; report the actual failure rather than schedule generic cleanup.
 
-## P8-02 — Prove discount role recognition independently
+## Recognition design
 
-**Hypothesis:** at least one unresolved adjustment has usable source text but fails because role classification relies on an incomplete row/context interpretation.
+1. Capture or import once. Preserve the encrypted original. Locally correct orientation/crop and detect poor quality. Offer a crop adjustment when useful; never require a merchant/items/totals cropping wizard for every receipt.
+2. Prepare the selected mode's input. For cloud, produce a flattened, redacted image and any equally redacted OCR hints. Strip metadata and unrelated background. For local Mac, remain on the user's devices.
+3. Ask the model for literal structured fields: merchant, date, printed currency, ordered purchases, quantities/units/unit prices when actually printed, line amounts, subtotal, taxes, discounts, fees and total. Separate payments/change/loyalty savings from receipt accounting. Missing values stay unknown; unsupported discount parent links stay unassigned.
+4. Validate into a provider-independent candidate. Do not funnel the response through the old OCR row parser. Compare image-only versus image-plus-raw-OCR in the lab; old parser guesses are not truth. Vision remains useful for capture, OCR evidence and independent disagreement checks, not as a veto that makes the LLM repeat its errors.
+5. Present one normal receipt draft. Flag unresolved differences and open the relevant original region for correction. Finish still requires independent full-source review and exact reconciliation; draft saving remains available.
 
-Use P8-01's source-backed cases to define a conservative adjustment group: explicit promotion/discount indicators, printed sign or established layout semantics, relative geometry, section boundaries and source ownership. Detect an unassigned discount separately from linking it to a purchase. Parent identity may remain unknown; no inferred tax allocation or forced parent link. A generic negative number is insufficient evidence to distinguish a discount from a return. Do not change an unsigned amount's sign merely to balance a receipt.
+Long receipts: preserve readable resolution using an overview and overlapping tiles within the chosen provider's image/token limits. Freeze automatic tiling before scoring. Start with one request; allow at most one additional bounded request for a long receipt or explicit focused retry. If the receipt cannot fit safely, explain the limitation and offer a crop/local review, rather than silently truncate. Deduplicate by original image occurrence/coordinates, not matching names or prices; identical purchases can be real separate rows.
 
-Run a test-only candidate against frozen OCR first. Include fictional explicit discounts, unsigned promotion displays with genuinely supported semantics, returns, negative totals, product names containing discount-like words, repeated amounts, multiple adjacent adjustments, wrapped labels, missing/ambiguous signs and competing parent items. Vary values and geometry; never match exact private item names, prices or image coordinates.
+The extraction schema uses exact decimal strings parsed locally, nullable unsupported fields, source image/tile references, literal descriptions and distinct purchase/adjustment/summary types. Model-provided quotations, coordinates and confidence are claims, not verified provenance. Map them to the original where possible and label unverified evidence honestly. Arithmetic detects conflicts; it must never fabricate missing amounts or choose a convenient sign.
 
-**Promotion gate:** at least one additional exact checked adjustment from the 4/8 baseline in both passes; no loss of correct purchases or summaries; no duplicate source consumption, unsupported sign changes or extra adjustment on negative fixtures. Report classification and parent-link accuracy separately. A passing subset may proceed; four recoveries are not assumed.
+Treat receipt text and model output as untrusted data. No tools, browsing, URL fetching or app commands available to the model. Bound payloads, output size, nesting, item counts, timeouts and concurrency. Refusals, invalid schema, truncation and implausible results are recoverable failures, not partially successful final receipts.
 
-**Stop:** a failed candidate stays outside production. One bounded candidate, with no post-hoc threshold sweep. A second mechanism requires a revised proposal and approval.
+## Connection experience
 
-## P8-03 — One distinct local text-recovery proof, conditional
+Settings → AI recognition begins with Not connected and Connect a provider. Keep local recognition usable throughout.
 
-Start only if P8-01 identifies either useful retained alternative text or a credible detection-versus-recognition failure. Do not repeat P6 inversion/anchor-agreement policies or P7's unchanged full-image Paddle and tight Vision row-reread configurations.
+Flow: choose provider → read concise data-use/free-allowance information → open official key instructions → paste concealed key → select an approved image-capable model → explicitly run a tiny fictional verification request → confirm privacy settings → enable AI. Explain that the verification consumes a small amount of the user's allowance. Do not read the clipboard automatically or request keys in chat.
 
-Choose exactly one branch before scoring:
+Track credential acceptance, image/model capability, last successful check and privacy confirmation separately. Connection states: Not connected, Checking, Ready, Invalid/revoked key, Model unavailable, Rate limited, Allowance exhausted/billing required, Offline and Service unavailable. Show the selected provider/model and last verification time. Ready means the latest check passed, not guaranteed future availability. A successful API call does not prove Zero Data Retention; use account evidence where available, otherwise label the user's confirmation accurately.
 
-- **A: observation adapter.** If retained alternative-engine text already contains a missing correct field, test a geometry/source-preserving adapter that accommodates that engine's segmentation. Keep literal characters and signs; do not repair strings from labels. Prove automatic association/selection using image evidence only. No new inference is needed for the initial proof.
-- **B: recognition-only regions.** If full-image detection/segmentation is the demonstrated obstacle and no useful retained reading exists, propose feeding original-image regions into the existing pinned local recognizer's recognition stage, bypassing its full-image detector. Confirm the retained model/runtime supports that interface before implementation; otherwise stop and request a revised protocol. No new model or runtime download is implicitly authorized.
+Actions: Test connection, Change model, Replace key, Provider usage dashboard, Disable AI and Disconnect. Disable preserves the credential but stops future AI requests; Disconnect removes the stored credential and cancels pending work. Explain provider-side revocation separately. Test a replacement before replacing a working key, unless the user explicitly removes the old one. Never show raw provider errors that could expose a key or receipt.
 
-For B, define regions using only runtime observations and layout: total-label anchors with full sign margins, purchase-column geometry and parser structural gaps. State how confidently wrong text would be found; low OCR confidence alone failed to cover most residuals before. Freeze region policy, padding, orientation, runtime/model and candidate-selection rules on fictional fixtures before private inference. Limit to four regions per receipt, one alternate read per region, no recursive retries. Log uncovered failures explicitly.
+Use non-synchronizing device-only Keychain storage appropriate to foreground authenticated use; no UserDefaults, app bundle, source control, receipt backup, analytics or logs for keys. Store only nonsecret connection preferences outside Keychain. No silent system-clipboard clearing, which could remove unrelated user content.
 
-Human-marked regions may be used in a separate diagnostic to measure candidate availability, but never credited as automatic localization or automatic recovery. No user text or checked values enter runtime selection. If coverage is poor, report it rather than expand crops after seeing expected answers.
+Offer Ask each time initially; after setup, the user may choose Use AI by default. Show the active method/provider on import with a switch to local. Initial app version supports the proven cloud provider, not every researched service. Do not show unsupported models as working choices.
 
-Selection must define when to retain the original, accept source-backed new text, or abstain. Preserve an existing correct field in controls; do not simply prefer whichever engine matches the answer. Conflicting signs remain unresolved without sufficient new evidence; repeated same-engine reads are not independent proof. No decimal insertion, trailing-minus stripping, payment substitution or balancing-based amount choice.
+## Privacy and simplified import UX
 
-**Promotion gate:** at least one new exact purchase pair or checked total in both passes, with no lost previously correct field or new unsupported money. State separately whether purchase accuracy reached 59/65 and totals improved. Candidate availability without a safe automatic selector fails promotion. Include genuine negative/refund and competing-number controls. Report end-to-end Simulator cost and coverage, not just crop speed.
+Before a cloud upload, preview exactly the redacted image that will be sent, state the recipient and let the user adjust redactions or cancel. Start with a preview on every upload; evaluate any reduced-friction consent design separately. Retain merchant/item/price evidence needed for recognition. Remove unnecessary membership/card/transaction identifiers, personal contact information and barcodes where possible, without erasing product codes or monetary signs. Redaction is fallible; purchase contents remain sensitive and must not be described as anonymous.
 
-**Stop:** no automatic engine/model sweep. If both branches lack justification, skip this task and explain why. A model change would need its own explicit approval.
+A key's validity is separate from provider privacy approval. Record provider, endpoint, relevant policy/settings confirmation and consent version locally. Changing providers or material data practices requires renewed disclosure. No silent cloud fallback from Mac/offline mode, no provider cascade, and no background scanning of the wallet. Existing receipts are reprocessed only by explicit action, with Apply/Cancel and preserved edits.
 
-## P8-04 — Minimal assisted recovery, only if needed and approved
+Progress: Preparing image → Reading receipt → Checking fields. Avoid fake percentages. Cancel immediately restores user control; explain when an upload has already occurred and cannot be recalled. An error retains the photo and offers Retry or Use local recognition. The user does not have to import again.
 
-This is conditional user-facing work, not an automatic accuracy experiment. First check whether existing focused correction and region-reread controls already suffice. If so, retain them and omit this milestone.
+No chatbot page or second competing receipt editor. Use existing paper styling, Liquid Glass controls, accessible labels, consistent native control sizing, dark/light modes and reduced-motion behavior. Keep the original accessible. AI status appears during processing or in provenance details; do not clutter saved receipts with technical labels. Never mark source review complete merely because AI or arithmetic passed.
 
-For unresolved cases, propose one contextual request at a time: mark the troublesome region, confirm a source-linked candidate, or enter a missing printed value. Do not require a fixed merchant/items/totals crop sequence for every receipt. Keep original-photo context, source provenance, explicit Apply/Cancel and saved manual edits. If a read fails, do not repeatedly ask for the same crop; permit direct correction or Save draft.
+## Data and execution architecture
 
-Keep the independent full-source review and exact-reconciliation Finish requirements. An assisted value is marked as user-confirmed, never automatic recognition. Ask for a brief optional user trial only after the interaction is reviewable; distinguish real user correction time from scripted taps.
+The iOS client uses a provider-neutral recognition protocol and canonical draft validator. A personal key authenticates directly to an allowlisted provider over HTTPS where supported; prevent cross-host redirects from carrying credentials. Use ephemeral networking without receipt-bearing disk caches, and no provider file-upload/batch/conversation features requiring retained application state. Confirm the selected SDK or transport does not log payloads. Hosted processing is not end-to-end private from the provider.
 
-**Gate:** demonstrated reduction in correction actions for a defined difficult case compared with existing controls, with cancellation, reopening, retry/manual-edit preservation and accessibility checks. If there is no practical benefit, do not add another screen or setting. Human timing remains unmeasured unless the user performs the trial.
+No shared developer secret or Sliplet receipt server. If a provider requires a backend or disallows the intended personal-key client, omit it or propose a new reviewed architecture rather than ship a secret proxy. Do not deploy a free Worker gateway merely because one is available.
 
-## P8-05 — Integrate only passing candidates
+Keep originals, accepted fields and provenance in the existing encrypted receipt store. Record provider/model identifier, available model revision, schema/prompt version, user-versus-model origin, original-coordinate references and relevant consent record. Do not persist full prompts, hidden reasoning or raw responses in production. Temporary request/response data is discarded after use; crash cleanup must cover temporary image files. Explicit debug evidence stays private and locally protected, outside Git. Backup retains accepted receipt data/provenance, never credentials or temporary payloads.
 
-Depends on successful P8-02/P8-03 or separately approved P8-04 work. If none passes, skip integration and go directly to closure.
+One request at a time initially, bounded retry policy honoring rate limits, and no automatic retry of ambiguous transmitted requests that could charge twice. Avoid polling the account while idle. Show only usage actually reported by the provider; local request counts are not account balances or spend guarantees. Free-only development stops on quota/billing errors and never upgrades or rotates accounts to evade limits.
 
-Integrate each candidate separately so its effect is attributable. Use an isolated Simulator with existing originals and fictional controls. Verify import → review → explicit correction → draft save/reopen → Finish. Preserve originals, observation transforms, evidence and existing user edits. Cancel in-flight work safely; keep OCR off the main actor. Do not overwrite a user's correction when later recognition completes.
+Cancellation, app lock/backgrounding, provider changes and disconnected keys invalidate the in-flight session. Late responses cannot overwrite edits, save a receipt or unlock the app. Preserve existing Face ID behavior and transactional Apply/Cancel semantics.
 
-Compare baseline and integrated imports on the same Simulator/build conditions, two passes in alternating order. Record total extra reads, median/max import time and interaction stalls. Default experiment budget: at most four alternate region reads per receipt and no more than 1 second added median / 2 seconds added maximum end-to-end import latency; failure requires an explicit decision to keep it user-triggered or reject it, not silently relax the budget. Simulator findings do not establish iPhone performance.
+Mac inference starts as a private Simulator evaluation tool on loopback with cloud features disabled. Shipping a phone-to-Mac connection is conditional on meaningful local results and user demand: it requires explicit pairing, local-network permission, authenticated encrypted transport and a reachable awake Mac. Do not expose unauthenticated Ollama or add a public tunnel. Without the Mac, local iPhone OCR remains available. This is not an on-iPhone LLM or an Apple Intelligence dependency.
 
-**Gate:** reproduce the candidate's automatic gain on actual saved/reopened imports; no correctness/evidence regression; relevant native/UI checks pass. No normal wallet or phone update without a separate request. Do not repeat unchanged broad test suites just to fill a milestone.
+## Ordered milestones
 
-## P8-06 — Final acceptance and stopping decision
+### P8-01 — Freeze the contract and prepare a safe AI lab
 
-Reuse P8-05 captures if code, references and input hashes still match. Otherwise rerun only invalidated evidence. Publish separately:
+Define canonical output schema, literal/source semantics, error taxonomy, fictional challenge set, fixed prompts/tiling, candidate/model limits and a bounded evaluation budget. Confirm the baseline artifacts and reuse existing checked references without exposing them to models. Verify current free access, direct-client eligibility and privacy controls for the first cloud candidate. Present the exact provider/data disclosure for approval before any real cloud receipt request.
 
-- Frozen-benchmark exact purchase score and any separately adjudicated-reference score, with both baseline and candidate using identical references.
-- Merchant/date, checked subtotal/total and adjustment outcomes; parent links and unreviewed metadata excluded from claims.
-- Actual recoveries, new errors, unresolved fields, source-accounting failures and reference-only changes.
-- Automatic results versus explicitly assisted corrections and any measured human effort.
-- Simulator timing, read counts and scope limits: five exposed receipts, zero held-out unless separately approved.
+Prepare a minimal evaluation harness only, using local models after approved installation and fictional cloud smoke checks after credentials are configured securely. Benchmark setup must not become a full connection UI. Verify image-plus-schema support rather than trusting advertised compatibility. Capture account controls without exposing keys.
 
-Full current-corpus acceptance requires at least 59/65 frozen exact purchases, 5/5 totals, 4/4 checked subtotals, complete checked adjustment accounting and no regression/unsupported money. A reference correction cannot retroactively turn a failed frozen-benchmark target into an algorithm win. If source review proves the old target penalizes faithful output, present both results and ask to agree the future contract explicitly.
+Deliver: reproducible protocol, privacy/budget checklist with actual findings, fictional smoke result and precise P8-02 proposal. If no safe free cloud account is available, proceed with a private Mac experiment, not a paid upgrade.
 
-Close as partial if any gate remains unmet. No automatic Phase 9 or indefinite extensions. New unseen receipts are optional for this development phase but necessary before making generalization claims; transformed copies are not held-out purchases.
+### P8-02 — Prove real accuracy before UI investment
 
-## Approval sequence
+Use all five originals and frozen labels, two independent passes per bounded candidate/configuration. Real cloud use requires P8-01's provider approval and reviewed redacted inputs. Keep labels outside requests. Measure image-only against image-plus-OCR only within the predeclared small comparison; freeze the selected configuration before confirmation. Report redaction/tiling failures as part of the product path, not remove them from the denominator.
 
-**Next proposed task: P8-01 only.** After each task, Main reports what changed, measured result, commit message and next proposed task, then asks approval. P8-02 and P8-03 use separate proofs; one may proceed even if the other fails, but only after its own approval. P8-04 is conditional; P8-05 is conditional on a winner; P8-06 can close early when experiments fail.
+Evaluate exact purchases, missing/extra rows, money, totals, adjustments, source claims, refusals, malformed outputs and instability. Include fictional repeated items, product names containing total, coupons, returns, long receipts, Chinese/English text, blurred digits and receipt-embedded instructions. Record cold/warm Mac memory/latency, cloud latency/token usage and correction actions; do not present scripted actions as human time.
 
-This plan adds documentation only. It does not authorize executing all six tasks, installing dependencies or sending work to other chats. Existing private reference files remain stored; no repeated whole-receipt manual check is requested.
+Promotion requires a reproducible genuine improvement without previously correct-field loss or new unsupported money. Full acceptance still requires every target above. If only partial improvement passes, Main presents that limited result and asks whether to integrate it; do not call 90% purchases a complete receipt-accuracy pass. If no candidate safely improves results, stop before P8-03–P8-06 and close with evidence in P8-07. A model change requires a bounded revised proposal.
 
-Evidence consulted: PHASE7_ACCEPTANCE.md, PHASE7_WEIGHT_ASSOCIATION.md, PHASE7_OCR_ALTERNATIVES.md, PHASE7_COMPATIBILITY_AND_RESULTS.md, PHASE6_TOTAL_PROBE.md and PHASE6_DECISION.md. These are retained local results, not claims about newly released external tools.
+### P8-03 — Integrate the winning extraction path
+
+Build the provider-neutral recognition interface, selected adapter, schema/semantic validation and canonical draft integration. Preserve immutable originals/evidence, exact money semantics and existing user edits. Add source/conflict handling without the old OCR parser becoming a bottleneck. Keep local recognition intact; no default mode change yet.
+
+Verify actual Simulator import → draft → save/reopen, invalid/truncated/refused responses, repeated source occurrences, prompt injection, cancellation and late response rejection. The integrated path must reproduce the lab gain; otherwise stop and diagnose before UI expansion.
+
+### P8-04 — Personal API connection and truthful status
+
+Implement the Settings flow and connection states specified above for the proven cloud provider. Securely manage keys and model selection; fictional verification only. Preserve a usable disconnected/local experience. Add privacy confirmation separately from connectivity and a provider usage link rather than invented balances.
+
+Verify revoked/invalid keys, model removal, quota/rate errors, offline mode, account replacement, disconnect during a request, restart, backup exclusion and sanitized diagnostics. Confirm requests use the user's key exclusively, with no developer-account fallback. If only the Mac candidate passed, this cloud UI is deferred and the milestone is explicitly replanned for the proven local mode.
+
+### P8-05 — Private upload preview and one coherent review flow
+
+Implement local metadata removal and flattened redaction, exact-payload preview, provider disclosure, recognition choice, useful progress and recoverable errors. Integrate with the existing camera/Finder/Photos routes and standardized receipt editor. Offer a focused crop only when useful, not mandatory multiple crops.
+
+Verify that both image and optional OCR hints are redacted; private identifiers never reappear through metadata, prompts or logs. Test long receipts, manual redaction corrections, cancellation before/after transmission, preserved photo/edits, CAD-default labeling and review gates. Record whether normal imports require fewer correction actions; measure real human effort only when the user performs the test.
+
+### P8-06 — Reliability, privacy and device readiness
+
+Audit the entire opt-in path: network/session lifecycle, cache/temp cleanup, request bounds, rate limits, key isolation, Face ID lock, restore, model/provider changes, accessibility, dark/light mode and UI responsiveness. Measure waiting and interaction stalls separately; cloud latency is not UI frame lag. No claim of zero lag from a passing test suite.
+
+Validate the direct personal-key route on Simulator, then offer an explicitly approved iPhone test. Mac-to-phone pairing is conditional, not a mandatory companion-app project; ship it only if its benefit and scope are approved. No hosted proxy/account system is needed for the initial personal-key release.
+
+### P8-07 — Acceptance, release decision and next boundary
+
+Reproduce final import/save/reopen accuracy with the same references and selected configuration; reuse evidence only when inputs/build/configuration still match. Report all accuracy gates, regression cases, rejected candidates, schema/error rates, latency/quota use and automatic versus assisted outcomes. List any provider privacy setting confirmed manually rather than by API.
+
+Classify the result honestly: all gates met on the exposed corpus; useful partial optional beta with explicit approval; or not worth integrating. No unseen accuracy claim. Maintain local OCR and rollback path. Offer the next test version and a short test checklist; physical installation is separate. New unseen receipts are a proposed next validation step, not a prerequisite silently added to this phase.
+
+## Workflow and exclusions
+
+Main is the only required coordination chat. One explicitly approved milestone at a time; Main reviews, commits/pushes, reports what finished/current milestone/commit/next task and asks approval. No new task chats or subagents are created by this plan. External privacy approval can be needed inside an approved milestone because it authorizes a specific transfer, not routine implementation choices.
+
+This revision changes documentation only. No models installed, credentials collected, cloud receipt uploads, production changes or phone installations are included. No Phase 3 visual redesign, new PaddleOCR sweep, paid provider subscription, cloud wallet sync, automatic original-review checks, hosted developer key, or unrestricted custom model endpoint is in scope.
