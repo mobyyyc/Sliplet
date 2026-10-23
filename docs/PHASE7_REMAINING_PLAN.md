@@ -1,6 +1,6 @@
 # Phase 7 remaining agenda — general receipt interpretation
 
-Revised 2026-10-22 after the focused human review. This is a design update, not authorization to implement every remaining task. P7-01 through P7-04 remain completed; P7-05 is complete; P7-06 awaits approval. Main requests approval before each subsequent milestone.
+Revised 2026-10-22 after the focused human review. This is a design update, not authorization to implement every remaining task. P7-01 through P7-04 remain completed; P7-05 and P7-06 are complete; P7-07 awaits approval. Main requests approval before each subsequent milestone.
 
 ## Evidence and scope
 
@@ -80,6 +80,8 @@ Five exposed receipts and synthetic tests cannot establish accuracy on unseen pu
 
 ## Workflow and next action
 
-P7-05 completed with a frozen 56/65 baseline (86.2%). The next acceptance threshold is 59/65, requiring three actual recoveries; totals remain a separate gate. Request approval for P7-06. The remaining order is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main owns review, commit/push and the next-task approval. No new chats or subagents are needed. This agenda changes the implementation strategy, not production recognition code.
+P7-05 completed with a frozen 56/65 baseline (86.2%). The next acceptance threshold is 59/65, requiring three actual recoveries; totals remain a separate gate. P7-06 now measures 57/65 (87.7%) with two weighted purchases recovered and one additional exact pair. Request approval for P7-07. The remaining order is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main owns review, commit/push and the next-task approval. No new chats or subagents are needed. This agenda changes the implementation strategy, not production recognition code.
 
 P7-05 completion details and limitations are recorded in `PHASE7_FOCUSED_REVIEW.md`; its final results supersede the intermediate 55/66 measurement above.
+
+P7-06 completion: `PHASE7_WEIGHT_ASSOCIATION.md` records the bounded production rule, 31 fictional checks, ten frozen-OCR replays and 46 native regression tests. P7-07 should include the wrong-amount OCR case alongside remaining description and total failures. Suffix deletion and speculative discount linkage were not promoted.

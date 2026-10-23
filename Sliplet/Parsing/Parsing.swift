@@ -103,7 +103,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p7-04-count-extensions-0.7.0"
+    static let version = "p7-06-weight-extensions-0.7.1"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -385,6 +385,57 @@ enum ReceiptParser {
         return q
     }
 
+    /// A following weight/rate row must contain its own printed extension.
+    /// Relative geometry and explicit units establish the group; totals never supply a price.
+    private static func recoverWeightedExtensions(_ parsed: inout ParsedReceipt, rows: [Row]) {
+        guard let merchant = parsed.merchant, ReceiptMerchantDirectory.match(merchant) != nil,
+              rows.count > 1 else { return }
+        let order = Dictionary(rows.enumerated().flatMap { index, row in row.ids.map { ($0, index) } }, uniquingKeysWith: min)
+        for index in 0..<(rows.count - 1) {
+            let head = rows[index], tail = rows[index + 1]
+            let description = head.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Do not recover purchases from a payment/total footer.
+            guard !rows[..<index].contains(where: {
+                (summaryLabel($0.text)?.kind == .total && !monetaryTokens($0.text).isEmpty)
+                    || first(#"^(?:CASH|VISA|MASTERCARD|DEBIT|CREDIT|CHANGE|TENDER)\b"#, fieldText($0.text)) != nil
+            }) else { continue }
+            let syntax = #"^\d+(?:\.\d+)?\s*(?:KG|LB|LBS)\s*@\s*\$?\d+\.\d{2}\s*/\s*(?:KG|LB|LBS)\s+(?:[A-Z]\s+)?\$?\d+\.\d{2}\s*$"#
+            guard first(syntax, tail.text.uppercased()) != nil,
+                  monetaryTokens(description).isEmpty, first(quantityPattern, description) == nil,
+                  first(#"\p{L}"#, description) != nil, summaryLabel(description) == nil,
+                  first(metadataPattern, fieldText(description)) == nil,
+                  first(#"^(?:HST|GST|PST|TAX|DISCOUNT|COUPON|DEPOSIT|ADJUSTMENT)\b"#, fieldText(description)) == nil,
+                  ReceiptParser.merchant(description) == nil, dateCandidates(description).isEmpty,
+                  first(#"^(?:PRODUCE|MEAT|MEATS|DAIRY|SEAFOOD|BAKERY|GROCERY|GROCERIES)(?:\s+DEPARTMENT)?$"#, fieldText(description)) == nil,
+                  head.height > 0, tail.height > 0, head.center > tail.center,
+                  head.center - tail.center <= min(head.height, tail.height) * 1.5,
+                  let hx = head.parts.compactMap(\.boundingBox).map(\.x).min(),
+                  let tx = tail.parts.compactMap(\.boundingBox).map(\.x).min(), tx > hx,
+                  let qText = first(#"^\d+(?:\.\d+)?"#, tail.text), let q = ExactInput.decimal(qText),
+                  let unit = printedUnit(tail.text),
+                  let rateUnit = first(#"/\s*(?:KG|LBS|LB)\b"#, tail.text.uppercased()),
+                  rateUnit.replacingOccurrences(of: "/", with: "").trimmingCharacters(in: .whitespaces) == unit else { continue }
+            let tokens = monetaryTokens(tail.text)
+            guard tokens.count == 2, let rr = Range(tokens[0].range, in: tail.text),
+                  let ar = Range(tokens[1].range, in: tail.text),
+                  let rate = printedMoney(String(tail.text[rr])), let amount = printedMoney(String(tail.text[ar])),
+                  extensionMatches(q, rate: rate, amount: amount) else { continue }
+            let ids = head.ids + tail.ids
+            guard !parsed.lines.contains(where: { !Set($0.sourceLineIDs).isDisjoint(with: ids) }) else { continue }
+            var line = ParsedReceipt.Line(kind: "purchase", description: description, amount: amount, quantity: q, sourceLineIDs: ids)
+            line.sku = printedSKU(description); line.unit = unit; line.unitPrice = rate
+            let position = parsed.lines.firstIndex { existing in
+                existing.sourceLineIDs.compactMap { order[$0] }.min().map { $0 > index } ?? false
+            } ?? parsed.lines.endIndex
+            parsed.lines.insert(line, at: position)
+            let resolved = Set(ids)
+            parsed.issues.removeAll { issue in
+                ["unpriced_source_row", "quantity_association_uncertain"].contains(issue.code)
+                    && !issue.sourceLineIDs.isEmpty && Set(issue.sourceLineIDs).isSubset(of: resolved)
+            }
+        }
+    }
+
     /// Recover only the verified split count/rate/extension layout. Original OCR is immutable.
     private static func recoverExplicitCountExtensions(_ parsed: inout ParsedReceipt, rows: [Row]) {
         guard let merchant = parsed.merchant, ReceiptMerchantDirectory.match(merchant) != nil else { return }
@@ -609,6 +660,7 @@ enum ReceiptParser {
             if dates.allSatisfy({ $0.0 == date }) { result.date = date } else { issue("date_conflicting", Array(Set(dates.flatMap { $0.1 })).sorted { $0.uuidString < $1.uuidString }) }
         }
         recoverExplicitCountExtensions(&result, rows: grouped)
+        recoverWeightedExtensions(&result, rows: grouped)
         for (missing, code) in [(result.merchant == nil, "merchant_missing"), (result.date == nil, "date_missing"), (result.currency == nil, "currency_missing"), (result.total == nil, "total_missing")] where missing { issue(code, []) }
         issue("source_review_required", observations.map(\.id))
         return result

@@ -1,0 +1,27 @@
+{
+  "fictional_checks": 31,
+  "passes": [
+    {
+      "before": 56,
+      "after": 57,
+      "denominator": 65,
+      "recovered_purchases": 2,
+      "lost_correct_fields": 0
+    },
+    {
+      "before": 56,
+      "after": 57,
+      "denominator": 65,
+      "recovered_purchases": 2,
+      "lost_correct_fields": 0
+    }
+  ],
+  "fresh_OCR": false,
+  "held_out": 0,
+  "native_regressions": {
+    "executed": 46,
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0
+  }
+}
