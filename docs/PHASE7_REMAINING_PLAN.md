@@ -91,3 +91,5 @@ P7-07 completion: `PHASE7_OCR_ALTERNATIVES.md` records two fresh native passes a
 P7-08 completion: `PHASE7_WORKFLOW_VERIFICATION.md` confirms repeated actual imports at 57/65, unchanged source evidence, preserved draft/review gates and 28 passing native/UI methods. P7-09 may reuse these fresh captures if build/source/reference hashes remain unchanged; do not repeat identical imports without a new concern. The 59/65 and all-total acceptance gates are still unmet.
 
 P7-09 completion: `PHASE7_ACCEPTANCE.md` records verified repeated 57/65 exact purchases, 3/5 totals, 4/4 checked subtotals and 4/8 exact adjustments. No new production changes. The final audit reused hash-verified P7-08 imports; Phase 7 work is complete but recognition acceptance failed. Further accuracy work requires a separately approved plan.
+
+Next-phase planning completed: `PHASE8_PLAN.md` defines six gated tasks, with P8-01 evidence triage awaiting approval. No Phase 8 implementation has started.
