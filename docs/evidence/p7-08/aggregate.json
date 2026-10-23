@@ -1,0 +1,40 @@
+{
+  "task": "P7-08",
+  "passes": [
+    {
+      "before_exact": 56,
+      "after_exact": 57,
+      "totals_correct": 3,
+      "subtotals_correct": 4,
+      "verified_roundtrips": 5
+    },
+    {
+      "before_exact": 56,
+      "after_exact": 57,
+      "totals_correct": 3,
+      "subtotals_correct": 4,
+      "verified_roundtrips": 5
+    }
+  ],
+  "held_out": 0,
+  "production_changed": false,
+  "automatic_extra_reads": false,
+  "median_import_to_review_ms": 1131.9803541628062,
+  "max_import_to_review_ms": 1971.1447916779434,
+  "max_main_actor_poll_gap_ms": 23.939500009873882,
+  "lost_correct_fields": 0,
+  "native_tests": {
+    "result": "Passed",
+    "totalTestCount": 25,
+    "passedTests": 25,
+    "failedTests": 0,
+    "skippedTests": 0
+  },
+  "ui_tests": {
+    "result": "Passed",
+    "totalTestCount": 3,
+    "passedTests": 3,
+    "failedTests": 0,
+    "skippedTests": 0
+  }
+}

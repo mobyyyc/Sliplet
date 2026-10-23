@@ -1,6 +1,6 @@
 # Phase 7 remaining agenda — general receipt interpretation
 
-Revised 2026-10-22 after the focused human review. This is a design update, not authorization to implement every remaining task. P7-01 through P7-04 remain completed; P7-05 through P7-07 are complete; P7-07 failed its promotion gate. P7-08 awaits approval. Main requests approval before each subsequent milestone.
+Revised 2026-10-22 after the focused human review. This is a design update, not authorization to implement every remaining task. P7-01 through P7-04 remain completed; P7-05 through P7-08 are complete; P7-07 failed its promotion gate. P7-09 awaits approval. Main requests approval before each subsequent milestone.
 
 ## Evidence and scope
 
@@ -80,10 +80,12 @@ Five exposed receipts and synthetic tests cannot establish accuracy on unseen pu
 
 ## Workflow and next action
 
-P7-05 completed with a frozen 56/65 baseline (86.2%). The next acceptance threshold is 59/65, requiring three actual recoveries; totals remain a separate gate. P7-06 now measures 57/65 (87.7%) with two weighted purchases recovered and one additional exact pair. P7-07 produced no safe accuracy gain; request approval for P7-08 verification of the P7-06 change only. The remaining order is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main owns review, commit/push and the next-task approval. No new chats or subagents are needed. This agenda changes the implementation strategy, not production recognition code.
+P7-05 completed with a frozen 56/65 baseline (86.2%). The next acceptance threshold is 59/65, requiring three actual recoveries; totals remain a separate gate. P7-06 now measures 57/65 (87.7%) with two weighted purchases recovered and one additional exact pair. P7-07 produced no safe accuracy gain; P7-08 verified ten actual import/save/reopen cycles and 28 passing native/UI methods; request approval for P7-09 final acceptance assessment. The remaining order is P7-05 → P7-06 → P7-07 → P7-08 → P7-09. Main owns review, commit/push and the next-task approval. No new chats or subagents are needed. This agenda changes the implementation strategy, not production recognition code.
 
 P7-05 completion details and limitations are recorded in `PHASE7_FOCUSED_REVIEW.md`; its final results supersede the intermediate 55/66 measurement above.
 
 P7-06 completion: `PHASE7_WEIGHT_ASSOCIATION.md` records the bounded production rule, 31 fictional checks, ten frozen-OCR replays and 46 native regression tests. P7-07 should include the wrong-amount OCR case alongside remaining description and total failures. Suffix deletion and speculative discount linkage were not promoted.
 
 P7-07 completion: `PHASE7_OCR_ALTERNATIVES.md` records two fresh native passes at 57/65, no additional text candidates, 80 row rereads with zero recoveries and 14 regressive substitutions. Only three of eight failed purchase-row regions were covered. Production OCR is unchanged. P7-08 verifies the P7-06 improvement; it is not expected to close the 90% gap. P7-09 must report partial results if the acceptance gates remain unmet.
+
+P7-08 completion: `PHASE7_WORKFLOW_VERIFICATION.md` confirms repeated actual imports at 57/65, unchanged source evidence, preserved draft/review gates and 28 passing native/UI methods. P7-09 may reuse these fresh captures if build/source/reference hashes remain unchanged; do not repeat identical imports without a new concern. The 59/65 and all-total acceptance gates are still unmet.
