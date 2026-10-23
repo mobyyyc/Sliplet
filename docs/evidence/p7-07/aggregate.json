@@ -1,0 +1,51 @@
+{
+  "passes": [
+    {
+      "counts": {
+        "baseline_exact_pairs": 57,
+        "baseline_totals_correct": 3,
+        "full_observations": 331,
+        "region_reads": 40,
+        "invalid_geometry_observations": 10,
+        "full_alternative_strings": 0,
+        "full_alternative_oracle_recoverable_pairs": 0,
+        "full_alternative_oracle_recoverable_totals": 0,
+        "region_alternative_strings": 0,
+        "region_oracle_recoverable_pairs": 0,
+        "region_oracle_recoverable_totals": 0
+      },
+      "median_read_ms": 296.7561666664551,
+      "max_read_ms": 942.7798750039074
+    },
+    {
+      "counts": {
+        "baseline_exact_pairs": 57,
+        "baseline_totals_correct": 3,
+        "full_observations": 331,
+        "region_reads": 40,
+        "invalid_geometry_observations": 10,
+        "full_alternative_strings": 0,
+        "full_alternative_oracle_recoverable_pairs": 0,
+        "full_alternative_oracle_recoverable_totals": 0,
+        "region_alternative_strings": 0,
+        "region_oracle_recoverable_pairs": 0,
+        "region_oracle_recoverable_totals": 0
+      },
+      "median_read_ms": 297.85624999931315,
+      "max_read_ms": 776.8107083320501
+    }
+  ],
+  "production_changed": false,
+  "held_out": 0,
+  "selection_rule": "none; candidate gains are label-assisted availability diagnostics only",
+  "coverage": {
+    "failed_purchase_rows": 8,
+    "failed_purchase_regions_covered": 3,
+    "region_replays_losing_correct_pairs": 14
+  },
+  "native_tests": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  }
+}
