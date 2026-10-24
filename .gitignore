@@ -41,3 +41,6 @@ private-receipts/
 
 # Private recognition review exports
 /sliplet-p402-checked*.json
+
+# Private redacted receipt review export (still contains purchase data).
+/sliplet-p801-redactions*.json

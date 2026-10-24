@@ -73,3 +73,11 @@ Confirmation gates: at least 59/65 exact purchases, 5/5 totals, 4/4 checked subt
 ## Current next step
 
 The diagnostic fictional run and bounded prompt correction are complete. Keychain storage was added at the user's request and native save/read/replace/delete tests passed with a temporary fictional credential. The user must enter their key once to populate the persistent entry; do not claim it was saved before verifying its presence. Account data controls are user-confirmed; present the packet above for real-upload approval when the experiment is ready. Record any model/API incompatibility before proposing P8-02. If account setup is delayed, retain the tested harness and mark the task awaiting that step rather than completed.
+
+## Local redacted preview preparation
+
+The user approved local preview preparation after the fictional test passed. Prepared five upright images with 29 suggested identifier/contact masks, using retained OCR boxes and original hashes. The original photos and checked references are unchanged. The offline page supports manual masks, original comparison and checked export of flattened PNGs. Barcode coverage and missed identifiers require human review; no privacy-completeness claim is made.
+
+Browser checks passed: all five images load; all-receipt confirmation gate works; edits clear confirmation; exported pixels remain redacted while the original is being viewed; sampled mask pixels are opaque; no page HTTP requests occurred. The automated test did not create a user-approved export. The page and all receipt-derived files remain ignored/private. Only generic tooling is committed. No real receipt upload or P8-02 inference has occurred.
+
+Next: user reviews the local page and exports `sliplet-p801-redactions.json` into the main project folder. Validate that exact export, then request explicit transfer approval. Export alone is not consent to upload.

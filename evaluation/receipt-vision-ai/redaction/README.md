@@ -1,0 +1,11 @@
+# Offline redaction review
+
+`prepare.py` uses Pillow, macOS sips, the retained corpus manifest and P7-08 OCR boxes to prepare five upright local previews. Original photos are resolved by digest; metadata is removed by RGB re-rendering. Vision boxes are mapped from normalized bottom-left coordinates onto upright image pixels. Suggested masks use identifier/contact context, not product-code length alone. Barcodes, missed text and overly broad masks require human inspection. This is not a privacy-completeness guarantee.
+
+Output is ignored owner-only `private-receipts/evaluation/p8-01-redaction-review`. Existing review output is never overwritten. Open `index.html` locally. The page includes the original pixels for local comparison and is private; do not publish it. It uses no external scripts/fonts/network APIs and disallows connections via CSP.
+
+The user can add masks, undo and restore suggestions. Mask edits clear confirmation. Export requires all five receipts checked and always rasterizes masks onto a fresh canvas, even when the original is being viewed. Exported PNGs contain opaque masked pixels, not reversible overlays. Export `sliplet-p801-redactions.json` to the project root (explicitly ignored). It contains sensitive purchases even after redaction. `upload_authorized` remains false: review/export is not transfer permission. The image hash/slot anchors are private and must never be included in model requests.
+
+`verify.cjs` uses Playwright and installed Chrome in a temporary profile. Run with Playwright available on NODE_PATH. It checks image loading, confirmation gating, mask-change invalidation, export while viewing original, opaque mask pixels and zero page HTTP requests. It does not save an export or confer human approval. Real corpus bytes and OCR text are never printed. The browser test passed for the prepared five images; original receipt content and barcode coverage still require user review.
+
+P8-02 must validate the returned export against originals, geometry and content hashes, inspect the exact output, and obtain explicit provider/payload approval before implementing or running a real-receipt request. This preparation makes no cloud call and does not access Keychain.
