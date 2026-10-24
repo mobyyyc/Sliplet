@@ -1,0 +1,366 @@
+{
+  "task": "P8-02",
+  "status": "bounded_experiment_complete_candidate_rejected",
+  "production_changed": false,
+  "exposed_receipts": 5,
+  "held_out_receipts": 0,
+  "fictional": {
+    "requests": 12,
+    "exact_cases": 10,
+    "failed_cases": [
+      "weighted",
+      "weighted-ocr"
+    ]
+  },
+  "selection": {
+    "variant": "image-only",
+    "ocr_improved_weighted_case": false
+  },
+  "real": {
+    "planned_samples": 10,
+    "requests_including_one_user_authorized_retry": 11,
+    "statuses": {
+      "unknown_source_image": 7,
+      "rate_or_quota_limited": 3,
+      "received": 1
+    },
+    "raw_returned_outputs": 8,
+    "full_acceptance": false,
+    "schema_source_valid_outputs": 1,
+    "schema_source_valid_outputs_without_semantic_issues": 0,
+    "tokens": {
+      "prompt_tokens": 19296,
+      "completion_tokens": 19588,
+      "total_tokens": 38884
+    }
+  },
+  "primary": {
+    "task": "P8-02",
+    "exposed_receipts": 5,
+    "held_out_receipts": 0,
+    "passes": [
+      {
+        "pass": 1,
+        "counts": {
+          "exact_purchase_pairs": 0,
+          "expected_purchases": 65,
+          "actual_purchases": 0,
+          "missing_line_proxies": 73,
+          "unrelated_unmatched_actual_lines": 0,
+          "ambiguous_group_count_mismatch": 0
+        },
+        "summary_fields": {
+          "currency": {
+            "unscorable": 5
+          },
+          "date": {
+            "missing": 5
+          },
+          "merchant": {
+            "missing": 5
+          },
+          "subtotal": {
+            "missing": 4,
+            "unscorable": 1
+          },
+          "total": {
+            "missing": 5
+          }
+        },
+        "adjustments": {
+          "expected": 8,
+          "exact": 0
+        },
+        "previously_correct_lost": {
+          "summary_fields": 17,
+          "line_fields": 199,
+          "previously_exact_rows": 61
+        },
+        "source_methods": {},
+        "statuses": {
+          "unknown_source_image": 4,
+          "rate_or_quota_limited": 1
+        },
+        "unscored_payment_change_rows": {},
+        "latency_seconds": [
+          8.538,
+          0.234,
+          5.407,
+          8.191,
+          4.528
+        ],
+        "validated_response_usage_only": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        }
+      },
+      {
+        "pass": 2,
+        "counts": {
+          "exact_purchase_pairs": 17,
+          "expected_purchases": 65,
+          "actual_purchases": 22,
+          "missing_line_proxies": 55,
+          "unrelated_unmatched_actual_lines": 5,
+          "ambiguous_group_count_mismatch": 0
+        },
+        "summary_fields": {
+          "currency": {
+            "unscorable": 5
+          },
+          "date": {
+            "missing": 4,
+            "wrong": 1
+          },
+          "merchant": {
+            "missing": 4,
+            "wrong": 1
+          },
+          "subtotal": {
+            "missing": 3,
+            "correct": 1,
+            "unscorable": 1
+          },
+          "total": {
+            "missing": 4,
+            "correct": 1
+          }
+        },
+        "adjustments": {
+          "expected": 8,
+          "exact": 0
+        },
+        "previously_correct_lost": {
+          "summary_fields": 16,
+          "line_fields": 148,
+          "previously_exact_rows": 44
+        },
+        "source_methods": {
+          "unique_raw_ocr_description": 16,
+          "model_box_claim": 7
+        },
+        "statuses": {
+          "rate_or_quota_limited": 2,
+          "received": 1,
+          "unknown_source_image": 2
+        },
+        "unscored_payment_change_rows": {
+          "payment": 1
+        },
+        "latency_seconds": [
+          1.429,
+          8.682,
+          4.673,
+          7.3,
+          0.667
+        ],
+        "validated_response_usage_only": {
+          "prompt_tokens": 2412,
+          "completion_tokens": 3339,
+          "total_tokens": 5751
+        }
+      }
+    ],
+    "baseline_exact_purchases": 57,
+    "baseline_expected_purchases": 65,
+    "baseline_correct_totals": 3,
+    "baseline_correct_adjustments": 4,
+    "quantity_unit_price_labels_available": false,
+    "model_source_claims_verified": false,
+    "production_changed": false
+  },
+  "conditional_diagnostic": {
+    "task": "P8-02",
+    "diagnostic_only": true,
+    "assumption": "A single invalid claimed image ID is projected to the one supplied image solely for offline scoring. Model source boxes remain unverified claims. No candidate is accepted by this projection.",
+    "exposed_receipts": 5,
+    "held_out_receipts": 0,
+    "passes": [
+      {
+        "pass": 1,
+        "readable_raw_responses": 5,
+        "first_attempt_statuses": {
+          "unknown_source_image": 4,
+          "rate_or_quota_limited": 1
+        },
+        "additional_projection_failures": {
+          "unknown_source_image": 1
+        },
+        "raw_summary_fields_on_returned_outputs_only": {
+          "currency": {
+            "unscorable": 5
+          },
+          "date": {
+            "correct": 2,
+            "wrong": 1,
+            "missing": 2
+          },
+          "merchant": {
+            "wrong": 2,
+            "correct": 3
+          },
+          "subtotal": {
+            "correct": 4,
+            "unscorable": 1
+          },
+          "total": {
+            "correct": 5
+          }
+        },
+        "counts": {
+          "exact_purchase_pairs": 6,
+          "expected_purchases": 65,
+          "actual_purchases": 50,
+          "missing_line_proxies": 58,
+          "unrelated_unmatched_actual_lines": 39
+        },
+        "summary_fields": {
+          "currency": {
+            "unscorable": 5
+          },
+          "date": {
+            "correct": 2,
+            "missing": 3
+          },
+          "merchant": {
+            "wrong": 1,
+            "missing": 1,
+            "correct": 3
+          },
+          "subtotal": {
+            "correct": 3,
+            "missing": 1,
+            "unscorable": 1
+          },
+          "total": {
+            "correct": 4,
+            "missing": 1
+          }
+        },
+        "adjustments": {
+          "expected": 8,
+          "exact": 1
+        },
+        "previously_correct_losses": {
+          "summary_fields": 6,
+          "previously_exact_rows": 54
+        },
+        "source_methods": {
+          "model_box_claim": 36,
+          "unique_raw_ocr_description": 18
+        },
+        "raw_sign_and_kind_counts": {
+          "negative_amount_rows": 0,
+          "discount_kind_rows": 1
+        }
+      },
+      {
+        "pass": 2,
+        "readable_raw_responses": 3,
+        "first_attempt_statuses": {
+          "rate_or_quota_limited": 2,
+          "received": 1,
+          "unknown_source_image": 2
+        },
+        "additional_projection_failures": {
+          "invalid_source_box": 1
+        },
+        "raw_summary_fields_on_returned_outputs_only": {
+          "currency": {
+            "unscorable": 3
+          },
+          "date": {
+            "wrong": 1,
+            "missing": 2
+          },
+          "merchant": {
+            "wrong": 1,
+            "correct": 2
+          },
+          "subtotal": {
+            "correct": 3
+          },
+          "total": {
+            "correct": 3
+          }
+        },
+        "counts": {
+          "exact_purchase_pairs": 23,
+          "expected_purchases": 65,
+          "actual_purchases": 33,
+          "missing_line_proxies": 47,
+          "unrelated_unmatched_actual_lines": 8
+        },
+        "summary_fields": {
+          "currency": {
+            "unscorable": 5
+          },
+          "date": {
+            "missing": 4,
+            "wrong": 1
+          },
+          "merchant": {
+            "missing": 3,
+            "wrong": 1,
+            "correct": 1
+          },
+          "subtotal": {
+            "missing": 2,
+            "correct": 2,
+            "unscorable": 1
+          },
+          "total": {
+            "missing": 3,
+            "correct": 2
+          }
+        },
+        "adjustments": {
+          "expected": 8,
+          "exact": 0
+        },
+        "previously_correct_losses": {
+          "summary_fields": 13,
+          "previously_exact_rows": 38
+        },
+        "source_methods": {
+          "unique_raw_ocr_description": 27,
+          "model_box_claim": 7
+        },
+        "raw_sign_and_kind_counts": {
+          "negative_amount_rows": 0,
+          "discount_kind_rows": 0
+        }
+      }
+    ],
+    "real_requests_including_explicit_retry": 11,
+    "real_usage": {
+      "prompt_tokens": 19296,
+      "completion_tokens": 19588,
+      "total_tokens": 38884
+    },
+    "elapsed_seconds_including_keychain_network_validation": [
+      8.538,
+      1.429,
+      9.241,
+      0.234,
+      8.682,
+      5.407,
+      4.673,
+      8.191,
+      7.3,
+      4.528,
+      0.667
+    ],
+    "app_changed": false,
+    "full_acceptance": false
+  },
+  "local_checks": {
+    "experiment_tests": 19,
+    "existing_lab_tests": 33,
+    "redaction_tests": 2,
+    "baseline_reverified": true,
+    "production_build_rerun": false
+  },
+  "next": "Propose P8-02B corrective lab experiment; P8-03 integration remains blocked by failed accuracy gates."
+}

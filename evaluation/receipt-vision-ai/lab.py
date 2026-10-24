@@ -164,7 +164,17 @@ def http_state(status):
     return {400:'request_or_schema_rejected',401:'key_rejected',403:'access_denied',404:'model_or_endpoint_unavailable',
             413:'request_too_large',422:'request_or_schema_rejected',429:'rate_or_quota_limited'}.get(status,'provider_error')
 
-def send(body, key):
+def safe_rate_headers(headers):
+    """Only allowlisted numeric/duration quota values; never arbitrary header text."""
+    result={}
+    for name in ('retry-after','x-ratelimit-limit-requests','x-ratelimit-limit-tokens',
+                 'x-ratelimit-remaining-requests','x-ratelimit-remaining-tokens',
+                 'x-ratelimit-reset-requests','x-ratelimit-reset-tokens'):
+        value=headers.get(name) if headers is not None else None
+        if isinstance(value,str) and re.fullmatch(r'[0-9.msuhd ]{1,40}',value):result[name]=value
+    return result
+
+def send(body, key, metadata=None):
     encoded = json.dumps(body).encode('utf-8')
     if len(encoded)>1_500_000:
         raise LabError('request_too_large')
@@ -176,9 +186,11 @@ def send(body, key):
         'User-Agent':'SlipletReceiptLab/0.1','Accept':'application/json'},method='POST')
     try:
         with opener.open(req,timeout=60) as response:
+            if metadata is not None:metadata['rate_limits']=safe_rate_headers(response.headers)
             raw = response.read(MAX_RESPONSE+1)
     except urllib.error.HTTPError as error:
         diagnostic = {'http_status':error.code,'error_format':'unknown','provider_code':'unrecognized'}
+        if metadata is not None:metadata['rate_limits']=safe_rate_headers(error.headers)
         # Read only to classify known static codes. Never persist or echo error text.
         try:
             raw_error = error.read(16384)
@@ -192,6 +204,14 @@ def send(body, key):
                          'json_validate_failed','model_permission_blocked'}
                 if isinstance(code,str) and code in allowed:
                     diagnostic['provider_code']=code
+                if error.code==429:
+                    message=parsed_error.get('error',{}).get('message','')
+                    if isinstance(message,str):
+                        for phrase,scope in [('tokens per minute','tokens_per_minute'),('tokens per day','tokens_per_day'),('requests per minute','requests_per_minute'),('requests per day','requests_per_day')]:
+                            if phrase in message.lower():diagnostic['limit_scope']=scope;break
+                        for label in ('Limit','Used','Requested'):
+                            match=re.search(r'\b'+label+r'\s*:?\s*([0-9]{1,12}(?:\.[0-9]{1,6})?)',message,re.I)
+                            if match:diagnostic[label.lower()+'_count']=float(match.group(1))
             elif b'error code: 1010' in raw_error:
                 diagnostic['error_format']='edge_rejection_1010'
             elif raw_error.lstrip().lower().startswith((b'<!doctype html',b'<html')):

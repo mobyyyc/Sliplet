@@ -1,6 +1,6 @@
 # P8-01 — vision AI contract and safe lab
 
-Date: 2026-10-24. Status: P8-01 complete as a developer-lab preparation milestone. Fictional extraction and corrected real-payload approval are verified. P8-02 execution awaits separate milestone approval. Consumer-app BYOK eligibility remains unresolved and is a P8-04 gate.
+Date: 2026-10-24. Status: P8-01 complete as a developer-lab preparation milestone. Fictional extraction and corrected real-payload approval are verified. P8-02 execution was separately approved on 2026-10-24; see PHASE8_ACCURACY_EXPERIMENT.md. Consumer-app BYOK eligibility remains unresolved and is a P8-04 gate.
 
 ## Verified preparation
 
@@ -72,9 +72,9 @@ Confirmation gates: at least 59/65 exact purchases, 5/5 totals, 4/4 checked subt
 
 ## Current next step
 
-P8-01 is complete for the developer laboratory. The fictional prompt-v2 smoke passed and the macOS Keychain credential entry was verified without printing the secret. Free plan and inference Zero Data Retention are user-confirmed, not API-verified. The corrected five-image export is verified and the user's transfer approval is bound privately to its digest and each flattened image digest. No real cloud calls have occurred.
+P8-01 is complete for the developer laboratory. The fictional prompt-v2 smoke passed and the macOS Keychain credential entry was verified without printing the secret. Free plan and inference Zero Data Retention are user-confirmed, not API-verified. The corrected five-image export is verified and the user's transfer approval is bound privately to its digest and each flattened image digest. No real cloud calls had occurred at the P8-01 completion checkpoint. P8-02 has since completed with a rejected configuration; see PHASE8_ACCURACY_EXPERIMENT.md for real-call counts and results.
 
-Next is P8-02, requiring its own milestone approval: complete fictional challenge scoring, validate the reviewed-payload-only runner and fixed geometry, freeze the selected configuration, then run the bounded real-corpus experiment. The existing smoke command continues to accept only its bundled fictional image. This milestone does not establish consumer-app BYOK eligibility or real-receipt accuracy.
+P8-02 was separately approved on 2026-10-24: complete fictional challenge scoring, validate the reviewed-payload-only runner and fixed geometry, freeze the selected configuration, then run the bounded real-corpus experiment. The existing smoke command continues to accept only its bundled fictional image. This milestone does not establish consumer-app BYOK eligibility or real-receipt accuracy.
 
 ## Local redacted preview preparation
 
@@ -92,4 +92,4 @@ The checked export revealed six pricing rows masked by an overly broad bare-@ em
 
 The replacement export contains five human-confirmed receipts with 23 retained masks. All source anchors, dimensions and mask rectangles match the corrected preview. Every decoded image pixel matches the original upright image with the approved opaque rectangles applied; therefore all six restored pricing rows remain unchanged outside retained masks. All images are opaque, and no embedded EXIF, XMP or text metadata was found. This verifies export integrity, not an automatic guarantee that every personal identifier was noticed by human review.
 
-The user approved the corrected previews and replaced the old export. The exact export and individual PNG digests, source anchors and approval scope are recorded only in ignored private evidence. No private content or digest is published. Approval covers these corrected redacted images for the proposed bounded Groq experiment, with the manually confirmed Free plan and inference ZDR controls. P8-02 execution still awaits its own milestone approval. Real uploads performed: zero.
+The user approved the corrected previews and replaced the old export. The exact export and individual PNG digests, source anchors and approval scope are recorded only in ignored private evidence. No private content or digest is published. Approval covers these corrected redacted images for the proposed bounded Groq experiment, with the manually confirmed Free plan and inference ZDR controls. P8-02 was subsequently approved on 2026-10-24. Real uploads performed at this P8-01 checkpoint: zero. Subsequent experiment results are recorded separately.

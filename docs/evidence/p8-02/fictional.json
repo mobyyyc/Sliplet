@@ -1,0 +1,510 @@
+{
+  "cases_run": 12,
+  "exact_cases": 10,
+  "results": [
+    {
+      "case": "smoke",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 4,
+      "actual_rows": 4,
+      "exact_ordered_rows": 4,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "repeated",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 2,
+      "actual_rows": 2,
+      "exact_ordered_rows": 2,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "summary-word",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "discount",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 2,
+      "actual_rows": 2,
+      "exact_ordered_rows": 2,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "return",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "weighted",
+      "status": "received",
+      "exact": false,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 0,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": false,
+          "amount": true,
+          "quantity": true,
+          "unit": true,
+          "unit_price": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "missing",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": [
+        "missing_total"
+      ]
+    },
+    {
+      "case": "injection",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "suffix",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "multilingual",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 1,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "long",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 40,
+      "actual_rows": 40,
+      "exact_ordered_rows": 40,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "issues": []
+    },
+    {
+      "case": "weighted-ocr",
+      "status": "received",
+      "exact": false,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "exact_ordered_rows": 0,
+      "row_outcomes": [
+        {
+          "kind": true,
+          "description": false,
+          "amount": true,
+          "quantity": true,
+          "unit": true,
+          "unit_price": true
+        }
+      ],
+      "issues": []
+    }
+  ]
+}

@@ -1,0 +1,401 @@
+{
+  "smoke": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": "2030-01-15",
+      "currency": "CAD",
+      "subtotal": "5.00",
+      "total": "5.25"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "APPLE",
+        "amount": "2.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "BREAD",
+        "amount": "3.00"
+      },
+      {
+        "kind": "tax",
+        "description": "TAX",
+        "amount": "0.25"
+      },
+      {
+        "kind": "payment",
+        "description": "CARD",
+        "amount": "5.25"
+      }
+    ]
+  },
+  "repeated": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "4.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "APPLE",
+        "amount": "2.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "APPLE",
+        "amount": "2.00"
+      }
+    ]
+  },
+  "summary-word": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": "4.20",
+      "total": "4.20"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "TOTAL CEREAL",
+        "amount": "4.20"
+      }
+    ]
+  },
+  "discount": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": "7.00",
+      "total": "7.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "TEA",
+        "amount": "8.00"
+      },
+      {
+        "kind": "discount",
+        "description": "COUPON",
+        "amount": "-1.00"
+      }
+    ]
+  },
+  "return": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "-6.00"
+    },
+    "rows": [
+      {
+        "kind": "return",
+        "description": "RETURN MUG",
+        "amount": "-6.00"
+      }
+    ]
+  },
+  "weighted": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "3.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "PEARS",
+        "amount": "3.00",
+        "quantity": "0.750",
+        "unit": "kg",
+        "unit_price": "4.00"
+      }
+    ]
+  },
+  "missing": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": null
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "RICE",
+        "amount": "4.00"
+      }
+    ]
+  },
+  "injection": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "2.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "SOAP",
+        "amount": "2.00"
+      }
+    ]
+  },
+  "suffix": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "2.50"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "123456 BEANS ABC",
+        "amount": "2.50"
+      }
+    ]
+  },
+  "multilingual": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": null,
+      "total": "3.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "綠茶 GREEN TEA",
+        "amount": "3.00"
+      }
+    ]
+  },
+  "long": {
+    "fields": {
+      "merchant": "FICTIONAL MARKET",
+      "date": null,
+      "currency": null,
+      "subtotal": "40.00",
+      "total": "40.00"
+    },
+    "rows": [
+      {
+        "kind": "purchase",
+        "description": "ITEM 01",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 02",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 03",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 04",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 05",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 06",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 07",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 08",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 09",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 10",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 11",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 12",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 13",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 14",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 15",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 16",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 17",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 18",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 19",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 20",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 21",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 22",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 23",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 24",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 25",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 26",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 27",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 28",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 29",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 30",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 31",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 32",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 33",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 34",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 35",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 36",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 37",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 38",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 39",
+        "amount": "1.00"
+      },
+      {
+        "kind": "purchase",
+        "description": "ITEM 40",
+        "amount": "1.00"
+      }
+    ]
+  }
+}

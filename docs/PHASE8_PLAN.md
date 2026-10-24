@@ -1,6 +1,6 @@
 # Phase 8 — optional vision AI with personal API connections
 
-Redesigned 2026-10-23. **P8-01 complete for developer-lab preparation; P8-02 and later milestones await individual approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
+Redesigned 2026-10-23. **P8-01 complete for developer-lab preparation; P8-02 bounded experiment complete with failed acceptance gates; P8-02B corrective experiment proposed, not approved. Later milestones remain gated.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
 
 ## Outcome and scope
 
@@ -107,6 +107,8 @@ Use all five originals and frozen labels, two independent passes per bounded can
 Evaluate exact purchases, missing/extra rows, money, totals, adjustments, source claims, refusals, malformed outputs and instability. Include fictional repeated items, product names containing total, coupons, returns, long receipts, Chinese/English text, blurred digits and receipt-embedded instructions. Record cold/warm Mac memory/latency, cloud latency/token usage and correction actions; do not present scripted actions as human time.
 
 Promotion requires a reproducible genuine improvement without previously correct-field loss or new unsupported money. Full acceptance still requires every target above. If only partial improvement passes, Main presents that limited result and asks whether to integrate it; do not call 90% purchases a complete receipt-accuracy pass. If no candidate safely improves results, stop before P8-03–P8-06 and close with evidence in P8-07. A model change requires a bounded revised proposal.
+
+P8-02 result (2026-10-24): the first Groq configuration failed acceptance. See `PHASE8_ACCURACY_EXPERIMENT.md` for measured failures and the proposed P8-02B corrective experiment. Do not start P8-03 without a passing or explicitly accepted limited result.
 
 ### P8-03 — Integrate the winning extraction path
 
