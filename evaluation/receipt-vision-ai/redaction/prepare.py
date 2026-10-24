@@ -2,6 +2,7 @@
 import base64,hashlib,json,os,re,subprocess,sys
 from pathlib import Path
 from PIL import Image,ImageOps,ImageDraw
+from rules import should_mask
 ROOT=Path(__file__).resolve().parents[3]
 OUT=ROOT/'private-receipts/evaluation/p8-01-redaction-review'
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -14,8 +15,6 @@ def main():
  captures=ROOT/'private-receipts/evaluation/p7-08-final/captures'
  OUT.mkdir(mode=0o700)
  entries=[]
- sensitive=re.compile(r'\b(member(?:ship)?|loyalty|account|acct|auth(?:orization)?|approval|terminal|cashier|operator|transaction|trans\s*#|receipt\s*#|invoice|reference|trace|ref\s*#|aid|tvr|tsi)\b|\b(?:tel|phone|fax)\b|\b\d{3}[-. ()]+\d{3}[-. ]+\d{4}\b|@|\b[A-Z]\d[A-Z][ -]?\d[A-Z]\d\b|\b\d+\s+.*\b(?:STREET|ROAD|AVENUE|DRIVE|BLVD|LANE|HWY)\b',re.I)
- card=re.compile(r'(?:\*|[xX]){3,}\s*\d{3,}|\b\d{12,19}\b')
  for slot,g in enumerate(groups):
   source=sources[g['images'][0]['sha256']]
   converted=OUT/f'converted-{slot}.png'
@@ -32,7 +31,7 @@ def main():
   for obs in c['observations']:
    text=obs['text']
    # Product codes alone are not identifiers; long-number rule is limited to card/context lines.
-   flagged=sensitive.search(text) or (card.search(text) and re.search(r'card|visa|master|debit|credit|\*|[xX]{3}',text,re.I))
+   flagged=should_mask(text)
    if not flagged:continue
    box=obs['boundingBox'];pad=8
    x=max(0,box['x']*w-pad);y=max(0,(1-box['y']-box['height'])*h-pad)

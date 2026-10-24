@@ -81,3 +81,7 @@ The user approved local preview preparation after the fictional test passed. Pre
 Browser checks passed: all five images load; all-receipt confirmation gate works; edits clear confirmation; exported pixels remain redacted while the original is being viewed; sampled mask pixels are opaque; no page HTTP requests occurred. The automated test did not create a user-approved export. The page and all receipt-derived files remain ignored/private. Only generic tooling is committed. No real receipt upload or P8-02 inference has occurred.
 
 Next: user reviews the local page and exports `sliplet-p801-redactions.json` into the main project folder. Validate that exact export, then request explicit transfer approval. Export alone is not consent to upload.
+
+### Quantity and unit-price redaction correction
+
+The checked export revealed six pricing rows masked by an overly broad bare-@ email heuristic: five across two No Frills receipts and one on another receipt. Replaced bare-@ matching with an email-address pattern. Removed only exact erroneous suggested rectangles, retaining all other user masks and backing up the original export privately. Quantities, weights and unit prices are extraction evidence and must remain visible. Two regression tests cover six measurement/product examples and five identifier examples. Browser export checks passed. The two unchanged receipts retain their review confirmations; the three changed previews require reconfirmation. No cloud transfer occurred.
