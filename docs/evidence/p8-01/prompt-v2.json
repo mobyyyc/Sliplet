@@ -1,0 +1,16 @@
+{
+  "prompt_revision": "p801-prompt-v2",
+  "change": "Explicitly include non-purchase monetary rows in lines; inspect footer without inventing absent rows.",
+  "schema_changed": false,
+  "scoring_changed": false,
+  "image_changed": false,
+  "previous_live_result": "tax_and_payment_omitted",
+  "new_live_result": "exact_fictional_match",
+  "real_receipts_uploaded": false,
+  "all_summary_fields_matched": true,
+  "exact_rows": 4,
+  "expected_rows": 4,
+  "validation_issues": [],
+  "elapsed_seconds": 2.17,
+  "real_accuracy_claim": false
+}

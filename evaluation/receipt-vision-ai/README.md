@@ -12,13 +12,15 @@ python3 -m unittest discover -s evaluation/receipt-vision-ai -p 'test_*.py'
 python3 evaluation/receipt-phase7-acceptance/check.py
 ```
 
-The first two commands use only Python's standard library and make no network requests. The last verifies retained private Phase 7 evidence and prints aggregate results only. Fixtures are fictional; the 32 tests check harness behavior, not model accuracy. Eleven images cover summary/payment separation, repeated purchases, total in a product name, discounts, refunds, weights, missing digits, prompt injection, printed suffixes, bilingual text and long receipts. Only `smoke.expected.json` is a fully structured expected response; remaining cases currently have printed text and challenge descriptions, not completed model evaluations.
+The first two commands use only Python's standard library and make no network requests. The last verifies retained private Phase 7 evidence and prints aggregate results only. Fixtures are fictional; the 33 tests check harness behavior, not model accuracy. Eleven images cover summary/payment separation, repeated purchases, total in a product name, discounts, refunds, weights, missing digits, prompt injection, printed suffixes, bilingual text and long receipts. Only `smoke.expected.json` is a fully structured expected response; remaining cases currently have printed text and challenge descriptions, not completed model evaluations.
 
 `generate_fixtures.py` needs Pillow and the macOS Arial Unicode font. It regenerates fictional assets and their manifest. Existing PNGs are committed for byte-stable requests; no Pillow dependency is required to run a smoke test.
 
 ## Private API-key entry
 
-Open `Run-Fictional-Test.command` in Terminal. Confirm FREE only after checking the account plan. Paste a fresh key into the hidden prompt, then type TEST to authorize the single fictional request. Never put the key in chat, command arguments, source files or an environment file. The launcher does not save it to Keychain yet: it is a one-request, in-memory credential. Later app connections use device Keychain.
+Open `Save-API-Key.command` in Terminal for one-time setup. The hidden prompt stores the personal credential in macOS Keychain under service `com.sliplet.development.groq`, account `personal-api-key`, with synchronization disabled and accessibility restricted to the unlocked device. It verifies read-back but makes no API request. A stored key is not automatically a verified API connection.
+
+Then open `Run-Fictional-Test.command`. Confirm FREE only after checking the account plan, and TEST to send the single fictional request. It reuses the saved key; when none exists, it prompts privately and saves it only after Groq accepts the request. Keys never enter process arguments, environment files, Git, plaintext files or result logs. macOS may ask permission to access Keychain. Replace the key through the save launcher; remove it with `python3 lab.py forget-key`. This deletes only the local lab credential, not the provider key. API revocation remains a provider action.
 
 The endpoint and model are fixed in `lab.py`. Requests use TLS verification, disallow redirects and implicit proxies, and never retry automatically. There is one request per launch and a local UTC-day maximum of three attempts, counting failures. Do not reset the counter to bypass the budget; diagnose first. User confirmation of a free plan is not API verification of billing status.
 

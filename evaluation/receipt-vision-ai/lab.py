@@ -17,6 +17,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import lab_keychain
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -280,12 +281,20 @@ def smoke():
     if not sys.stdin.isatty():
         raise LabError('interactive_terminal_required')
     print('Sliplet: fictional receipt connection test. No real receipts are read.')
-    print('Use a NEW key if any previous key was pasted into a chat. This key stays in memory only.')
+    print('Use a NEW key if any previous key was pasted into a chat. Verified keys are stored in macOS Keychain.')
     print('One request to Groq. Your account allowance is used. No automatic retries.')
     if input('Confirm your Groq account is on the free tier (type FREE): ').strip().upper()!='FREE':
         raise LabError('cancelled')
     body=request_body()
-    key=getpass.getpass('Paste the replacement API key here (hidden; never saved): ').strip()
+    try:
+        key=lab_keychain.read_key()
+    except lab_keychain.KeychainError as error:
+        raise LabError(str(error)) from None
+    key_was_saved=key is not None
+    if key_was_saved:
+        print('Using your saved macOS Keychain credential.')
+    else:
+        key=getpass.getpass('API key (hidden; saved to Keychain after Groq accepts it): ').strip()
     if not key or '\n' in key or '\r' in key or len(key)>512:
         raise LabError('invalid_key_input')
     try:
@@ -297,12 +306,18 @@ def smoke():
     directory=reserve_attempt()
     start=time.monotonic()
     report={'task':'P8-01','fixture':'fictional-smoke','model':MODEL,'live_request_attempted':True,
-            'key_saved':False,'private_receipts_sent':False,'privacy_settings_verified':False,
+            'key_saved':key_was_saved,'key_storage':'macOS Keychain','private_receipts_sent':False,'privacy_settings_verified':False,
             'prompt_sha256':hashlib.sha256((HERE/'prompt.txt').read_bytes()).hexdigest(),
             'schema_sha256':hashlib.sha256((HERE/'schema.json').read_bytes()).hexdigest()}
     try:
         envelope=send(body,key)
         report['credential_accepted']=True
+        if not key_was_saved:
+            try:
+                lab_keychain.save_key(key)
+                report['key_saved']=True
+            except lab_keychain.KeychainError:
+                report['key_storage_error']='keychain_save_denied'
         usage=envelope.get('usage',{}) if isinstance(envelope,dict) else {}
         if isinstance(usage,dict):
             report['usage']={k:usage[k] for k in ('prompt_tokens','completion_tokens','total_tokens')
@@ -312,7 +327,7 @@ def smoke():
     except LabError as e:
         report.update(status=str(e),diagnostic=e.diagnostic)
     finally:
-        key=None  # Drop reference; Python does not guarantee physical memory erasure.
+        key=None  # Drop the process reference; persistent copy is in Keychain only.
     report['elapsed_seconds']=round(time.monotonic()-start,2)
     report['checked_at_utc']=datetime.datetime.now(datetime.timezone.utc).isoformat()
     # Only static outcomes/counters. Never save response contents or credentials.
@@ -322,7 +337,20 @@ def smoke():
 
 def main():
     os.umask(0o077)
-    if sys.argv[1:]==['smoke']:
+    if sys.argv[1:]==['configure-key']:
+        if not sys.stdin.isatty():raise LabError('interactive_terminal_required')
+        print('Store your personal Groq key in macOS Keychain. No API request will be sent.')
+        key=getpass.getpass('API key (hidden): ').strip()
+        if not key or len(key)>512 or '\n' in key or '\r' in key:
+            raise LabError('invalid_key_input')
+        lab_keychain.save_key(key)
+        if lab_keychain.read_key()!=key:raise LabError('keychain_verification_failed')
+        key=None
+        print('Key saved and read-back verified. Future lab runs reuse it. API validity is checked separately.')
+    elif sys.argv[1:]==['forget-key']:
+        lab_keychain.delete_key()
+        print('Removed this lab credential from macOS Keychain.')
+    elif sys.argv[1:]==['smoke']:
         smoke()
     elif sys.argv[1:]==['check']:
         expected=json.loads((HERE/'fixtures/smoke.expected.json').read_text())
@@ -330,7 +358,7 @@ def main():
         body=request_body()
         print(json.dumps({'offline_contract_check':'passed','network_used':False,'request_bytes':len(json.dumps(body).encode()),'model':MODEL}))
     else:
-        print('Usage: python3 lab.py check | smoke')
+        print('Usage: python3 lab.py check | smoke | configure-key | forget-key')
         return 2
     return 0
 
@@ -340,6 +368,6 @@ if __name__=='__main__':
     except LabError as error:
         print('Stopped: '+str(error));sys.exit(1)
     except (KeyboardInterrupt,EOFError):
-        print('\nCancelled; no key saved.');sys.exit(1)
+        print('\nCancelled. Any existing Keychain credential is unchanged.');sys.exit(1)
     except Exception:
         print('Stopped: unexpected local error; sensitive details suppressed.');sys.exit(1)

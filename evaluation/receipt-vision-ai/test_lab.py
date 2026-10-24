@@ -152,7 +152,7 @@ class TransportTests(unittest.TestCase):
         self.assertTrue(lab.smoke_matches(parsed))
         parsed['total']['value']='1.00'
         self.assertFalse(lab.smoke_matches(parsed))
-    def test_lowercase_confirmation_and_memory_only_key(self):
+    def test_lowercase_confirmation_and_keychain_only_storage(self):
         import io
         import tempfile
         candidate=json.loads((lab.HERE/'fixtures/smoke.expected.json').read_text())
@@ -160,12 +160,30 @@ class TransportTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory,patch.object(lab,'ROOT',Path(directory)), \
              patch('sys.stdin.isatty',return_value=True),patch('builtins.input',side_effect=['free','test']), \
              patch('getpass.getpass',return_value='fictional-secret-for-test'), \
+             patch('lab_keychain.read_key',return_value=None),patch('lab_keychain.save_key') as save, \
              patch('lab.send',return_value=response) as send,patch('sys.stdout',new_callable=io.StringIO) as out:
             lab.smoke()
             self.assertEqual(send.call_count,1)
+            save.assert_called_once_with('fictional-secret-for-test')
             self.assertNotIn('fictional-secret-for-test',out.getvalue())
             for path in Path(directory).rglob('*.json'):
                 self.assertNotIn('fictional-secret-for-test',path.read_text())
+
+    def test_saved_key_reused_without_secret_prompt(self):
+        import io
+        import tempfile
+        candidate=json.loads((lab.HERE/'fixtures/smoke.expected.json').read_text())
+        response={'choices':[{'finish_reason':'stop','message':{'content':json.dumps(candidate)}}]}
+        with tempfile.TemporaryDirectory() as directory,patch.object(lab,'ROOT',Path(directory)), \
+             patch('sys.stdin.isatty',return_value=True),patch('builtins.input',side_effect=['FREE','TEST']), \
+             patch('getpass.getpass',side_effect=AssertionError('must reuse saved key')), \
+             patch('lab_keychain.read_key',return_value='fictional-saved-key'), \
+             patch('lab_keychain.save_key') as save,patch('lab.send',return_value=response) as send, \
+             patch('sys.stdout',new_callable=io.StringIO) as out:
+            lab.smoke()
+            self.assertEqual(send.call_args.args[1],'fictional-saved-key')
+            save.assert_not_called()
+            self.assertNotIn('fictional-saved-key',out.getvalue())
 
     def test_daily_budget_counts_failures(self):
         import tempfile
