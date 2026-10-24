@@ -1,6 +1,6 @@
 # Phase 8 — optional vision AI with personal API connections
 
-Redesigned 2026-10-23. **P8-01 approved and in progress; later milestones await individual approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
+Redesigned 2026-10-23. **P8-01 complete for developer-lab preparation; P8-02 and later milestones await individual approval.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
 
 ## Outcome and scope
 

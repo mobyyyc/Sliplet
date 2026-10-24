@@ -1,6 +1,6 @@
 # P8-01 — vision AI contract and safe lab
 
-Date: 2026-10-23. Status: local preparation verified; live connectivity verified; fictional extraction diagnosis and real-upload approval pending. No P8-02 recognition experiment or app integration is authorized by this status.
+Date: 2026-10-24. Status: P8-01 complete as a developer-lab preparation milestone. Fictional extraction and corrected real-payload approval are verified. P8-02 execution awaits separate milestone approval. Consumer-app BYOK eligibility remains unresolved and is a P8-04 gate.
 
 ## Verified preparation
 
@@ -72,7 +72,9 @@ Confirmation gates: at least 59/65 exact purchases, 5/5 totals, 4/4 checked subt
 
 ## Current next step
 
-The diagnostic fictional run and bounded prompt correction are complete. Keychain storage was added at the user's request and native save/read/replace/delete tests passed with a temporary fictional credential. The user must enter their key once to populate the persistent entry; do not claim it was saved before verifying its presence. Account data controls are user-confirmed; present the packet above for real-upload approval when the experiment is ready. Record any model/API incompatibility before proposing P8-02. If account setup is delayed, retain the tested harness and mark the task awaiting that step rather than completed.
+P8-01 is complete for the developer laboratory. The fictional prompt-v2 smoke passed and the macOS Keychain credential entry was verified without printing the secret. Free plan and inference Zero Data Retention are user-confirmed, not API-verified. The corrected five-image export is verified and the user's transfer approval is bound privately to its digest and each flattened image digest. No real cloud calls have occurred.
+
+Next is P8-02, requiring its own milestone approval: complete fictional challenge scoring, validate the reviewed-payload-only runner and fixed geometry, freeze the selected configuration, then run the bounded real-corpus experiment. The existing smoke command continues to accept only its bundled fictional image. This milestone does not establish consumer-app BYOK eligibility or real-receipt accuracy.
 
 ## Local redacted preview preparation
 
@@ -85,3 +87,9 @@ Next: user reviews the local page and exports `sliplet-p801-redactions.json` int
 ### Quantity and unit-price redaction correction
 
 The checked export revealed six pricing rows masked by an overly broad bare-@ email heuristic: five across two No Frills receipts and one on another receipt. Replaced bare-@ matching with an email-address pattern. Removed only exact erroneous suggested rectangles, retaining all other user masks and backing up the original export privately. Quantities, weights and unit prices are extraction evidence and must remain visible. Two regression tests cover six measurement/product examples and five identifier examples. Browser export checks passed. The two unchanged receipts retain their review confirmations; the three changed previews require reconfirmation. No cloud transfer occurred.
+
+### Corrected export verification and transfer approval — 2026-10-24
+
+The replacement export contains five human-confirmed receipts with 23 retained masks. All source anchors, dimensions and mask rectangles match the corrected preview. Every decoded image pixel matches the original upright image with the approved opaque rectangles applied; therefore all six restored pricing rows remain unchanged outside retained masks. All images are opaque, and no embedded EXIF, XMP or text metadata was found. This verifies export integrity, not an automatic guarantee that every personal identifier was noticed by human review.
+
+The user approved the corrected previews and replaced the old export. The exact export and individual PNG digests, source anchors and approval scope are recorded only in ignored private evidence. No private content or digest is published. Approval covers these corrected redacted images for the proposed bounded Groq experiment, with the manually confirmed Free plan and inference ZDR controls. P8-02 execution still awaits its own milestone approval. Real uploads performed: zero.
