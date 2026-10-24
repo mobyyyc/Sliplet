@@ -12,7 +12,7 @@ python3 -m unittest discover -s evaluation/receipt-vision-ai -p 'test_*.py'
 python3 evaluation/receipt-phase7-acceptance/check.py
 ```
 
-The first two commands use only Python's standard library and make no network requests. The last verifies retained private Phase 7 evidence and prints aggregate results only. Fixtures are fictional; the 27 tests check harness behavior, not model accuracy. Eleven images cover summary/payment separation, repeated purchases, total in a product name, discounts, refunds, weights, missing digits, prompt injection, printed suffixes, bilingual text and long receipts. Only `smoke.expected.json` is a fully structured expected response; remaining cases currently have printed text and challenge descriptions, not completed model evaluations.
+The first two commands use only Python's standard library and make no network requests. The last verifies retained private Phase 7 evidence and prints aggregate results only. Fixtures are fictional; the 32 tests check harness behavior, not model accuracy. Eleven images cover summary/payment separation, repeated purchases, total in a product name, discounts, refunds, weights, missing digits, prompt injection, printed suffixes, bilingual text and long receipts. Only `smoke.expected.json` is a fully structured expected response; remaining cases currently have printed text and challenge descriptions, not completed model evaluations.
 
 `generate_fixtures.py` needs Pillow and the macOS Arial Unicode font. It regenerates fictional assets and their manifest. Existing PNGs are committed for byte-stable requests; no Pillow dependency is required to run a smoke test.
 
@@ -22,7 +22,7 @@ Open `Run-Fictional-Test.command` in Terminal. Confirm FREE only after checking 
 
 The endpoint and model are fixed in `lab.py`. Requests use TLS verification, disallow redirects and implicit proxies, and never retry automatically. There is one request per launch and a local UTC-day maximum of three attempts, counting failures. Do not reset the counter to bypass the budget; diagnose first. User confirmation of a free plan is not API verification of billing status.
 
-A status-only report is saved to ignored `private-receipts/evaluation/p8-01-lab/smoke-result.json` with owner-only permissions. It contains no key, image, raw model output or private receipt fields. `credential_accepted` is separate from schema validity and `fictional_exact`. Provider account privacy controls remain unverified by this request. A successful fictional test does not demonstrate real receipt accuracy.
+A status-only report is saved to ignored `private-receipts/evaluation/p8-01-lab/smoke-result.json` with owner-only permissions. It contains no key, image, raw model output or private receipt fields. Derived mismatch diagnostics contain only static labels, row indexes, booleans and counts. `credential_accepted` is separate from schema validity and `fictional_exact`. Provider account privacy controls remain unverified by this request. A successful fictional test does not demonstrate real receipt accuracy.
 
 Generic error states suppress response bodies and exception details. `rate_or_quota_limited` intentionally does not guess whether 429 means a short rate limit or exhausted allowance. No automatic model fallback or billing upgrade is permitted. Close the Terminal window to cancel; a request already transmitted cannot be recalled.
 

@@ -232,6 +232,33 @@ def smoke_matches(candidate):
     def rows(c):return [(r['kind'],r['description'],r['amount']) for r in c['lines']]
     return fields and rows(candidate)==rows(expected)
 
+def smoke_diagnostics(candidate):
+    """Static labels, booleans and counts only; no model text or money in logs."""
+    expected=json.loads((HERE/'fixtures/smoke.expected.json').read_text())
+    expected_rows=expected['lines']
+    remaining=list(range(len(expected_rows)))
+    extra=[]
+    exact=0
+    for row in candidate['lines']:
+        matches=[i for i in remaining if all(row[k]==expected_rows[i][k] for k in ('kind','description','amount'))]
+        if matches:
+            remaining.remove(matches[0]);exact+=1
+        else:
+            extra.append({
+                'kind':row['kind'],
+                'description_matches_expected_rows':[i for i,r in enumerate(expected_rows) if row['description']==r['description']],
+                'amount_matches_expected_rows':[i for i,r in enumerate(expected_rows) if row['amount']==r['amount']],
+                'description_is_summary_label':(row['description'] or '').strip().upper() in ('SUBTOTAL','TOTAL'),
+                'amount_missing':row['amount'] is None})
+    values=[Decimal(r['amount']) for r in candidate['lines']
+            if r['kind'] in ('purchase','return','discount','tax','fee') and r['amount'] is not None]
+    return {'field_matches':{k:candidate[k]['value']==expected[k]['value']
+                            for k in ('merchant','date','currency','subtotal','total')},
+            'exact_rows_ignoring_order':exact,'expected_row_count':len(expected_rows),
+            'actual_row_count':len(candidate['lines']),'unmatched_expected_row_indexes':remaining,
+            'unmatched_actual_rows':extra,
+            'accounting_sum_matches_expected_total':sum(values)==Decimal(expected['total']['value'])}
+
 def reserve_attempt():
     directory=ROOT/'private-receipts/evaluation/p8-01-lab'
     directory.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -270,7 +297,9 @@ def smoke():
     directory=reserve_attempt()
     start=time.monotonic()
     report={'task':'P8-01','fixture':'fictional-smoke','model':MODEL,'live_request_attempted':True,
-            'key_saved':False,'private_receipts_sent':False,'privacy_settings_verified':False}
+            'key_saved':False,'private_receipts_sent':False,'privacy_settings_verified':False,
+            'prompt_sha256':hashlib.sha256((HERE/'prompt.txt').read_bytes()).hexdigest(),
+            'schema_sha256':hashlib.sha256((HERE/'schema.json').read_bytes()).hexdigest()}
     try:
         envelope=send(body,key)
         report['credential_accepted']=True
@@ -279,7 +308,7 @@ def smoke():
             report['usage']={k:usage[k] for k in ('prompt_tokens','completion_tokens','total_tokens')
                              if type(usage.get(k)) is int and 0<=usage[k]<=1_000_000}
         candidate,validation=read_completion(envelope)
-        report.update(status='image_schema_response_received',fictional_exact=smoke_matches(candidate),validation=validation)
+        report.update(status='image_schema_response_received',fictional_exact=smoke_matches(candidate),validation=validation,extraction_diagnostics=smoke_diagnostics(candidate))
     except LabError as e:
         report.update(status=str(e),diagnostic=e.diagnostic)
     finally:

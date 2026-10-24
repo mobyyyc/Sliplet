@@ -70,6 +70,36 @@ class ContractTests(unittest.TestCase):
     def test_schema_changes_fail_closed(self):
         with self.assertRaises(lab.LabError):lab.validate_shape('x',{'type':'string','unknown_keyword':True})
 
+class DiagnosticTests(unittest.TestCase):
+    def setUp(self):
+        self.c=json.loads((lab.HERE/'fixtures/smoke.expected.json').read_text())
+    def test_correct_fixture_has_no_mismatch(self):
+        d=lab.smoke_diagnostics(self.c)
+        self.assertEqual(d['exact_rows_ignoring_order'],4)
+        self.assertTrue(d['accounting_sum_matches_expected_total'])
+    def test_omitted_tax_identified_without_amounts(self):
+        del self.c['lines'][2]
+        d=lab.smoke_diagnostics(self.c)
+        self.assertEqual(d['unmatched_expected_row_indexes'],[2])
+        self.assertFalse(d['accounting_sum_matches_expected_total'])
+    def test_wrong_total_distinct_from_wrong_lines(self):
+        self.c['total']['value']='99.00'
+        d=lab.smoke_diagnostics(self.c)
+        self.assertFalse(d['field_matches']['total'])
+        self.assertTrue(d['accounting_sum_matches_expected_total'])
+    def test_arbitrary_model_text_not_logged(self):
+        self.c['lines'][0]['description']='untrusted-private-looking-text'
+        d=lab.smoke_diagnostics(self.c)
+        self.assertNotIn('untrusted-private-looking-text',json.dumps(d))
+        self.assertEqual(d['unmatched_actual_rows'][0]['description_matches_expected_rows'],[])
+    def test_duplicate_row_and_payment_kind_error(self):
+        self.c['lines'][-1]['kind']='purchase'
+        self.c['lines'].append(copy.deepcopy(self.c['lines'][0]))
+        d=lab.smoke_diagnostics(self.c)
+        self.assertEqual(d['actual_row_count'],5)
+        self.assertEqual(len(d['unmatched_actual_rows']),2)
+        self.assertEqual(d['unmatched_expected_row_indexes'],[3])
+
 class TransportTests(unittest.TestCase):
     def test_request_fictional_only(self):
         with patch('lab.send',side_effect=AssertionError('network used')):

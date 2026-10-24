@@ -1,28 +1,30 @@
 # P8-01 — vision AI contract and safe lab
 
-Date: 2026-10-23. Status: local preparation verified; live account/model access unresolved and privacy approval pending. No P8-02 recognition experiment or app integration is authorized by this status.
+Date: 2026-10-23. Status: local preparation verified; live connectivity verified; fictional extraction diagnosis and real-upload approval pending. No P8-02 recognition experiment or app integration is authorized by this status.
 
 ## Verified preparation
 
 - Re-ran `evaluation/receipt-phase7-acceptance/check.py`: retained ten import/save/reopen captures, originals, evidence and frozen annotations verified. Repeated baseline remains 57/65 purchases, 3/5 totals, 4/4 checked subtotals, 4/8 adjustments and merchant/date 5/5. No new OCR or private cloud upload.
 - Added isolated `evaluation/receipt-vision-ai`: schema, literal-extraction prompt, fictional fixtures, bounded smoke transport, hidden credential entry and status-only reporting.
-- Offline contract check and 27 negative/positive harness tests pass. No production files changed. Visually inspected the fictional smoke image.
+- Offline contract check and 32 negative/positive harness tests pass. No production files changed. Visually inspected the fictional smoke image.
 - Eleven fictional images prepared. Their challenge coverage is not a model test result. Only the small smoke fixture has a complete structured expected response at this stage; P8-02 expands exact challenge scoring before any real-corpus configuration selection.
 - User confirmed the old exposed credential was revoked, a replacement is ready, and the account is on the Free plan. No credential is stored in this document, repository or harness output. The replacement is entered only by the user into Terminal.
 
 ## Live smoke status
 
-The first fictional request returned HTTP 403/access denied after approximately 0.5 seconds. No receipt extraction was obtained and no private receipt was sent. The first runner deliberately did not retain response bodies, so the exact reason is unknown. This is not evidence of poor model accuracy or a proven bad key.
+The first fictional request returned HTTP 403/access denied. A later manual request succeeded: credential accepted, image/schema response received in 3.58 seconds, 1,157 prompt tokens and 556 completion tokens (1,713 total). The fictional exact-match check failed and validation flagged a total conflict. The earlier response was intentionally discarded, so the exact extraction error cannot be reconstructed from that status alone. Do not claim the application User-Agent definitively caused the recovery.
 
-Prepared one manual diagnostic retry with an explicit application User-Agent and safe allowlisted error-code classification. This tests a possible request-boundary issue, not a confirmed cause. No automatic retry was performed. Never store error bodies to diagnose access. The status-only private report is authoritative for the most recent attempt; a successful later result must update this record before milestone completion.
+Added derived diagnostics for field matches, missing/extra row identities and accounting classification, without saving response text or raw amounts. Thirty-two local tests pass, including known missing-tax, wrong-total, duplicate-row and payment-classification failures. These checks support the validator/diagnostics; they do not prove what happened in the previous live model result. One diagnostic fictional request is pending, within the original three-attempt daily budget. The prompt and request schema are unchanged so the new run can investigate rather than silently tune to the expected answer.
+
+The user confirmed Zero Data Retention is enabled for inference. This is manual account confirmation, not API verification, and does not authorize real uploads by itself. The account's Free plan was also user-confirmed. Real payload preview and transfer approval remain separate.
 
 ## Provider feasibility findings
 
-The official model page lists `qwen/qwen3.8-27b` as preview, text/image input, and JSON schema support. The structured-output page lists strict mode for this model. The vision endpoint accepts inline base64 images, up to three per request. These are documented capabilities; the combined live request is still unverified until the smoke result exists.
+The official model page lists `qwen/qwen3.8-27b` as preview, text/image input, and JSON schema support. The structured-output page lists strict mode for this model. The vision endpoint accepts inline base64 images, up to three per request. These are documented capabilities; a live combined image/schema request has succeeded, with extraction correctness still under investigation.
 
 Sources: [model](https://console.groq.com/docs/model/qwen/qwen3.8-27b), [structured output](https://console.groq.com/docs/structured-outputs), [vision](https://console.groq.com/docs/vision).
 
-Free-tier status is user-confirmed; actual model access, quota headers and request execution remain pending. The harness never upgrades plans or follows retries. A successful request does not verify billing configuration. Groq documents a payment method requirement for upgrading to the paid Developer tier.
+Free-tier status is user-confirmed; model access and request execution succeeded; exact account quota settings remain unverified. The harness never upgrades plans or follows retries. A successful request does not verify billing configuration. Groq documents a payment method requirement for upgrading to the paid Developer tier.
 
 Source: [billing](https://console.groq.com/docs/billing-faqs).
 
@@ -68,4 +70,4 @@ Confirmation gates: at least 59/65 exact purchases, 5/5 totals, 4/4 checked subt
 
 ## Current next step
 
-Complete the fictional live smoke test using the local Terminal launcher, then inspect only its sanitized result. Resolve account data controls and present the packet above for real-upload approval. Record any model/API incompatibility before proposing P8-02. If account setup is delayed, retain the tested harness and mark the task awaiting that step rather than completed.
+Complete the diagnostic fictional run using the local Terminal launcher, then inspect its sanitized mismatch report. Account data controls are user-confirmed; present the packet above for real-upload approval when the experiment is ready. Record any model/API incompatibility before proposing P8-02. If account setup is delayed, retain the tested harness and mark the task awaiting that step rather than completed.

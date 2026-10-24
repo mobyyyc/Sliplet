@@ -1,7 +1,7 @@
 {
   "task": "P8-01",
-  "status": "prepared_awaiting_live_access_and_privacy",
-  "offline_tests_passed": 27,
+  "status": "awaiting_fictional_diagnosis_and_real_upload_approval",
+  "offline_tests_passed": 32,
   "fictional_images": 11,
   "baseline_reverified": true,
   "exposed_receipts": 5,
@@ -10,10 +10,16 @@
   "baseline_purchase_count": 65,
   "production_changed": false,
   "private_cloud_uploads": 0,
-  "live_capability_verified": false,
-  "last_observed_live_state": "access_denied",
+  "live_capability_verified": true,
+  "last_observed_live_state": "image_schema_response_received",
   "free_account_user_confirmed": true,
   "account_privacy_verified": false,
   "native_consumer_byok_eligibility": "unresolved",
-  "local_model_installed": false
+  "local_model_installed": false,
+  "fictional_exact": false,
+  "fictional_validation_issues": [
+    "total_conflict"
+  ],
+  "account_privacy_user_confirmed": true,
+  "real_upload_approved": false
 }
