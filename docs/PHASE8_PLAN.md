@@ -1,6 +1,6 @@
 # Phase 8 — optional vision AI with personal API connections
 
-Redesigned 2026-10-23. **P8-01 complete for developer-lab preparation; P8-02 bounded experiment complete with failed acceptance gates; P8-02B corrective experiment proposed, not approved. Later milestones remain gated.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
+Redesigned 2026-10-23. **P8-01 complete for developer-lab preparation; P8-02 bounded experiment complete with failed acceptance gates; P8-02B corrective experiment stopped on a provider limit, with no measured improvement over local OCR in the completed subset; see PHASE8_CORRECTION_EXPERIMENT.md. Later milestones remain gated.** This replaces the targeted-OCR Phase 8 agenda committed in df8ee7b. Its P8-01–P8-06 definitions are superseded, not completed. Phase 7's results remain unchanged.
 
 ## Outcome and scope
 
@@ -109,6 +109,8 @@ Evaluate exact purchases, missing/extra rows, money, totals, adjustments, source
 Promotion requires a reproducible genuine improvement without previously correct-field loss or new unsupported money. Full acceptance still requires every target above. If only partial improvement passes, Main presents that limited result and asks whether to integrate it; do not call 90% purchases a complete receipt-accuracy pass. If no candidate safely improves results, stop before P8-03–P8-06 and close with evidence in P8-07. A model change requires a bounded revised proposal.
 
 P8-02 result (2026-10-24): the first Groq configuration failed acceptance. See `PHASE8_ACCURACY_EXPERIMENT.md` for measured failures and the proposed P8-02B corrective experiment. Do not start P8-03 without a passing or explicitly accepted limited result.
+
+P8-02B result: two completed real receipts score 33/36 purchases, equal to the same-subset baseline, with date/adjustment regressions. A third request was rate-limited; seven were not run. P8-02C is proposed in `PHASE8_CORRECTION_EXPERIMENT.md` and requires approval. P8-03 remains gated.
 
 ### P8-03 — Integrate the winning extraction path
 

@@ -1,0 +1,57 @@
+{
+  "task": "P8-02B",
+  "status": "stopped_on_provider_limit_not_promoted",
+  "fictional": {
+    "raw_exact": 3,
+    "calibrated_exact": 6,
+    "cases": 6,
+    "holdout": false
+  },
+  "real_statuses": {
+    "received": 2,
+    "rate_or_quota_limited": 1,
+    "not_run": 7
+  },
+  "completed_subset_only": {
+    "completed_receipt_passes": 2,
+    "exact_purchases": 33,
+    "expected_purchases_in_completed_subset": 36,
+    "baseline_exact_same_subset": 33,
+    "missing_line_proxies": 4,
+    "unmatched_output_proxies": 6,
+    "previously_correct_summary_fields_lost": 2,
+    "previously_exact_rows_lost": 1,
+    "expected_adjustments": 8,
+    "exact_adjustments": 3
+  },
+  "summary_fields_completed_subset": {
+    "currency": {
+      "unscorable": 2
+    },
+    "date": {
+      "missing": 1,
+      "wrong": 1
+    },
+    "merchant": {
+      "correct": 2
+    },
+    "subtotal": {
+      "correct": 2
+    },
+    "total": {
+      "correct": 2
+    }
+  },
+  "validation_issues": {
+    "date_needs_review": 1,
+    "total_conflict": 2
+  },
+  "full_pass_denominator": 65,
+  "completed_exact_over_full_first_pass_denominator": 33,
+  "full_benchmark_complete": false,
+  "repeated_run_complete": false,
+  "real_quantity_labels_available": false,
+  "exposed_corpus_receipts": 5,
+  "held_out_receipts": 0,
+  "production_changed": false
+}

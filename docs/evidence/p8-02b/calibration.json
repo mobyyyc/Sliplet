@@ -1,0 +1,9 @@
+{
+  "fictional_requests": 6,
+  "raw_exact_cases": 3,
+  "calibrated_exact_cases": 6,
+  "additional_calibration_network_calls": 0,
+  "fresh_ocr_pairs_reverified": 11,
+  "production_changed": false,
+  "real_calls_before_selection": 0
+}

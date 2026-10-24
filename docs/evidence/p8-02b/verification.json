@@ -1,0 +1,12 @@
+{
+  "verified": true,
+  "fictional_attempts": 6,
+  "real_attempts": 3,
+  "approved_pixels_verified": true,
+  "frozen_configuration_verified": true,
+  "unchanged_references_verified": true,
+  "canonical_results_reproduced": true,
+  "production_changed": false,
+  "planned_real_attempts": 10,
+  "real_attempts_not_run": 7
+}
