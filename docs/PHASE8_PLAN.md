@@ -110,7 +110,7 @@ Promotion requires a reproducible genuine improvement without previously correct
 
 P8-02 result (2026-10-24): the first Groq configuration failed acceptance. See `PHASE8_ACCURACY_EXPERIMENT.md` for measured failures and the proposed P8-02B corrective experiment. Do not start P8-03 without a passing or explicitly accepted limited result.
 
-P8-02B result: two completed real receipts score 33/36 purchases, equal to the same-subset baseline, with date/adjustment regressions. A third request was rate-limited; seven were not run. P8-02C is proposed in `PHASE8_CORRECTION_EXPERIMENT.md` and requires approval. P8-03 remains gated.
+P8-02B result: two completed real receipts score 33/36 purchases, equal to the same-subset baseline, with date/adjustment regressions. A third request was rate-limited; seven were not run. P8-02C full-image extraction without OCR completed its fictional evaluation (2/6 fully exact; no real uploads); see `PHASE8_IMAGE_ONLY_EXPERIMENT.md`. This replaces the earlier proposed region-reading experiment. A focused image-only field-contract refinement is proposed and awaits approval. P8-03 remains gated.
 
 ### P8-03 — Integrate the winning extraction path
 

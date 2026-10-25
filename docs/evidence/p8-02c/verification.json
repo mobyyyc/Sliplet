@@ -1,0 +1,9 @@
+{
+  "verified": true,
+  "fictional_attempts": 6,
+  "real_attempts": 0,
+  "no_ocr_or_coordinates_in_requests": true,
+  "frozen_configuration_verified": true,
+  "canonical_results_reproduced": true,
+  "production_changed": false
+}

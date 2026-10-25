@@ -1,0 +1,217 @@
+{
+  "task": "P8-02C",
+  "cases_planned": 6,
+  "cases_run": 6,
+  "passed_cases": 2,
+  "results": [
+    {
+      "case": "dense-coupons",
+      "status": "received",
+      "exact": false,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": false,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "expected_rows": 15,
+      "actual_rows": 15,
+      "issues": []
+    },
+    {
+      "case": "weighted",
+      "status": "unreadable_printed_number",
+      "exact": false
+    },
+    {
+      "case": "repeated",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "expected_rows": 3,
+      "actual_rows": 3,
+      "issues": []
+    },
+    {
+      "case": "ambiguous",
+      "status": "received",
+      "exact": false,
+      "fields": {
+        "merchant": true,
+        "date": false,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "issues": [
+        "missing_total"
+      ]
+    },
+    {
+      "case": "injection",
+      "status": "received",
+      "exact": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "expected_rows": 1,
+      "actual_rows": 1,
+      "issues": []
+    },
+    {
+      "case": "multilingual",
+      "status": "received",
+      "exact": false,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": false,
+          "description": false,
+          "amount": false
+        }
+      ],
+      "expected_rows": 3,
+      "actual_rows": 2,
+      "issues": []
+    }
+  ],
+  "ocr_used": false,
+  "calibration_after_calls": false
+}
