@@ -1,0 +1,10 @@
+{
+  "verified": true,
+  "request_and_fixture_hashes_match": true,
+  "same_prompt_schema_and_images": true,
+  "canonical_results_reproduced": true,
+  "baseline_unchanged": true,
+  "fictional_attempts": 2,
+  "real_attempts": 0,
+  "original_failure_retained": true
+}

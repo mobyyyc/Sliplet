@@ -1,0 +1,55 @@
+{
+  "task": "P8-02E",
+  "cases_planned": 6,
+  "cases_run": 1,
+  "passed_cases": 0,
+  "results": [
+    {
+      "case": "dense-coupons",
+      "status": "network_or_timeout",
+      "exact": false
+    },
+    {
+      "case": "weighted",
+      "status": "not_run",
+      "exact": false
+    },
+    {
+      "case": "repeated",
+      "status": "not_run",
+      "exact": false
+    },
+    {
+      "case": "ambiguous",
+      "status": "not_run",
+      "exact": false
+    },
+    {
+      "case": "injection",
+      "status": "not_run",
+      "exact": false
+    },
+    {
+      "case": "multilingual",
+      "status": "not_run",
+      "exact": false
+    }
+  ],
+  "ocr_used": false,
+  "calibration_after_calls": false,
+  "model": "gemini-3.8-flash",
+  "baseline": {
+    "model": "qwen/qwen3.8-27b",
+    "passed_cases": 4,
+    "cases_run": 6
+  },
+  "attempts": 2,
+  "attempt_statuses": {
+    "provider_error": 1,
+    "network_or_timeout": 1
+  },
+  "recovery_attempts": 1,
+  "real_uploads": 0,
+  "comparison_complete": false,
+  "accuracy_comparison_valid": false
+}

@@ -1,0 +1,6 @@
+{
+  "status": "model_metadata_accessible",
+  "model": "models/gemini-3.8-flash",
+  "generate_content_supported": true,
+  "inference_verified": false
+}
