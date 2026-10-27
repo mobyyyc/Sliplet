@@ -147,3 +147,19 @@ Classify the result honestly: all gates met on the exposed corpus; useful partia
 Main is the only required coordination chat. One explicitly approved milestone at a time; Main reviews, commits/pushes, reports what finished/current milestone/commit/next task and asks approval. No new task chats or subagents are created by this plan. External privacy approval can be needed inside an approved milestone because it authorizes a specific transfer, not routine implementation choices.
 
 The original redesign changed documentation only. Approved P8-01 now adds an isolated fictional-only lab; see its status report for verification results. No models installed, private receipt uploads, production changes or phone installations are included in this preparation. No Phase 3 visual redesign, new PaddleOCR sweep, paid provider subscription, cloud wallet sync, automatic original-review checks, hosted developer key, or unrestricted custom model endpoint is in scope.
+
+## P8-02E source-audit update — 2026-10-27
+
+Local source inspection found mixed model, input and reference errors. Two dates
+were redacted out; multiple reference names conflict with print or use inconsistent
+field boundaries; a printed purchase and tax line are missing from reference lists.
+Real model errors remain, including tax-marker/quantity contamination and a date
+digit misread. See `PHASE8_MODEL_COMPARISON.md`, “Local source audit”. Historical
+scores are retained and are not reinterpreted as pure visual reading accuracy.
+
+The next proposed approved task is **input and reference integrity repair**:
+prepare a narrow source-backed confirmation page, reuse earlier checked work,
+version corrections rather than overwrite v3, ensure complete readable source
+inputs, then rescore both retained Gemini and local baseline outputs under one
+consistent contract. No fresh model requests are needed for that task. Only after
+this comparison should Main propose targeted model corrections or P8-03 integration.

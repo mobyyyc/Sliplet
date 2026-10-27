@@ -211,3 +211,79 @@ Seven new offline tests pass: preservation of valid values/raw candidate, reject
 ### Decision
 
 Do not integrate as a replacement or claim the accuracy target is solved. The prompt/adapter revision improves practical response handling and summary fields, but item/adjustment accuracy and dates still fail acceptance. Next proposed task: inspect the remaining mismatches against exact image regions and verify date visibility, using existing checked labels; distinguish image legibility, transcription, role assignment, description policy and scorer ambiguity before another prompt/model experiment. No need to request fresh human labeling unless a specific source conflict is actually found.
+
+## Local source audit — 2026-10-27
+
+The approved follow-up inspected the exact five sent JPEGs, original local images,
+saved model outputs and frozen reference-v3. No API requests, model changes, app
+changes or reference edits were made. `source_audit.py` checks that each inspected
+JPEG is byte-identical to its retained request image and inventories private
+inputs. Its replay verifies evidence identity, not visual judgment. Detailed
+case/row observations and hashes remain in the ignored private audit folder;
+`source-audit-result.json` contains aggregate categories only.
+
+### Correction to the earlier interpretation
+
+The three missing dates are not three demonstrated reading failures: two were
+covered by redaction, and one was visible but numerically ambiguous without a
+printed format legend. Of the other two dates, one was correct and one contained
+a genuine year-digit reading error. The original checked date supports that
+error finding. The frozen date scores remain unchanged, but attributing all
+missing dates to the model would be incorrect.
+
+Twenty unmatched reference rows were visually investigated. Categories overlap:
+
+| Finding | Rows |
+| --- | ---: |
+| Model includes price-column tax markers in the name | 8 |
+| Model includes a quantity prefix in the name | 2 |
+| Reference transcription conflicts with print | 2 |
+| Reference uses a department heading or fragment as the name | 2 |
+| Reference omits a printed name suffix | 3 |
+| Reference omits a printed coupon code | 4 |
+| Reference includes a price-column marker inconsistently | 2 |
+
+These are manual source findings, not newly verified replacement labels. The
+user previously requested retaining printed name suffixes; deleting them merely
+to fit old references would be the wrong correction. Price-column markers and
+quantity prefixes need distinct fields, with layout/context determining the
+boundary rather than unconditional suffix removal.
+
+Extra output also has mixed causes. One printed purchase and one printed tax
+line are absent from the corresponding reference lists. Conversely, the model
+classified a loyalty earning line as a purchase. Another zero-valued identifier
+line was treated as a purchase; its intended role needs focused confirmation.
+A printed line is not automatically a purchase, and an unmatched output is not
+automatically invented. This audit does not establish correctness of every field
+on those extra lines or change the evaluation denominator.
+
+### Decision and next proposed task
+
+Keep strict 42/65 and supplementary 50/65 results as historical measurements
+against reference-v3. They are not clean estimates of visual reading accuracy.
+The local baseline must undergo the same revised evaluation; no new superiority
+or 90% claim is justified. Five exposed receipts still provide no held-out test.
+
+Before another prompt experiment, repair the test inputs and reference contract:
+
+1. Prepare a versioned correction proposal with source crops for the four
+   transcription/heading conflicts, missing purchase/tax lines and uncertain
+   zero-valued row. Ask only for these focused confirmations, reusing prior
+   checks and the user's existing suffix preference.
+2. Specify consistent fields for printed product code/name, quantity, tax marker,
+   coupon code and non-purchase lines. Preserve raw text and original evidence.
+   Do not award fuzzy-name credit or infer money to make totals balance.
+3. Prepare complete readable inputs from the actual receipts already authorized
+   by the user. Check that any retained redactions do not hide merchant, date,
+   purchases, quantity/weight, unit price, tax or totals.
+4. Freeze a new reference version with an explicit change ledger, retain v3, and
+   rescore both saved Gemini output and the local baseline before spending any
+   further requests. Distinguish unavailable source fields from recognition
+   errors, while still reporting end-to-end missing fields.
+5. Use remaining verified errors to design a bounded prompt/schema correction
+   experiment. Any fresh inference and app integration remain separate approved
+   tasks. P8-03 stays gated until results justify it.
+
+Verification: audit recorded and replayed against byte-identical sent images;
+reference bytes unchanged during the audit. No receipt text, dates, amounts,
+images or private hashes are included in committed audit output.

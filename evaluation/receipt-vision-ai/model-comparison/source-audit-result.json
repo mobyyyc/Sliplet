@@ -1,0 +1,31 @@
+{
+  "receipts": 5,
+  "held_out_receipts": 0,
+  "date_categories": {
+    "correct": 1,
+    "model_digit_error": 1,
+    "redacted_out": 2,
+    "visible_ambiguous_numeric_date": 1
+  },
+  "description_category_counts": {
+    "model_price_column_marker_in_name": 8,
+    "model_quantity_prefix_in_name": 2,
+    "reference_transcription_conflict": 2,
+    "reference_heading_or_fragment_as_name": 2,
+    "reference_omits_printed_name_suffix": 3,
+    "reference_omits_printed_coupon_code": 4,
+    "reference_includes_price_column_marker": 2
+  },
+  "distinct_reference_rows_inspected": 20,
+  "extra_output_categories": {
+    "reference_missing_printed_purchase": 1,
+    "reference_missing_printed_tax": 1,
+    "model_loyalty_row_as_purchase": 1,
+    "model_zero_identifier_row_as_purchase_needs_role_confirmation": 1
+  },
+  "existing_scores_unchanged": true,
+  "labels_unchanged": true,
+  "new_network_requests": 0,
+  "evidence_inventory_verified": true,
+  "interpretation": "Manual findings; overlapping categories; no revised accuracy claim."
+}
