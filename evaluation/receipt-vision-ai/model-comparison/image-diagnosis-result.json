@@ -1,0 +1,28 @@
+{
+  "task": "P8-02E image diagnosis",
+  "verified": true,
+  "attempts": 3,
+  "real_uploads": 0,
+  "schema_used": false,
+  "receipt_extraction_tested": false,
+  "results": [
+    {
+      "case": "text-control",
+      "status": "received",
+      "elapsed_seconds": 1.316,
+      "acknowledged": true
+    },
+    {
+      "case": "tiny-image",
+      "status": "received",
+      "elapsed_seconds": 11.366,
+      "acknowledged": true
+    },
+    {
+      "case": "receipt-image",
+      "status": "network_or_timeout",
+      "elapsed_seconds": 30.087,
+      "diagnostic": {}
+    }
+  ]
+}

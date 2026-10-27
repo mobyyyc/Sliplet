@@ -81,3 +81,21 @@ The user approved another bounded resumption. The separate resume36.py runner re
 Total inference POST attempts across the initial run, diagnostics and this resumption: thirteen (eight image attempts and five text-only diagnostics). All were fictional. No key re-entry, billing change, app change or real upload occurred. P8-02E remains incomplete, with zero completed Gemini receipt cases.
 
 Do not keep requesting approval for identical retries as the default next step. Before another paid-provider inference attempt (including its free tier), diagnose the image-request failure with a separately bounded plan, or explicitly choose another candidate. Text generation succeeding is not proof that image inference is available, and repeated 503 responses do not establish receipt complexity as the cause.
+
+## Approved image-input diagnosis 01
+
+Three predeclared, sequential requests to Gemini 3.6 used the same instruction (Reply with OK), 128 output tokens, low thinking, no receipt system prompt and no output schema. Requests were spaced 95 seconds apart with a 30-second client timeout and no retries. Only the image part changed.
+
+| Control | Outcome | Seconds |
+| --- | --- | --- |
+| Text only | STOP completion, OK acknowledgment | 1.316 |
+| Valid 64 × 64 JPEG, 693 bytes | STOP completion, OK acknowledgment | 11.366 |
+| Exact fictional receipt JPEG, 1000 × 950, 171319 bytes | Network/timeout category, no response | 30.087 |
+
+Both JPEGs decode and verify locally. The native inlineData/mimeType format matches Google's JavaScript API example. Total payload is comfortably below the documented 20 MB inline limit. This excludes an oversized request and shows the credential/endpoint can accept at least one image; it does not prove visual understanding from an OK acknowledgment. Google documents inline images and bounded handling of transient failures: [image input](https://ai.google.dev/gemini-api/docs/generate-content/image-understanding), [troubleshooting](https://ai.google.dev/gemini-api/docs/troubleshooting).
+
+The full receipt failed without the extraction prompt or schema, so those are not necessary for this failure. This was a single non-simultaneous sample per condition: image workload, changing service availability and client timeout remain confounded. Do not claim the schema is the sole cause, a global outage, or a proven free-tier restriction. No extraction accuracy was tested in this diagnostic.
+
+All three exact requests, original responses and source hashes reproduce offline. Two new offline tests cover paired-request isolation and no retry after failure. Three diagnostic POSTs bring the experiment-wide total to sixteen: ten image attempts and six text-only attempts. All inputs are fictional; no app changes or billing changes.
+
+Recommended next bounded experiment, pending approval: use the same fictional receipt at reduced resolution, compare it with the original at an equal timeout, and request a short image-specific answer. If that establishes a working image path, attempt plain JSON extraction without provider-enforced schema, retain strict local validation, and score against the unchanged reference. Reduced resolution can damage text recognition; success must be measured, not assumed. Do not restart the six-case benchmark until the first actual extraction works.
