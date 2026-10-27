@@ -176,3 +176,38 @@ The existing baseline outperforms this configuration even on the same usable sub
 All five payloads reproduce from the reviewed image derivatives, and usable canonical candidates reproduce from retained raw output. The reference hash is unchanged. Four offline tests pass for the real-call cap, no retries, incomplete-output rejection, prose rejection and wrapper-only handling. Cumulative P8-02E-related requests: 30 (24 image requests, six text-only), with this experiment's five real uploads explicitly authorized.
 
 Do not proceed with P8-03 integration on these results. Recommended next approved task: a bounded real-error analysis and correction experiment, using the retained outputs first. Separate printed tax markers from monetary tokens with source evidence; prevent one malformed optional/row field from discarding unrelated valid readings while retaining review requirements; check date visibility and interpretation; and analyze description/adjustment mismatches against the existing human labels. Freeze any revised prompt/adapter before another bounded real run. Preserve current failures and compare against the same baseline, not only the easiest returned cases.
+
+## Approved correction experiment — 2026-10-27
+
+The user approved diagnosis, targeted corrections and another bounded actual-receipt test. Prior responses and labels remain untouched. Seven malformed amount strings were found in the first earlier response: all have numeric/sign content followed by letters. Their tax-marker interpretation is a hypothesis, not independently verified source evidence. Sixteen earlier output names did not exactly match references; seven were similar under a diagnostic-only name comparison. No fuzzy matching was used to award correctness.
+
+Two changes were frozen before five new requests:
+1. A prompt supplement asks for footer/date context, exact item codes/descriptions, numeric amounts separate from tax/status letters, separate summary/adjustment/payment roles and bare JSON. Examples are generic, not receipt answers.
+2. Local field isolation preserves the raw candidate, validates structure, and converts malformed numeric/unit fields to unknown in a working copy while flagging their paths for review. It never strips arbitrary suffixes, rounds fractional cents, fills money from totals or changes signs. Unrelated valid fields survive. Structural failure still rejects a candidate; drafts always require review. This is lab-only.
+
+Offline replay of the four earlier returned responses retained all four drafts and 73 accounting rows while flagging seven fields. That is recovery, not corrected OCR or additional verified money.
+
+### Fresh run
+
+All five new requests returned usable candidates in 4.583–7.701 seconds; no retries, no outer-fence removal, no invalid-field substitution needed in these new responses. Merchant 5/5, total 5/5, checked subtotal 4/4. Dates: one correct, one wrong, three missing. Exact adjustments: 3/8. No total conflicts were flagged; balanced totals do not establish item correctness.
+
+Unchanged strict unique-kind/description scoring: 42/65 exact purchase pairs versus the same-matcher local baseline's 47/65. The prior real run was 31/65 with rejected/unavailable receipts; this improvement combines improved output availability/formatting and changed readings, not an isolated prompt effect. Nine previously exact accounting rows were lost relative to baseline.
+
+### Duplicate-identity limitation and supplementary metric
+
+The references contain five repeated-description groups, comprising ten purchases; each group has identical checked amounts. The strict matcher refuses to assign an individual identity to such duplicates. Therefore its maximum individual-pair score is 55/65 on this corpus, below a 90% goal even for perfect content.
+
+A new supplementary metric was added after inference began. It leaves the strict score unchanged. It credits an indistinguishable purchase group only when all reference core fields are printed_verified, amounts within the group are identical, the original matcher marks the whole group ambiguous, and actual kind/normalized description/amount and occurrence count all match. Missing/extra occurrences, wrong amounts, different-amount groups and unsupported values get no group credit. It does not claim individual source identity, quantity correctness or unseen accuracy. Both candidate and baseline use the same metric.
+
+- Gemini: 42 strict pairs + 8 confirmed group purchases = **50/65 (76.9%)**.
+- Local baseline: 47 strict pairs + 10 confirmed group purchases = **57/65 (87.7%)**.
+
+This post-hoc supplementary metric is not the old geometry-assisted metric, even where the baseline count happens to coincide. Neither configuration meets 90% by this core-field measure.
+
+There are 24 unmatched output names: one differs only by a leading code, 14 have a similar-name candidate, and nine have another role/name difference. Similarity is diagnostic only, not proof of correctness or invention. Dates missing from model output also require checking visibility in the exact sent derivatives before blaming interpretation alone.
+
+Seven new offline tests pass: preservation of valid values/raw candidate, rejection rather than rounding of fractional cents, unchanged valid input, structural rejection, correct duplicate count handling, no credit for missing/extra/wrong-value duplicates, and no identity resolution using different amounts. All five requests and canonical results reproduce against unchanged reference hashes. No app changes. Five exposed real receipts, zero held-out purchases; no repeated-run stability claim. Cumulative P8-02E-related requests: 35 (29 image, six text-only), including ten explicitly approved real uploads.
+
+### Decision
+
+Do not integrate as a replacement or claim the accuracy target is solved. The prompt/adapter revision improves practical response handling and summary fields, but item/adjustment accuracy and dates still fail acceptance. Next proposed task: inspect the remaining mismatches against exact image regions and verify date visibility, using existing checked labels; distinguish image legibility, transcription, role assignment, description policy and scorer ambiguity before another prompt/model experiment. No need to request fresh human labeling unless a specific source conflict is actually found.

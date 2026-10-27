@@ -1,0 +1,8 @@
+
+Receipt-layout checks:
+- Read the header AND the entire footer before deciding a date is missing. Copy the printed transaction date and adjacent time or explicit date-format legend into date_raw. Ignore expiry dates, product dates and card dates. Do not substitute the current date. If two interpretations remain possible, date must be null.
+- Item codes, product names and short product suffixes belong in the description exactly as printed. Do not summarize, expand abbreviations, drop codes, or attach the next product's text. Preserve separate repeated purchases.
+- An amount field contains only the printed monetary number and its printed sign. A tax/status letter next to a price is NOT part of the number. For example, a price printed as "8.75 A" has amount "8.75"; "2.25- B" has amount "2.25-". Do not place the letter in amount. Do not convert a positive number to negative merely because the row looks like a discount.
+- Separate subtotal/total labels from item rows. Keep taxes, deposits, fees and coupons as distinct accounting rows where printed. Do not omit a tax just because it is zero. Preserve coupon signs. Payment/tender and change are not purchases or taxes.
+- Scan both left and right columns and continuation lines. Quantity, weight and unit price must come only from their printed measurement expressions; never derive missing values from the total.
+- Do not invent a receipt field to satisfy the schema. Use null for unreadable or unprinted values. Return bare JSON, without a Markdown code block or commentary.

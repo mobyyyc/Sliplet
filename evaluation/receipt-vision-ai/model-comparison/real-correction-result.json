@@ -1,0 +1,148 @@
+{
+  "task": "P8-02E real correction",
+  "strict": {
+    "task": "P8-02E real five",
+    "attempts": 5,
+    "planned": 5,
+    "transport_statuses": {
+      "received": 5
+    },
+    "offline_usable_candidates": 5,
+    "offline_rejection_categories": {},
+    "outer_fences_removed": 0,
+    "format_only_recoveries": 0,
+    "usable_subset_counts": {
+      "exact_purchase_pairs": 42,
+      "expected_purchases": 65,
+      "missing_line_proxies": 20,
+      "unrelated_unmatched_actual_lines": 24,
+      "ambiguous_identity": 64,
+      "ambiguous_group_count_mismatch": 0
+    },
+    "usable_subset_baseline": {
+      "exact_purchase_pairs": 47,
+      "expected_purchases": 65,
+      "missing_line_proxies": 11,
+      "unrelated_unmatched_actual_lines": 8,
+      "ambiguous_identity": 80,
+      "ambiguous_group_count_mismatch": 0
+    },
+    "counts": {
+      "exact_purchase_pairs": 42,
+      "expected_purchases": 65,
+      "missing_line_proxies": 20,
+      "unrelated_unmatched_actual_lines": 24,
+      "ambiguous_identity": 64,
+      "ambiguous_group_count_mismatch": 0,
+      "expected_adjustments": 8,
+      "exact_adjustments": 3
+    },
+    "baseline_same_matcher": {
+      "exact_purchase_pairs": 47,
+      "expected_purchases": 65,
+      "missing_line_proxies": 11,
+      "unrelated_unmatched_actual_lines": 8,
+      "ambiguous_identity": 80,
+      "ambiguous_group_count_mismatch": 0
+    },
+    "fields": {
+      "currency": {
+        "unscorable": 5
+      },
+      "date": {
+        "correct": 1,
+        "wrong": 1,
+        "missing": 3
+      },
+      "merchant": {
+        "correct": 5
+      },
+      "subtotal": {
+        "correct": 4,
+        "unscorable": 1
+      },
+      "total": {
+        "correct": 5
+      }
+    },
+    "losses": {
+      "summary_fields": 4,
+      "previously_exact_rows": 9
+    },
+    "ocr_used": false,
+    "exposed_receipts": 5,
+    "held_out_receipts": 0,
+    "app_changed": false,
+    "reference_unchanged": true
+  },
+  "supplementary": {
+    "task": "real correction supplementary audit",
+    "statuses": {
+      "received": 5
+    },
+    "candidate": {
+      "strict_exact_purchase_pairs": 42,
+      "eligible_indistinguishable_purchases": 10,
+      "confirmed_duplicate_group_purchases": 8,
+      "confirmed_duplicate_groups": 4,
+      "core_correct_purchases_including_groups": 50,
+      "expected_purchases": 65
+    },
+    "baseline_same_metric": {
+      "strict_exact_purchase_pairs": 47,
+      "eligible_indistinguishable_purchases": 10,
+      "confirmed_duplicate_group_purchases": 10,
+      "confirmed_duplicate_groups": 5,
+      "core_correct_purchases_including_groups": 57,
+      "expected_purchases": 65
+    },
+    "line_field_outcomes": {
+      "kind": {
+        "missing": 20,
+        "ambiguous_identity": 8,
+        "correct": 45
+      },
+      "description": {
+        "missing": 20,
+        "ambiguous_identity": 8,
+        "correct": 45
+      },
+      "amount": {
+        "missing": 20,
+        "ambiguous_identity": 8,
+        "correct": 45
+      },
+      "quantity": {
+        "unscorable": 57,
+        "ambiguous_identity": 8
+      },
+      "unit": {
+        "unscorable": 57,
+        "ambiguous_identity": 8
+      },
+      "unitPrice": {
+        "unscorable": 57,
+        "ambiguous_identity": 8
+      }
+    },
+    "invalid_fields": {
+      "fields_flagged": 0
+    },
+    "receipts_with_total_conflict": 0,
+    "metric_added_after_calls": true,
+    "individual_duplicate_identity_verified": false,
+    "labels_unchanged": true
+  },
+  "saved_output_replay": {
+    "retained_drafts": 4,
+    "retained_accounting_rows": 73,
+    "flagged_numeric_or_unit_fields": 7
+  },
+  "name_diagnostics": {
+    "unmatched_output_names": 24,
+    "similar_name_diagnostic_only": 14,
+    "leading_code_only_difference": 1,
+    "other_role_or_name_difference": 9
+  },
+  "new_tests_passed": 7
+}
