@@ -73,3 +73,11 @@ Fourteen offline tests pass (run in separate processes to isolate adapter config
 Sources: [Gemini 3.6 capabilities](https://ai.google.dev/gemini-api/docs/models/gemini-3.6-flash), [Standard free-tier pricing](https://ai.google.dev/gemini-api/docs/pricing), [native API schema](https://ai.google.dev/api/generate-content).
 
 Next: resume P8-02E with a bounded, explicitly approved inference check when service is available; do not proceed to app integration or real Gemini receipt uploads based on these diagnostics.
+
+## Approved resumption 01 — stopped after one request
+
+The user approved another bounded resumption. The separate resume36.py runner retained all earlier attempts and sent the same Gemini 3.6 adapted image request once. It returned HTTP 503 UNAVAILABLE after 3.035 seconds. The remaining five images were not sent. Offline verification reproduced the request and canonical evaluation setup; no model receipt output exists to score. Two additional offline tests verify frozen attempt limits and refusal to retry a recorded failure.
+
+Total inference POST attempts across the initial run, diagnostics and this resumption: thirteen (eight image attempts and five text-only diagnostics). All were fictional. No key re-entry, billing change, app change or real upload occurred. P8-02E remains incomplete, with zero completed Gemini receipt cases.
+
+Do not keep requesting approval for identical retries as the default next step. Before another paid-provider inference attempt (including its free tier), diagnose the image-request failure with a separately bounded plan, or explicitly choose another candidate. Text generation succeeding is not proof that image inference is available, and repeated 503 responses do not establish receipt complexity as the cause.

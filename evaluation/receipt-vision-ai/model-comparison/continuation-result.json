@@ -12,5 +12,15 @@
   "provider_schema_adjustment": "omit rows.maxItems only; unchanged local 150-row validation",
   "real_uploads": 0,
   "offline_tests_passed": 14,
-  "app_changed": false
+  "app_changed": false,
+  "approved_resumption_01": {
+    "image_attempts": 1,
+    "completed_receipts": 0,
+    "status": "503_UNAVAILABLE",
+    "seconds": 3.035,
+    "remaining_cases_not_sent": 5,
+    "verification": "offline reproduced",
+    "additional_offline_tests_passed": 2
+  },
+  "total_inference_post_attempts": 13
 }
