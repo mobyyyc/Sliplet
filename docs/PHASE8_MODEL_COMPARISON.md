@@ -99,3 +99,23 @@ The full receipt failed without the extraction prompt or schema, so those are no
 All three exact requests, original responses and source hashes reproduce offline. Two new offline tests cover paired-request isolation and no retry after failure. Three diagnostic POSTs bring the experiment-wide total to sixteen: ten image attempts and six text-only attempts. All inputs are fictional; no app changes or billing changes.
 
 Recommended next bounded experiment, pending approval: use the same fictional receipt at reduced resolution, compare it with the original at an equal timeout, and request a short image-specific answer. If that establishes a working image path, attempt plain JSON extraction without provider-enforced schema, retain strict local validation, and score against the unchanged reference. Reduced resolution can damage text recognition; success must be measured, not assumed. Do not restart the six-case benchmark until the first actual extraction works.
+
+## Approved resolution diagnosis — first complete extraction content
+
+Three image requests were reserved in advance, with 95-second spacing, a 60-second timeout, no retries, and zero real inputs. The two reading controls used the same merchant-only prompt and output settings; only the image changed. The reduced image was 640 × 608; the original remained the exact 1000 × 950 fixture JPEG.
+
+| Request | Outcome | Seconds |
+| --- | --- | --- |
+| Reduced image, merchant-only | HTTP 503 UNAVAILABLE | 2.364 |
+| Original image, merchant-only | Correct merchant | 2.018 |
+| Original image, full extraction without server schema | Complete STOP response; exact outer Markdown JSON fence caused strict invalid_json | 27.100 |
+
+The run was interrupted while waiting before the extraction call. On continuation, Main verified that only the two controls had been sent, then resumed the third request without replaying either control.
+
+The extraction request uses the existing field instructions and exact schema as text in the user prompt, without provider-enforced formatting. It keeps strict local schema validation. This changes prompt placement and schema presentation as well as provider formatting; success is not proof that removal of provider schema alone caused the improvement. The failed reduced image and successful original do not establish a benefit from downscaling.
+
+Offline inspection removed only one exact outer Markdown JSON fence. The original invalid_json result and raw output remain unchanged. No fields, signs, numbers or labels were repaired. The enclosed JSON passes the unchanged local schema and canonical normalizer. Against the existing dense-coupons reference, all five scored summary fields and all 15 accounting rows (12 purchases, two discounts, one tax) are exact. Payment is excluded by the existing canonical accounting rules. Qwen's retained response missed the tax on this same case. This is one exposed fictional case, not an overall accuracy percentage, reliability result or completed six-case comparison.
+
+Six new offline tests pass: resolution/request isolation, selection gate, no reference-answer leakage, exact fence handling, rejection of prose/multiple fences, and rejection of malformed or duplicate-key JSON. Offline verification reproduces all requests and the scored content. The experiment-wide total is nineteen POST attempts: thirteen image attempts and six text-only diagnostics. No real receipt, billing or app changes.
+
+Next proposed task: freeze a new six-fixture configuration using the successful original-resolution plain-JSON request, with narrowly bounded outer-fence handling before unchanged local validation. Preserve this pilot separately; score every case, retain failures, and do not claim a model winner until the comparison is complete. This needs the next explicit task approval; private Gemini uploads remain unapproved.

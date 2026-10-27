@@ -1,0 +1,118 @@
+{
+  "task": "P8-02E resolution diagnosis",
+  "verified": true,
+  "attempts": 3,
+  "real_uploads": 0,
+  "timeout_seconds": 60,
+  "selected_for_extraction": "original",
+  "results": [
+    {
+      "case": "reduced",
+      "status": "provider_error",
+      "diagnostic": {
+        "http_status": 503,
+        "provider_status": "UNAVAILABLE"
+      },
+      "elapsed_seconds": 2.364
+    },
+    {
+      "case": "original",
+      "status": "received",
+      "merchant_correct": true,
+      "elapsed_seconds": 2.018
+    },
+    {
+      "case": "extraction-original",
+      "status": "invalid_json",
+      "diagnostic": {},
+      "elapsed_seconds": 27.1,
+      "offline_wrapper_removed": true,
+      "local_validation_passed": true,
+      "fields": {
+        "merchant": true,
+        "date": true,
+        "currency": true,
+        "subtotal": true,
+        "total": true
+      },
+      "rows": [
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        },
+        {
+          "kind": true,
+          "description": true,
+          "amount": true
+        }
+      ],
+      "exact": true
+    }
+  ]
+}
