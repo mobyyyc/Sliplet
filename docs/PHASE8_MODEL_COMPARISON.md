@@ -142,3 +142,37 @@ The six-attempt evaluation task is complete. A comparison containing six Gemini 
 Offline verification reconstructs all six requests and five canonical candidates from retained raw outputs. Four additional tests pass: pilot-equivalent request, rejection of incomplete output, no repeat calls on resume, and stopping on a rate limit. All calls used the saved personal Gemini key. No real receipts, app changes, billing changes or paid fallback. Cumulative diagnostic/experiment POST count is 25 (19 image requests, six text-only), with all prior failures retained.
 
 Recommended next task: explicitly accept this limited result for a fictional-only Simulator prototype under P8-03. Integrate the provider-neutral draft adapter, strict validation, cancellation and honest recoverable error handling; retain local recognition. Do not enable real Gemini receipt imports or claim privacy approval from this synthetic result. The provider-specific privacy decision and broader reliability validation remain separate gates.
+
+## Explicitly approved actual-receipt test — 2026-10-27
+
+After disclosure that Gemini's unpaid service may use submitted data for product improvement and human review, the user explicitly approved sending actual receipts to Gemini. This approval supersedes the earlier fictional-only restriction for this bounded experiment; it does not enable automatic production uploads. Main used the five existing human-checked, previously reviewed redacted copies of actual receipts, preserving the approved transaction content and quantities/weights/unit prices. Groq's earlier approval was used only to verify those derivative pixels; the new user approval authorizes Gemini. No new human labels were requested or changed.
+
+One request per receipt, same image-only plain-JSON instructions, 60-second timeout, 95-second spacing, five real requests maximum, zero retries. The saved Gemini Keychain item was used. No account/billing changes or developer-key fallback. Raw responses, images, prompts, exact amounts and dates remain in the ignored owner-only evaluation directory; only aggregate evidence is committed.
+
+### Outcome
+
+Five requests were made. Four returned complete provider responses; the fifth returned 429 RESOURCE_EXHAUSTED. Two responses passed the frozen strict decoder directly. Two were rejected as invalid_json because their outer code fences used a different closing-newline layout.
+
+A separately recorded offline decoder removes only the exact outer JSON code fence and adjacent whitespace; it does not repair JSON, delete prose, change values, or accept incomplete provider output. One of those two responses then passes the unchanged canonical validator. The other still fails with unreadable_printed_number: seven amount fields contain letters; six have a decimal-number-plus-letter-suffix shape. These may include tax-marker contamination, but this shape is not proof of printed semantics. Do not strip arbitrary letters or claim the values were corrected.
+
+Three usable candidates are therefore available. This is offline recovery, not a retroactive change to strict request status or the app.
+
+| Measure | Gemini | Saved local baseline with the same matcher |
+| --- | --- | --- |
+| Exact purchase pairs, all five receipts | 31/65 | 47/65 |
+| Exact purchase pairs, same three usable receipts | 31/45 | 34/45 |
+| Exact adjustments, all five planned receipts | 1/8 | Not summarized here |
+| Correct totals in usable candidates | 3/3 | Not summarized here |
+| Correct checked subtotals in usable candidates | 3/3 | Not summarized here |
+
+The full-run score counts rejected/unavailable receipts as missing. It measures the current end-to-end path, not pure visual reading quality. Matching uses unique kind/description without coordinates or amount-assisted pairing. Repeated indistinguishable names remain ambiguous: these scores cannot be compared directly with older geometry-assisted 57/65 results. There are 13 unrelated unmatched output rows, which may reflect description errors rather than proven invented purchases.
+
+Dates did not pass: the full-run canonical results contain four missing and one wrong date (including rejected/unavailable receipts). A separate inspection of the four returned raw candidates found two literal dates present, two ISO dates present and only one model ISO date equal to the checked reference. Thus date handling and source visibility need investigation; do not attribute every missing date to the model without checking the sent derivative.
+
+The existing baseline outperforms this configuration even on the same usable subset. The 90% target and no-regression gates are not met. Production recognition is unchanged. No unseen receipts, repeated real runs or physical-phone validation were performed.
+
+### Validation and next task
+
+All five payloads reproduce from the reviewed image derivatives, and usable canonical candidates reproduce from retained raw output. The reference hash is unchanged. Four offline tests pass for the real-call cap, no retries, incomplete-output rejection, prose rejection and wrapper-only handling. Cumulative P8-02E-related requests: 30 (24 image requests, six text-only), with this experiment's five real uploads explicitly authorized.
+
+Do not proceed with P8-03 integration on these results. Recommended next approved task: a bounded real-error analysis and correction experiment, using the retained outputs first. Separate printed tax markers from monetary tokens with source evidence; prevent one malformed optional/row field from discarding unrelated valid readings while retaining review requirements; check date visibility and interpretation; and analyze description/adjustment mismatches against the existing human labels. Freeze any revised prompt/adapter before another bounded real run. Preserve current failures and compare against the same baseline, not only the easiest returned cases.

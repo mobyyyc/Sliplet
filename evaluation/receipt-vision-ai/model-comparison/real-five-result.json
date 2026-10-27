@@ -1,0 +1,82 @@
+{
+  "task": "P8-02E real five",
+  "attempts": 5,
+  "planned": 5,
+  "transport_statuses": {
+    "invalid_json": 2,
+    "received": 2,
+    "rate_or_quota_limited": 1
+  },
+  "offline_usable_candidates": 3,
+  "offline_rejection_categories": {
+    "unreadable_printed_number": 1
+  },
+  "outer_fences_removed": 1,
+  "format_only_recoveries": 1,
+  "usable_subset_counts": {
+    "exact_purchase_pairs": 31,
+    "expected_purchases": 45,
+    "missing_line_proxies": 11,
+    "unrelated_unmatched_actual_lines": 13,
+    "ambiguous_identity": 48,
+    "ambiguous_group_count_mismatch": 0
+  },
+  "usable_subset_baseline": {
+    "exact_purchase_pairs": 34,
+    "expected_purchases": 45,
+    "missing_line_proxies": 8,
+    "unrelated_unmatched_actual_lines": 5,
+    "ambiguous_identity": 48,
+    "ambiguous_group_count_mismatch": 0
+  },
+  "counts": {
+    "exact_purchase_pairs": 31,
+    "expected_purchases": 65,
+    "missing_line_proxies": 35,
+    "unrelated_unmatched_actual_lines": 13,
+    "ambiguous_identity": 48,
+    "ambiguous_group_count_mismatch": 0,
+    "expected_adjustments": 8,
+    "exact_adjustments": 1
+  },
+  "baseline_same_matcher": {
+    "exact_purchase_pairs": 47,
+    "expected_purchases": 65,
+    "missing_line_proxies": 11,
+    "unrelated_unmatched_actual_lines": 8,
+    "ambiguous_identity": 80,
+    "ambiguous_group_count_mismatch": 0
+  },
+  "fields": {
+    "currency": {
+      "unscorable": 5
+    },
+    "date": {
+      "missing": 4,
+      "wrong": 1
+    },
+    "merchant": {
+      "missing": 2,
+      "correct": 3
+    },
+    "subtotal": {
+      "missing": 1,
+      "correct": 3,
+      "unscorable": 1
+    },
+    "total": {
+      "missing": 2,
+      "correct": 3
+    }
+  },
+  "losses": {
+    "summary_fields": 9,
+    "previously_exact_rows": 20
+  },
+  "ocr_used": false,
+  "exposed_receipts": 5,
+  "held_out_receipts": 0,
+  "app_changed": false,
+  "reference_unchanged": true,
+  "new_offline_tests_passed": 4
+}
