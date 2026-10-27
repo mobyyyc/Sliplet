@@ -1,6 +1,6 @@
 # P8-02E — fixed-fixture vision model comparison
 
-Approved 2026-10-26. Setup verified; comparison incomplete because inference failed. Fictional receipts only. No app changes or real-receipt upload path.
+Approved 2026-10-26; six-attempt plain-JSON evaluation completed 2026-10-27 with five exact responses and one service failure. Historical diagnostic failures are retained below. Fictional receipts only. No app changes or real-receipt upload path.
 
 ## Candidate selection
 
@@ -119,3 +119,26 @@ Offline inspection removed only one exact outer Markdown JSON fence. The origina
 Six new offline tests pass: resolution/request isolation, selection gate, no reference-answer leakage, exact fence handling, rejection of prose/multiple fences, and rejection of malformed or duplicate-key JSON. Offline verification reproduces all requests and the scored content. The experiment-wide total is nineteen POST attempts: thirteen image attempts and six text-only diagnostics. No real receipt, billing or app changes.
 
 Next proposed task: freeze a new six-fixture configuration using the successful original-resolution plain-JSON request, with narrowly bounded outer-fence handling before unchanged local validation. Preserve this pilot separately; score every case, retain failures, and do not claim a model winner until the comparison is complete. This needs the next explicit task approval; private Gemini uploads remain unapproved.
+
+## Six-fixture plain-JSON evaluation — 2026-10-27
+
+The approved run made one new request per fixture, including the dense pilot case. It used the successful original-resolution prompt/configuration, with 60-second timeouts, 95-second spacing, no automatic retries, strict local validation and narrowly bounded outer-fence handling. The pilot was not substituted for a failed response. All six requests were attempted; five returned valid candidates and one returned HTTP 503.
+
+| Fixture | New Gemini result | Seconds |
+| --- | --- | --- |
+| Dense coupons | 503 UNAVAILABLE; no candidate | 6.004 |
+| Weighted purchase | Exact, including quantity/unit/unit price | 1.960 |
+| Repeated purchases | Exact, including separate occurrences and coupon | 2.235 |
+| Ambiguous date/unreadable total | Exact; retains missing/ambiguous fields | 18.733 |
+| Printed prompt injection | Exact; no invented subtotal | 13.589 |
+| Multilingual/zero tax | Exact | 2.860 |
+
+All five returned candidates match the unchanged reference on every scored field and row: 25 summary-field checks and nine accounting rows. None needed outer-fence removal in this run. Successful request latency ranges from 1.960 to 18.733 seconds, median 2.860 seconds; spacing is excluded. This is not phone performance or stable service latency.
+
+Operational exact completion is 5/6 (83.3%) versus the retained Qwen configuration's 4/6. Among returned Gemini candidates, 5/5 are exact, but that is conditional on receiving a response. Do not call this 100% overall accuracy or use the separate successful dense pilot to claim 6/6 for this run. The two configurations differ in prompt placement, schema enforcement, thinking and transport; this is not an isolated model-weight comparison. References were exposed during development; there are no held-out real purchases in this evaluation.
+
+The six-attempt evaluation task is complete. A comparison containing six Gemini candidates remains unavailable (the private report's comparison_complete flag therefore stays false). This is a promising limited result, with service reliability still unresolved, not an unconditional integration acceptance. The prior pilot was exact on dense coupons, but the repeat failed before extraction; that demonstrates why availability must remain visible.
+
+Offline verification reconstructs all six requests and five canonical candidates from retained raw outputs. Four additional tests pass: pilot-equivalent request, rejection of incomplete output, no repeat calls on resume, and stopping on a rate limit. All calls used the saved personal Gemini key. No real receipts, app changes, billing changes or paid fallback. Cumulative diagnostic/experiment POST count is 25 (19 image requests, six text-only), with all prior failures retained.
+
+Recommended next task: explicitly accept this limited result for a fictional-only Simulator prototype under P8-03. Integrate the provider-neutral draft adapter, strict validation, cancellation and honest recoverable error handling; retain local recognition. Do not enable real Gemini receipt imports or claim privacy approval from this synthetic result. The provider-specific privacy decision and broader reliability validation remain separate gates.
