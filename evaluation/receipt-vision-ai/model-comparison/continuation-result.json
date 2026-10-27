@@ -1,0 +1,16 @@
+{
+  "task": "P8-02E",
+  "comparison_complete": false,
+  "gemini_completed_receipt_cases": 0,
+  "gemini_receipt_accuracy": null,
+  "qwen_retained_exact_cases": 4,
+  "planned_cases": 6,
+  "continuation_image_attempts": 5,
+  "continuation_text_diagnostic_attempts": 5,
+  "previous_image_attempts": 2,
+  "latest_status": "503_UNAVAILABLE",
+  "provider_schema_adjustment": "omit rows.maxItems only; unchanged local 150-row validation",
+  "real_uploads": 0,
+  "offline_tests_passed": 14,
+  "app_changed": false
+}
