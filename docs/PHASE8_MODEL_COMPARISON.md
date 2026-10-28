@@ -407,3 +407,17 @@ Twenty-five targeted tests pass. Production remains unchanged.
 
 Next proposed approval is a fresh bounded confirmation with that adapter frozen
 before dispatch, followed by optional P8-03 integration only if benefit holds.
+
+## Frozen confirmation interrupted — 2026-10-28
+
+The user-approved confirmation froze the existing prompt/schema/recovery/reference
+before dispatch. Receipt one returned successfully; receipt two returned HTTP 503
+UNAVAILABLE. The no-retry rule stopped the run after two requests. Three receipts
+were not sent. Thirty local tests pass, but the live confirmation is incomplete
+and supplies no new five-receipt accuracy or acceptance claim. See
+`PHASE8_FROZEN_CONFIRMATION.md` and `structured-confirmation-result.json`.
+
+Next proposed approval is a bounded continuation of four requests: retry the
+unavailable receipt once and send the three remaining receipts, keeping the first
+success and all failure evidence. The same frozen extraction logic applies; no
+retuning or model substitution. No continuation has been sent.

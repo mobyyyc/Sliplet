@@ -1,0 +1,22 @@
+{
+  "task": "frozen structured confirmation",
+  "requests": 2,
+  "statuses": {
+    "received": 1,
+    "provider_error": 1
+  },
+  "complete": false,
+  "seconds": [
+    11.565,
+    9.675
+  ],
+  "review_flags": {
+    "boundary_rows": 0,
+    "receipts_with_boundary_review": 0,
+    "invalid_numeric_or_unit_fields": 0,
+    "receipts_requiring_review": 1
+  },
+  "adapter_frozen_before_inference": true,
+  "held_out_receipts": 0,
+  "app_changed": false
+}

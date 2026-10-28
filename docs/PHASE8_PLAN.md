@@ -201,3 +201,16 @@ scores, extra rows, review burden and field retention without retuning mid-run.
 A repeat gain supports optional model-to-reviewed-draft integration; it does not
 prove unseen accuracy. Do not begin this confirmation or app integration until
 Main receives the user's next approval.
+
+### Frozen confirmation status — 2026-10-28
+
+Configuration and acceptance gates were frozen, and 30 local checks passed. The
+first request succeeded; the second failed with provider HTTP 503 UNAVAILABLE.
+The declared no-retry rule stopped dispatch after two attempts, leaving three
+receipts unsent. Confirmation is incomplete; P8-03 integration has not started.
+
+Next proposed approval: resume with at most four requests, retrying only the
+unavailable receipt once and sending the three unsent receipts under the unchanged
+frozen logic. Reuse the first successful response, preserve the failure in reliability
+counts, and stop on any further failure. Total confirmation attempts would be six
+if all four continuation requests run. This continuation is not yet authorized.
