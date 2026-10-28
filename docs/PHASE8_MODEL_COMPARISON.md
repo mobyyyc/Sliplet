@@ -421,3 +421,13 @@ Next proposed approval is a bounded continuation of four requests: retry the
 unavailable receipt once and send the three remaining receipts, keeping the first
 success and all failure evidence. The same frozen extraction logic applies; no
 retuning or model substitution. No continuation has been sent.
+
+### Approved continuation also interrupted
+
+The approved retry of receipt two and first attempt at receipt three succeeded.
+Receipt four ended with network_or_timeout after 60.122 seconds; the fifth remained
+unsent under the stop-on-failure rule. The combined confirmation now has five
+attempts, three usable receipts, one 503 and one network/timeout. No full-set score
+or acceptance pass is claimed. The proposed next approval is two outstanding-image
+requests with a 120-second transport timeout; extraction and scoring remain frozen.
+See `structured-continuation-result.json` for the retained aggregate attempt record.

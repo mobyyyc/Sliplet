@@ -1,0 +1,20 @@
+{
+  "task": "frozen confirmation continuation",
+  "new_requests": 3,
+  "total_attempts": 5,
+  "attempt_statuses_including_prior_failure": {
+    "received": 3,
+    "provider_error": 1,
+    "network_or_timeout": 1
+  },
+  "complete": false,
+  "new_response_seconds": [
+    11.629,
+    19.75,
+    60.122
+  ],
+  "first_receipt_reused_without_resending": true,
+  "extraction_and_recovery_unchanged": true,
+  "held_out_receipts": 0,
+  "app_changed": false
+}

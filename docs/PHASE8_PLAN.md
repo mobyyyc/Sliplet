@@ -214,3 +214,15 @@ unavailable receipt once and sending the three unsent receipts under the unchang
 frozen logic. Reuse the first successful response, preserve the failure in reliability
 counts, and stop on any further failure. Total confirmation attempts would be six
 if all four continuation requests run. This continuation is not yet authorized.
+
+### Continuation status — confirmation still incomplete
+
+Two continuation requests succeeded, then receipt four hit the 60-second transport
+timeout. Dispatch stopped and receipt five remains unsent. There are three usable
+receipts across five attempts, including the retained 503 and timeout failures.
+No extraction logic changed and P8-03 remains unstarted.
+
+Next proposed approval: finish only the two outstanding receipts with at most two
+requests and a 120-second transport timeout. Keep all three successes, both failures,
+the same source images/reference and frozen extraction/recovery logic. Report the
+transport change explicitly. No new requests are authorized by this status entry.

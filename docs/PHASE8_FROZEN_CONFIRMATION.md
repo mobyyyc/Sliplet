@@ -69,3 +69,39 @@ attempts across the confirmation and continuation, for five receipt results if a
 four additional requests succeed. Stop again on any failure, retain the failed
 attempt in reliability counts, and do not tune the extraction or scoring rules.
 This proposal has not been dispatched and is not an automatic retry policy.
+
+## Approved continuation — 2026-10-28
+
+The user approved the four-request continuation. `resume_structured_confirmation.py`
+verifies the original frozen configuration, successful first response and failed
+second response before dispatch. It sends only receipt slots two through five,
+with at most four new attempts and no further automatic retry. The retry payload
+must exactly match the original failed request. The original successful receipt
+is reused without sending it again. Original records remain unchanged.
+
+Four additional protocol tests check exclusion of the first receipt, stopping after
+failed/interrupted retry, the four-request completion cap and rejection of duplicate
+or out-of-scope requests. The retry of receipt two succeeded. Remaining execution
+and the combined raw/adapted acceptance report are pending.
+
+### Continuation stopped at request timeout
+
+Three of the four approved continuation attempts were made. The retry of receipt
+two succeeded in 11.629 seconds; receipt three succeeded in 19.750 seconds;
+receipt four returned the transport's network_or_timeout category after 60.122
+seconds. The fifth receipt was not sent. No further retry was attempted.
+
+Across the original confirmation and continuation, five attempts have produced
+three usable receipt responses, one HTTP 503 and one network/timeout failure.
+The extraction/schema/adapter/reference hashes remain unchanged. This still does
+not produce a five-receipt confirmation or justify reusing the earlier 93.9% as a
+new result. The first successful receipt was not resent. Thirty-four local tests
+pass, but they do not establish provider reliability.
+
+Next proposed approval: at most two requests, retrying only receipt four and
+sending the unsent fifth receipt, with a 120-second transport timeout and the same
+frozen extraction rules and acceptance gates. Preserve the three successes and
+both failed attempts. This would total seven attempts if both new requests are
+made. Explicitly record the timeout change as a transport difference; do not claim
+identical latency conditions. Stop again on any failure. This proposal has not
+been dispatched and is not an automatic retry policy.
