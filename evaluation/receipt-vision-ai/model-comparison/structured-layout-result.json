@@ -1,0 +1,164 @@
+{
+  "task": "post-hoc structured name-boundary replay",
+  "new_api_requests": 0,
+  "source_trial_requests": 7,
+  "post_hoc": true,
+  "review_required": true,
+  "rows_with_provisional_name_boundary_recovery": 26,
+  "comparison": {
+    "gemini": {
+      "core": {
+        "strict_exact_purchase_pairs": 52,
+        "eligible_indistinguishable_purchases": 10,
+        "confirmed_duplicate_group_purchases": 10,
+        "confirmed_duplicate_groups": 5,
+        "core_correct_purchases_including_groups": 62,
+        "expected_purchases": 66,
+        "unrelated_unmatched_output_rows": 5
+      },
+      "adjustments": {
+        "expected": 9,
+        "exact": 8
+      },
+      "fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 4,
+          "missing": 1
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "correct": 5
+        },
+        "amount": {
+          "correct": 60,
+          "missing": 5,
+          "ambiguous_identity": 10
+        },
+        "description": {
+          "correct": 60,
+          "missing": 5,
+          "ambiguous_identity": 10
+        },
+        "kind": {
+          "correct": 60,
+          "missing": 5,
+          "ambiguous_identity": 10
+        },
+        "quantity": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "sku": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "taxMarker": {
+          "correct": 2,
+          "unscorable": 54,
+          "ambiguous_identity": 10
+        },
+        "unit": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "unitPrice": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "rate": {
+          "unscorable": 9
+        }
+      }
+    },
+    "local_baseline": {
+      "core": {
+        "strict_exact_purchase_pairs": 49,
+        "eligible_indistinguishable_purchases": 10,
+        "confirmed_duplicate_group_purchases": 10,
+        "confirmed_duplicate_groups": 5,
+        "core_correct_purchases_including_groups": 59,
+        "expected_purchases": 66,
+        "unrelated_unmatched_output_rows": 6
+      },
+      "adjustments": {
+        "expected": 9,
+        "exact": 4
+      },
+      "fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        },
+        "amount": {
+          "correct": 53,
+          "ambiguous_identity": 10,
+          "missing": 11,
+          "wrong": 1
+        },
+        "description": {
+          "correct": 54,
+          "ambiguous_identity": 10,
+          "missing": 11
+        },
+        "kind": {
+          "correct": 54,
+          "ambiguous_identity": 10,
+          "missing": 11
+        },
+        "quantity": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "sku": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "taxMarker": {
+          "correct": 2,
+          "unscorable": 54,
+          "ambiguous_identity": 10
+        },
+        "unit": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "unitPrice": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "rate": {
+          "unscorable": 9
+        }
+      }
+    }
+  },
+  "held_out_receipts": 0,
+  "app_changed": false,
+  "limitations": [
+    "Rule added after seeing this exposed corpus; needs frozen prospective confirmation.",
+    "Model literal transcription is not independent pixel verification.",
+    "Recovered boundaries require review; marker tax meaning remains unknown."
+  ]
+}

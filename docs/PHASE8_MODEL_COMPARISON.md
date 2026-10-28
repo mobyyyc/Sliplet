@@ -387,3 +387,23 @@ unresolved/missing/duplicate cases, unapproved policy, exact-money validation,
 export immutability and refusal to overwrite differing evidence. The final local
 comparison reproduces exactly, input hashes remain stable, and original audit
 verification passes. No new API requests, production edits or phone installation.
+
+## Structured fields and complete images — 2026-10-28
+
+The approved experiment completed two fixed fictional gates and five complete
+actual-image requests, with all seven usable and no retries. Full report:
+`PHASE8_STRUCTURED_FIELDS.md`. The frozen raw schema run improved adjustments to
+8/9, totals to 5/5 and dates to four correct plus one unresolved numeric ambiguity.
+Its exact core purchase count regressed to 37/66 because 26 name suffixes moved
+into the new tax-marker field.
+
+A separately retained post-hoc, review-required local layout recovery restores
+suffixes from the model's literal same-line or explicit measurement-continuation
+text, without changing amounts or making new calls. Final replay is 62/66 core
+purchases including exact duplicate groups (93.9%), versus local OCR 59/66 (89.4%).
+Both raw and replay scores remain visible. This exceeds 90% only on the exposed
+reference set after local recovery, not as a frozen prospective or unseen result.
+Twenty-five targeted tests pass. Production remains unchanged.
+
+Next proposed approval is a fresh bounded confirmation with that adapter frozen
+before dispatch, followed by optional P8-03 integration only if benefit holds.

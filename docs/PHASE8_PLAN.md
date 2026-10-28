@@ -183,3 +183,21 @@ unit-price/taxability accuracy where independent checked coverage is absent; do 
 expand human review to all receipts as a prerequisite. P8-03 integration remains
 conditional on the measured benefit and safe review flow. This next experiment is
 proposed, not started by the reference-repair approval.
+
+### Structured-field task completed — 2026-10-28
+
+Seven requests completed (two fictional, five actual). The expanded model schema
+retains tax markers, product codes, literal rows, quantity/unit price and tax
+base/rate separately, with explicit non-accounting rows and conservative unknowns.
+Frozen purchase score is 37/66 due to name-suffix misclassification; do not hide it.
+A separately labeled local recovery reaches 62/66 (93.9%) on reference-v4, versus
+59/66 local OCR, with 8/9 adjustments and 5/5 totals. All recovered boundaries still
+require review. No new calls were made for the local recovery. See
+`PHASE8_STRUCTURED_FIELDS.md` for replay history and limits.
+
+**Next proposed task: frozen confirmation before P8-03.** Freeze the v2 local
+boundary rule, rerun a bounded complete-image comparison, and assess raw/adapted
+scores, extra rows, review burden and field retention without retuning mid-run.
+A repeat gain supports optional model-to-reviewed-draft integration; it does not
+prove unseen accuracy. Do not begin this confirmation or app integration until
+Main receives the user's next approval.

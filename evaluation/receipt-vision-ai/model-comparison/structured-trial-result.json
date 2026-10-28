@@ -1,0 +1,245 @@
+{
+  "task": "structured complete-image trial",
+  "requests": 7,
+  "real_requests": 5,
+  "statuses": {
+    "received": 7
+  },
+  "seconds": [
+    23.969,
+    2.701,
+    15.722,
+    11.23,
+    28.319,
+    18.552,
+    7.504
+  ],
+  "complete": true,
+  "reference_version": "v4",
+  "held_out_receipts": 0,
+  "app_changed": false,
+  "comparison": {
+    "gemini": {
+      "core": {
+        "strict_exact_purchase_pairs": 27,
+        "eligible_indistinguishable_purchases": 10,
+        "confirmed_duplicate_group_purchases": 10,
+        "confirmed_duplicate_groups": 5,
+        "core_correct_purchases_including_groups": 37,
+        "expected_purchases": 66,
+        "unrelated_unmatched_output_rows": 30
+      },
+      "adjustments": {
+        "expected": 9,
+        "exact": 8
+      },
+      "fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 4,
+          "missing": 1
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "correct": 5
+        },
+        "amount": {
+          "correct": 35,
+          "missing": 30,
+          "ambiguous_identity": 10
+        },
+        "description": {
+          "correct": 35,
+          "missing": 30,
+          "ambiguous_identity": 10
+        },
+        "kind": {
+          "correct": 35,
+          "missing": 30,
+          "ambiguous_identity": 10
+        },
+        "quantity": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "sku": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "taxMarker": {
+          "correct": 2,
+          "unscorable": 54,
+          "ambiguous_identity": 10
+        },
+        "unit": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "unitPrice": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "rate": {
+          "unscorable": 9
+        }
+      }
+    },
+    "local_baseline": {
+      "core": {
+        "strict_exact_purchase_pairs": 49,
+        "eligible_indistinguishable_purchases": 10,
+        "confirmed_duplicate_group_purchases": 10,
+        "confirmed_duplicate_groups": 5,
+        "core_correct_purchases_including_groups": 59,
+        "expected_purchases": 66,
+        "unrelated_unmatched_output_rows": 6
+      },
+      "adjustments": {
+        "expected": 9,
+        "exact": 4
+      },
+      "fields": {
+        "currency": {
+          "unscorable": 5
+        },
+        "date": {
+          "correct": 5
+        },
+        "merchant": {
+          "correct": 5
+        },
+        "subtotal": {
+          "correct": 4,
+          "unscorable": 1
+        },
+        "total": {
+          "missing": 2,
+          "correct": 3
+        },
+        "amount": {
+          "correct": 53,
+          "ambiguous_identity": 10,
+          "missing": 11,
+          "wrong": 1
+        },
+        "description": {
+          "correct": 54,
+          "ambiguous_identity": 10,
+          "missing": 11
+        },
+        "kind": {
+          "correct": 54,
+          "ambiguous_identity": 10,
+          "missing": 11
+        },
+        "quantity": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "sku": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "taxMarker": {
+          "correct": 2,
+          "unscorable": 54,
+          "ambiguous_identity": 10
+        },
+        "unit": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "unitPrice": {
+          "unscorable": 56,
+          "ambiguous_identity": 10
+        },
+        "rate": {
+          "unscorable": 9
+        }
+      }
+    }
+  },
+  "prior_saved_gemini": {
+    "core": {
+      "strict_exact_purchase_pairs": 48,
+      "eligible_indistinguishable_purchases": 10,
+      "confirmed_duplicate_group_purchases": 8,
+      "confirmed_duplicate_groups": 4,
+      "core_correct_purchases_including_groups": 56,
+      "expected_purchases": 66,
+      "unrelated_unmatched_output_rows": 14
+    },
+    "adjustments": {
+      "expected": 9,
+      "exact": 7
+    },
+    "fields": {
+      "currency": {
+        "unscorable": 5
+      },
+      "date": {
+        "correct": 1,
+        "wrong": 1,
+        "missing": 3
+      },
+      "merchant": {
+        "correct": 5
+      },
+      "subtotal": {
+        "correct": 4,
+        "unscorable": 1
+      },
+      "total": {
+        "correct": 5
+      },
+      "amount": {
+        "missing": 12,
+        "ambiguous_identity": 8,
+        "correct": 55
+      },
+      "description": {
+        "missing": 12,
+        "ambiguous_identity": 8,
+        "correct": 55
+      },
+      "kind": {
+        "missing": 12,
+        "ambiguous_identity": 8,
+        "correct": 55
+      },
+      "quantity": {
+        "unscorable": 58,
+        "ambiguous_identity": 8
+      },
+      "sku": {
+        "unscorable": 58,
+        "ambiguous_identity": 8
+      },
+      "taxMarker": {
+        "missing": 2,
+        "unscorable": 56,
+        "ambiguous_identity": 8
+      },
+      "unit": {
+        "unscorable": 58,
+        "ambiguous_identity": 8
+      },
+      "unitPrice": {
+        "unscorable": 58,
+        "ambiguous_identity": 8
+      },
+      "rate": {
+        "unscorable": 9
+      }
+    }
+  },
+  "caveat": "Prompt, schema and source visibility changed together; no isolated prompt-effect or unseen accuracy claim."
+}
