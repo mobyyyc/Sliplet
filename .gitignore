@@ -44,3 +44,6 @@ private-receipts/
 
 # Private redacted receipt review export (still contains purchase data).
 /sliplet-p801-redactions*.json
+
+# Private Phase 8 reference-review exports (including browser duplicate names).
+/sliplet-p8-reference-checked*.json

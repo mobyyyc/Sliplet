@@ -287,3 +287,29 @@ Before another prompt experiment, repair the test inputs and reference contract:
 Verification: audit recorded and replayed against byte-identical sent images;
 reference bytes unchanged during the audit. No receipt text, dates, amounts,
 images or private hashes are included in committed audit output.
+
+### Approved reference repair — review prepared
+
+Prepared seven focused row confirmations: four transcription/heading conflicts,
+two missing accounting lines, and one uncertain identifier/non-purchase line.
+The offline page also requests approval of a consistent field-boundary policy.
+Model text is explicitly a proposal, not a checked answer. Original photos are
+embedded locally with zoom and existing reference-region outlines; those outlines
+are labeled as potentially wrong. No source drawing or invented continuation
+lines are required. Uncertain/partial decisions can always be exported.
+
+`prepare_reference_review.py` verifies the prior audit before generating an
+ignored private page and proposal. The export binds decisions to the reference
+hash, deterministic review ID and case IDs. All amounts are displayed as decimal
+currency values from stored integer cents. The page blocks network connections;
+private exports in the project root are ignored by Git. Existing v3 labels remain
+unchanged. Preparation validation checked seven unique case mappings, the
+four-existing/three-inclusion split and JavaScript syntax; a full browser
+interaction test has not been claimed.
+
+Status: awaiting the user's exported decisions. Do not create v4, count a checked
+proposal as independent human verification, or publish revised scores until the
+export is validated and unresolved decisions handled explicitly. The next step
+within this approved task is to validate the export and apply only confirmed,
+source-backed amendments to a separate versioned reference, with a change ledger,
+then compare saved Gemini and local baseline outputs under identical rules.
