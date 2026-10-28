@@ -431,3 +431,22 @@ attempts, three usable receipts, one 503 and one network/timeout. No full-set sc
 or acceptance pass is claimed. The proposed next approval is two outstanding-image
 requests with a 120-second transport timeout; extraction and scoring remain frozen.
 See `structured-continuation-result.json` for the retained aggregate attempt record.
+
+### Frozen confirmation completed — next approval is P8-03
+
+All five receipts are now usable after seven total attempts (the prior 503 and
+60-second timeout remain in reliability counts). The final two requests used the
+approved 120-second timeout, with unchanged extraction and scoring. Raw output:
+52/66 purchases; frozen recovery: 62/66 (93.9%), 9/9 adjustments, 5/5 totals,
+5/5 merchants, 4/4 checked subtotals, 4/5 dates. All bounded confirmation gates
+pass. The local baseline is 59/66 purchases, 4/9 adjustments, 3/5 totals and 5/5
+dates. This supports a limited optional integration, not universal superiority:
+one date is unresolved, ten name boundaries need review, and quantity/unit-price
+accuracy is not independently established. Five exposed receipts, zero held out.
+Forty-four local checks pass. App unchanged. See `PHASE8_FROZEN_CONFIRMATION.md`
+and `structured-finish-result.json` for the completed evidence.
+
+Next proposal: P8-03 provider-neutral model-to-reviewed-draft integration, retaining
+originals/user edits/local recognition and verifying recorded-response Simulator
+flows. P8-04/P8-05 still own key Settings and upload consent. Await Main's next
+user approval; no further live requests are included.

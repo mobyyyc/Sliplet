@@ -105,3 +105,42 @@ both failed attempts. This would total seven attempts if both new requests are
 made. Explicitly record the timeout change as a transport difference; do not claim
 identical latency conditions. Stop again on any failure. This proposal has not
 been dispatched and is not an automatic retry policy.
+
+## Frozen confirmation completed — 2026-10-28
+
+The user approved the final two requests with a 120-second transport timeout.
+Both succeeded (13.638 and 4.741 seconds). Slots one through three were reused,
+not resent. All seven attempts remain recorded: five usable results, one provider
+503 and one network/timeout. The last two requests used a longer timeout; this is
+not an identical-transport latency comparison. No extraction, prompt, image,
+reference or recovery rule changed during confirmation.
+
+The completed raw extraction scores 52/66 core purchases. Applying the same
+recovery rules frozen before inference scores 62/66 (93.9%): 52 strict purchase
+pairs plus 10 purchases confirmed only as indistinguishable duplicate groups.
+Adjustments are 9/9, merchants 5/5, totals 5/5, and checked subtotals 4/4 (one
+unscorable). Dates are 4/5; one remains unresolved. The local OCR comparison is
+59/66 purchases, 4/9 adjustments, 3/5 totals, and 5/5 dates. Thus the four bounded
+confirmation gates pass, but this is not universal field superiority or full
+release acceptance. Currency, quantities, unit prices and most tax markers lack
+sufficient independent labels for accuracy claims.
+
+Ten recovered name boundaries on one receipt still require review. Four purchase
+rows remain unmatched; do not equate name-based matching failure with incorrect
+prices. All five drafts require human review. These are five exposed receipts,
+with zero held-out receipts: 93.9% is a corpus result, not promised future accuracy.
+
+Thirty-eight structured/protocol checks and six reference-repair checks pass.
+The app has not changed. Private source images, requests, raw envelopes, frozen
+configuration and comparison ledgers remain local and ignored. Public evidence is
+aggregate-only in `structured-finish-result.json`.
+
+**Next proposed approval: P8-03, optional model-to-reviewed-draft integration.**
+Integrate the measured Gemini image-only path and conservative recovery into the
+app's recognition/draft boundary, preserve originals and user edits, and verify
+Simulator import/save/reopen plus failures/cancellation using recorded or fictional
+responses. Keep local recognition available and unchanged by default. This is
+acceptance of a limited improvement, including the unresolved date and required
+boundary review, not a claim that all Phase 8 accuracy/release goals passed.
+Personal-key Settings and the upload-consent experience remain P8-04/P8-05;
+no automatic real-receipt uploads or further live calls are authorized here.
