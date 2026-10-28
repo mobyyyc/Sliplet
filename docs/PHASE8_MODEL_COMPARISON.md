@@ -313,3 +313,77 @@ export is validated and unresolved decisions handled explicitly. The next step
 within this approved task is to validate the export and apply only confirmed,
 source-backed amendments to a separate versioned reference, with a change ledger,
 then compare saved Gemini and local baseline outputs under identical rules.
+
+### Reference repair completed — 2026-10-27
+
+The user exported all seven decisions, approved the naming policy, and reported
+that model reading looked substantially better in practice, including products,
+tax and unit-price information. The export's review ID, reference hash, case
+inventory, completion, decisions and checked flags validate. The explicit edited
+product spelling takes precedence over the model proposal. Four existing rows
+were corrected, one purchase and one tax line added, and the identifier line
+confirmed as non-accounting. Eight additional name-only amendments implement the
+visually audited and user-approved field-boundary policy; they are labeled as
+policy applications, not seven more independent human row reviews. Quantities,
+unit prices and other unreviewed fields were not silently promoted to verified.
+
+The original reference-v3, requests, model responses and historical scores remain
+unchanged. Final private evidence is in `reference-repair-01/final`: reference-v4,
+checked export, before/after amendment ledger, comparison ledger and hash manifest.
+An earlier local preflight is retained outside `final`; it omitted one audited
+price-marker boundary correction and is not the final result. Both candidates
+were rescored after that correction. `reference-repair-result.json` is the public
+aggregate result; `repair_reference.py` reproduces it without inference.
+
+| Measure on revised reference-v4 | Saved Gemini | Saved local OCR baseline |
+| --- | ---: | ---: |
+| Strict exact purchase pairs | 48/66 | 49/66 |
+| Additional exact indistinguishable-group purchases | 8 | 10 |
+| Core purchases including groups | 56/66 (84.8%) | 59/66 (89.4%) |
+| Exact adjustment rows | 7/9 | 4/9 |
+| Correct totals | 5/5 | 3/5 (two missing) |
+
+The reference now contains 66 purchases and nine adjustments. These are
+post-hoc, source-backed reference repairs, not model improvements. Historical v3
+replay reproduces the previous 42+8 and 47+10 purchase counts. Individual duplicate
+identity is still unresolved. No fuzzy description matches, amount-assisted
+pairing, output cleanup, or hidden removal of extra candidate rows was used.
+The user-confirmed non-purchase decision does not retrospectively remove that
+incorrect purchase from Gemini's saved output.
+
+The user observation and these results are compatible: Gemini has stronger
+summary/adjustment extraction, while the exact product-name contract still
+penalizes misplaced tax markers, quantity prefixes and a genuine character
+misread. This corpus does not establish overall model superiority or a 90% pass.
+The baseline received original images while the model received redacted images;
+that asymmetry especially affects dates, and prevents treating this as a clean
+same-input model benchmark. The previously reported date visibility breakdown
+still applies; changing references cannot restore hidden source pixels.
+
+### Structured fields are the next concrete limitation
+
+The image-only request schema has quantity and unit-price fields but no dedicated
+per-item tax-marker field. Its canonical converter sets `taxMarker` to null.
+Consequently a visible marker retained in the description is not represented in
+the structured field. Two now-confirmed tax markers are missing from canonical
+Gemini output and present in the local baseline; this is a schema/conversion
+limitation, not proof that Gemini failed to see them. The other tax markers and
+all reference quantity/unit-price fields remain unscorable or identity-ambiguous.
+Do not claim measured unit-price accuracy from the user's qualitative observation.
+
+Next proposed task: revise the image-only extraction contract to represent
+product name/code, printed quantity and unit price, item tax marker, and tax
+summary/base/rate/amount separately, plus explicit non-purchase rows. Preserve raw
+transcription, distinguish literal evidence from inferred taxability, and keep
+summary rows out of purchases. Avoid global suffix stripping: a name-column
+suffix remains part of the product name. Prepare complete readable actual-receipt
+inputs (no hidden date or accounting fields), freeze the revised configuration,
+then request a bounded comparison using the same reference-v4 and unchanged local
+baseline. Validate optional-field parsing and review behavior before integration.
+A numeric 90% promise is not justified before that experiment.
+
+Verification: six fictional safeguard tests pass for wrong-source binding,
+unresolved/missing/duplicate cases, unapproved policy, exact-money validation,
+export immutability and refusal to overwrite differing evidence. The final local
+comparison reproduces exactly, input hashes remain stable, and original audit
+verification passes. No new API requests, production edits or phone installation.

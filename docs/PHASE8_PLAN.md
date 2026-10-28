@@ -163,3 +163,23 @@ version corrections rather than overwrite v3, ensure complete readable source
 inputs, then rescore both retained Gemini and local baseline outputs under one
 consistent contract. No fresh model requests are needed for that task. Only after
 this comparison should Main propose targeted model corrections or P8-03 integration.
+
+### Reference integrity task completed
+
+The seven human decisions and approved naming policy are applied to a separate
+reference-v4; v3 and historical scores remain intact. Final saved-output comparison:
+Gemini 56/66 core purchases including exact duplicate groups, local baseline 59/66;
+adjustments 7/9 versus 4/9; totals 5/5 versus 3/5. No fresh calls. These are changed
+reference measurements, not model improvements. See the final evidence and limits
+in `PHASE8_MODEL_COMPARISON.md`.
+
+**Next proposed approval: structured receipt fields and complete-image experiment.**
+Fix the concrete schema gap for item tax markers, separate name/code/quantity/unit
+price and tax summary fields, explicitly classify non-purchase lines, preserve raw
+readings, and freeze a bounded new configuration. Prepare readable actual images
+without redaction covering dates or accounting fields. Validate the adapter using
+fictional tests, then compare a bounded real run with reference-v4. Do not claim
+unit-price/taxability accuracy where independent checked coverage is absent; do not
+expand human review to all receipts as a prerequisite. P8-03 integration remains
+conditional on the measured benefit and safe review flow. This next experiment is
+proposed, not started by the reference-repair approval.
