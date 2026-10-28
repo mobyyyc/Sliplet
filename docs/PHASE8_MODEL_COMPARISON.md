@@ -450,3 +450,16 @@ Next proposal: P8-03 provider-neutral model-to-reviewed-draft integration, retai
 originals/user edits/local recognition and verifying recorded-response Simulator
 flows. P8-04/P8-05 still own key Settings and upload consent. Await Main's next
 user approval; no further live requests are included.
+
+### P8-03 heading recovery and native parity
+
+A separately versioned, review-required department-heading rule raises saved-response
+purchase scores from 62/66 to 65/66 (98.5%) on both retained model runs. Original
+responses, references and frozen confirmation remain unchanged. Confirmation
+adjustments remain 9/9 and totals 5/5; earlier-trial adjustments remain 8/9. No new
+model requests were made. The rule requires a standalone department heading in both
+a two-line description and literal row evidence, and retains the source reading.
+
+The native adapter reproduces the fields through Simulator import/save/reopen.
+This is post-hoc replay on the same five exposed receipts, not unseen accuracy or
+fresh inference. See `PHASE8_APP_INTEGRATION.md` and `heading-replay-result.json`.

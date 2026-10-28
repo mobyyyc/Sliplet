@@ -122,7 +122,7 @@ final class ReceiptWorkspace {
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
-    func startImport(_ load: @escaping @Sendable () async throws -> Data) {
+    func startImport(modelReader: (any ReceiptModelReader)? = nil, _ load: @escaping @Sendable () async throws -> Data) {
         guard active, availability == .ready, !saving else { return }
         cancelImport(showNotice: false)
         flow = .loading; errorMessage = nil; notice = nil
@@ -136,7 +136,8 @@ final class ReceiptWorkspace {
                 let decode = Task.detached(priority: .userInitiated) { try ReceiptImage.decode(data) }
                 let image = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard self.isCurrent(session), self.flow == .loading else { return }
-                self.image = image; self.readImage()
+                self.image = image
+                if let modelReader { self.readModelImage(using: modelReader) } else { self.readImage() }
             } catch is CancellationError { }
             catch {
                 guard let self, self.isCurrent(session), self.flow == .loading else { return }
@@ -151,6 +152,29 @@ final class ReceiptWorkspace {
             guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { throw ImportFailure.unavailableFile }
             guard size > 0, size <= ReceiptStore.maximumAssetBytes else { throw ImportFailure.tooLarge }
             return try Data(contentsOf: url, options: [])
+        }
+    }
+    /// Opt-in integration boundary. Existing imports continue to use local Vision.
+    /// No in-flight response may overwrite edits, a new import, or a locked session.
+    private func readModelImage(using reader: any ReceiptModelReader) {
+        guard let image, active, !saving, selected == nil else { return }
+        task?.cancel(); worker?.cancel(); recognition?.cancel(); recognition = nil
+        draft = ReceiptReviewDraft(); extraction = nil; sourceVisible = false
+        flow = .reading; errorMessage = nil
+        let session = sessionID
+        let work = Task.detached(priority: .userInitiated) { try await reader.read(image: image) }
+        task = Task { [weak self] in
+            do {
+                let reading = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+                try Task.checkCancellation()
+                guard let self, self.isCurrent(session), self.flow == .reading else { return }
+                self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review
+            } catch is CancellationError { }
+            catch {
+                guard !Task.isCancelled, let self, self.isCurrent(session), self.flow == .reading else { return }
+                self.errorMessage = "The model could not read this receipt. Try on-device reading or review the original manually."
+                self.flow = .failed
+            }
         }
     }
     func readImage() {

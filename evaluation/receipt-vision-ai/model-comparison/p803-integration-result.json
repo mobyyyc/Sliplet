@@ -1,0 +1,31 @@
+{
+  "milestone": "P8-03",
+  "model_requests": 0,
+  "app_default": "local Vision",
+  "model_ui_available": false,
+  "native_model_tests": {
+    "passed": 10,
+    "skipped": 0
+  },
+  "native_parity_receipts": 5,
+  "workflow_tests_passed": 21,
+  "persistence_tests": {
+    "initial_passed": 25,
+    "initial_failed": 1,
+    "skipped_device_protection": 1,
+    "signed_keychain_rerun_passed": 1
+  },
+  "python_tests": {
+    "structured": 41,
+    "reference_repair": 6
+  },
+  "private_parity_input_removed": true,
+  "new_purchase_score": {
+    "correct": 65,
+    "expected": 66,
+    "strict_pairs": 55,
+    "duplicate_group_purchases": 10
+  },
+  "evaluation": "posthoc saved-response replay on five exposed receipts",
+  "held_out_receipts": 0
+}

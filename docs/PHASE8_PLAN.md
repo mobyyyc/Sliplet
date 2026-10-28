@@ -245,3 +245,21 @@ Next proposal: P8-03 provider-neutral model-to-reviewed-draft integration, retai
 originals/user edits/local recognition and verifying recorded-response Simulator
 flows. P8-04/P8-05 still own key Settings and upload consent. Await Main's next
 user approval; no further live requests are included.
+
+### P8-03 completed — optional draft integration and heading recovery
+
+The approved provider-neutral import boundary and Gemini structured-response adapter
+now feed the existing reviewed-draft workflow, with originals preserved and late
+results rejected. Local recognition remains the default. No user-facing model menu
+or default cloud transport is introduced before P8-04/P8-05.
+
+The additional approved accuracy work separates explicitly transcribed standalone
+department headings. Local v3 replay reaches 65/66 purchases (98.5%) on both saved
+runs; the confirmation responses retain 9/9 adjustments and 5/5 totals. This is
+post-hoc evidence on five exposed receipts, not fresh or unseen accuracy. The
+frozen 62/66 baseline remains intact. One name and one ambiguous date still need
+attention; quantity/unit-price accuracy is not established. Simulator parity covers
+all five saved outputs through draft save/reopen. See `PHASE8_APP_INTEGRATION.md`.
+
+Next approval: P8-04 personal API-key connection and truthful status. Do not start
+that milestone or upload further receipts on the basis of this completion entry.
