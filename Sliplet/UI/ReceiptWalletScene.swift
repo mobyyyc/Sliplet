@@ -883,6 +883,13 @@ struct ReceiptWalletSettingsView: View {
         NavigationStack {
             Form {
                 ReceiptAppLockSettings()
+                Section {
+                    NavigationLink {
+                        ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
+                    } label: {
+                        LabeledContent("AI recognition", value: workspace.aiConnection.hasKey ? "Gemini" : "Not connected")
+                    }.accessibilityIdentifier("aiRecognitionSettings")
+                }
                 ReceiptBackupSettingsSection(workspace: workspace, mode: $backupMode)
                 Section {
                     Picker("Receipt paper", selection: Binding(get: { workspace.walletSettings.paperAppearance }, set: { appearance in

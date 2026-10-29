@@ -64,6 +64,12 @@ final class ReceiptWorkspace {
     @ObservationIgnored private var recognition: ReceiptRecognitionJob?
     /// Internal evaluation opt-in; no product setting until the no-regression/latency gate passes.
     var adaptiveReading = false
+    let aiConnection: ReceiptAIConnection = {
+        #if DEBUG
+        if let preview = ReceiptAISettingsFixture.requested() { return preview }
+        #endif
+        return ReceiptAIConnection()
+    }()
     @ObservationIgnored private var permit = ReceiptOperationPermit()
     @ObservationIgnored private var shutdown: Task<Void, Never>?
     #if DEBUG
@@ -107,6 +113,7 @@ final class ReceiptWorkspace {
     /// Synchronous revocation precedes any actor hop. Queued writes fail or roll back before commit.
     func suspend() {
         active = false; privacyCovered = true; sessionID = UUID()
+        aiConnection.cancel()
         permit.revoke(); cancelBackup(); task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil
         let closing = store; store = nil

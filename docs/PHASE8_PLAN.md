@@ -263,3 +263,20 @@ all five saved outputs through draft save/reopen. See `PHASE8_APP_INTEGRATION.md
 
 Next approval: P8-04 personal API-key connection and truthful status. Do not start
 that milestone or upload further receipts on the basis of this completion entry.
+
+### P8-04 completed — 2026-10-29
+
+Settings now supports a personal Gemini key, a one-request fictional image check,
+transactional key replacement, historical verification/error status, separate privacy
+acknowledgment, enable/disable and disconnect. Keys use device-only non-synchronizing
+Keychain storage and are excluded from receipt backups. No developer-key fallback,
+quota estimate, inferred privacy status or automatic request is introduced.
+
+Connection/transport and native Settings checks use fictional fixtures; no live
+provider requests or real receipt uploads were made. The last successful check does
+not imply current availability. See `PHASE8_API_CONNECTION.md` for validation and
+limits. Local recognition remains the import default and only exposed import path.
+
+Next approval: P8-05, exact upload preview/redaction and explicit local-versus-AI
+import choice feeding the existing review flow. Enabling the connection preference
+does not itself authorize sending receipts. Await Main's next user approval.
