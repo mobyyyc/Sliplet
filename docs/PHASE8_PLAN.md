@@ -343,3 +343,13 @@ rejected it. Remaining uploads stopped. Fresh acceptance remains pending.
 The next proposed milestone is API-enforced structured output, fictional
 compatibility validation, then a newly frozen bounded real-receipt evaluation.
 See the continuation section in `PHASE8_ACCEPTANCE.md`; approval required.
+
+### P8-07 structured-output compatibility check — 2026-10-30
+
+Three distinct fictional schema configurations returned HTTP 400 on the selected
+model. No actual receipts were sent. Candidate request changes were restored to
+the prior production implementation; strict validation remains unchanged.
+26 focused native checks and four runner-boundary tests passed, but live schema
+compatibility did not. P8-07 remains pending. See
+`PHASE8_STRUCTURED_OUTPUT_CHECK.md` for retained evidence and the next proposed
+fictional-only schema-isolation task; Main approval required.

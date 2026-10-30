@@ -158,6 +158,12 @@ import XCTest
         guard !(0..<images.count).contains(where: { FileManager.default.fileExists(atPath: output.appendingPathComponent("request-\($0).json").path) }) else {
             throw XCTSkip("Frozen acceptance requests already exist; export never overwrites evidence")
         }
+        let fictional = try ReceiptImage.decode(GeminiConnectionTest.fictionalImage())
+        let probe = try ReceiptUploadImage.prepare(fictional, redactions: [])
+        let probeBody = try XCTUnwrap(GeminiReceiptTransport.request(upload: probe, key: "FICTIONAL_EXPORT_ONLY", model: .flash).httpBody)
+        let probeURL = output.appendingPathComponent("fictional-request.json")
+        try probeBody.write(to: probeURL, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: probeURL.path)
         for (index, path) in images.enumerated() {
             let image = try ReceiptImage.decode(Data(contentsOf: URL(fileURLWithPath: path)))
             let upload = try await Task.detached { try ReceiptUploadImage.prepare(image, redactions: []) }.value
