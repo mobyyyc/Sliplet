@@ -179,6 +179,9 @@ struct ReceiptHome: View {
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
             .disabled(workspace.saving)
         }
+        .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
+            if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopAIReading() }
+        }
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }

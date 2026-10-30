@@ -1,0 +1,55 @@
+{
+  "milestone": "P8-06",
+  "date": "2026-10-30",
+  "checks_passed": 71,
+  "optional_private_replay_skipped": 1,
+  "counts": {
+    "upload": 16,
+    "connection": 16,
+    "transport": 5,
+    "model": 9,
+    "lock": 10,
+    "backup": 12,
+    "ui": 3
+  },
+  "release_simulator_build": "passed",
+  "live_requests": 0,
+  "private_uploads": 0,
+  "phone_installed": false,
+  "new_accuracy_measurement": false,
+  "provider_latency_measured": false,
+  "physical_accessibility_validated": false,
+  "synthetic_scheduling_sample": {
+    "image_pixels": [
+      1200,
+      4000
+    ],
+    "preparation_seconds": 0.012098833,
+    "max_main_actor_heartbeat_seconds": 0.011352333,
+    "requested_heartbeat_seconds": 0.01,
+    "heartbeat_count": 5,
+    "frame_rate_claim": false
+  },
+  "fixed": [
+    "transport-origin cancellation recovery",
+    "connection identity refresh",
+    "pending result readiness check",
+    "cover count overflow",
+    "accessibility bottom layout",
+    "prepared preview lifetime"
+  ],
+  "local_logs": [
+    "/tmp/sliplet-p806-native.log",
+    "/tmp/sliplet-p806-followup.log",
+    "/tmp/sliplet-p806-lock-backup.log",
+    "/tmp/sliplet-p806-timing.log",
+    "/tmp/sliplet-p806-ui.log",
+    "/tmp/sliplet-p806-release.log"
+  ],
+  "remaining_validation": [
+    "P8-07 reference-based acceptance",
+    "separately approved physical-device test",
+    "physical VoiceOver and sustained performance",
+    "live model waiting/availability using user key"
+  ]
+}

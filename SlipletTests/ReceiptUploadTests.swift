@@ -11,14 +11,16 @@ private final class UploadProtocol: URLProtocol, @unchecked Sendable {
         var bytes = Data()
         var calls = 0
         var delay = false
+        var failure: URLError?
     }
     static let state = State()
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
-        let (status, bytes, delay) = Self.state.lock.withLock {
-            Self.state.calls += 1; return (Self.state.status, Self.state.bytes, Self.state.delay)
+        let (status, bytes, delay, failure) = Self.state.lock.withLock {
+            Self.state.calls += 1; return (Self.state.status, Self.state.bytes, Self.state.delay, Self.state.failure)
         }
+        if let failure { client?.urlProtocol(self, didFailWithError: failure); return }
         if delay { return } // Cancellation test: no callback until stopped.
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: bytes); client?.urlProtocolDidFinishLoading(self)
@@ -54,7 +56,7 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         XCTFail("Upload did not reach expected state")
     }
     func reset(status: Int = 200, bytes: Data = Data(), delay: Bool = false) {
-        UploadProtocol.state.lock.withLock { UploadProtocol.state.status = status; UploadProtocol.state.bytes = bytes; UploadProtocol.state.calls = 0; UploadProtocol.state.delay = delay }
+        UploadProtocol.state.lock.withLock { UploadProtocol.state.status = status; UploadProtocol.state.bytes = bytes; UploadProtocol.state.calls = 0; UploadProtocol.state.delay = delay; UploadProtocol.state.failure = nil }
     }
     var calls: Int { UploadProtocol.state.lock.withLock { UploadProtocol.state.calls } }
     var transport: GeminiReceiptTransport { GeminiReceiptTransport(makeSession: {
@@ -162,4 +164,82 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         w.aiConnection.setEnabled(false); w.sendToAI(upload); XCTAssertEqual(calls, 0); XCTAssertEqual(w.flow, .preparingUpload)
         w.suspend(); w.sendToAI(upload); XCTAssertEqual(calls, 0); XCTAssertNil(w.image)
     }
+    func testIndependentTransportCancellationLeavesRecoverableScreen() async throws {
+        let w = try await workspace(), source = try image()
+        let reader = GeminiReceiptReader(model: "fictional") { _ in throw CancellationError() }
+        w.startImport(modelReader: reader) { source.bytes }
+        try await wait { w.flow == .failed }
+        XCTAssertEqual(w.image?.bytes, source.bytes); XCTAssertTrue(w.errorMessage!.contains("interrupted"))
+    }
+    func testBackgroundCancelsPendingUploadAndClearsUnsavedImage() async throws {
+        reset(delay: true)
+        let w = try await workspace(), source = try image()
+        w.startImport(chooseRecognition: true) { source.bytes }; try await wait { w.flow == .preparingUpload }
+        w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: [])); try await wait { self.calls == 1 }
+        w.suspend(); try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(w.flow, .wallet); XCTAssertNil(w.image); XCTAssertNil(w.extraction)
+        XCTAssertTrue(w.privacyCovered); XCTAssertEqual(calls, 1)
+    }
+    func testDisabledConnectionCannotApplyCompletedResult() async throws {
+        reset(bytes: try ReceiptModelTests().envelope())
+        let w = try await workspace(), source = try image()
+        w.startImport(chooseRecognition: true) { source.bytes }; try await wait { w.flow == .preparingUpload }
+        w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: []))
+        // Runs synchronously before the request task can apply its response.
+        w.aiConnection.setEnabled(false)
+        try await wait { w.flow == .failed }
+        XCTAssertNil(w.extraction); XCTAssertEqual(w.image?.bytes, source.bytes)
+    }
+    func testPermanentProviderFailureInvalidatesConnectionButQuotaDoesNot() async throws {
+        for status in [401, 404, 429] {
+            reset(status: status)
+            let w = try await workspace(), source = try image()
+            w.startImport(chooseRecognition: true) { source.bytes }; try await wait { w.flow == .preparingUpload }
+            w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: [])); try await wait { w.flow == .failed }
+            XCTAssertEqual(w.aiConnection.canUseAI, status == 429)
+            XCTAssertEqual(w.image?.bytes, source.bytes); XCTAssertEqual(calls, 1)
+            XCTAssertFalse(w.errorMessage!.contains("FICTIONAL_UPLOAD_KEY"))
+        }
+    }
+    func testSessionHasNoPersistentCachesCookiesOrCredentials() {
+        let session = GeminiReceiptTransport.session(); defer { session.invalidateAndCancel() }
+        let c = session.configuration
+        XCTAssertNil(c.urlCache); XCTAssertNil(c.httpCookieStorage); XCTAssertNil(c.urlCredentialStorage)
+        XCTAssertFalse(c.httpShouldSetCookies); XCTAssertFalse(c.waitsForConnectivity)
+        XCTAssertEqual(c.timeoutIntervalForResource, 150)
+    }
+    func testMaximumDrawnPlusBroadCoversRemainsSupported() throws {
+        let covers = Array(repeating: CGRect(x: 0.1, y: 0.1, width: 0.1, height: 0.1), count: 98)
+            + [CGRect(x: 0, y: 0, width: 1, height: 0.15), CGRect(x: 0, y: 0.85, width: 1, height: 0.15)]
+        XCTAssertNoThrow(try ReceiptUploadImage.prepare(image(), redactions: covers))
+    }
+    func testPreparationOffMainActorAllowsUIHeartbeat() async throws {
+        let source = try image(width: 1200, height: 4000)
+        let work = Task.detached {
+            let start = ContinuousClock.now
+            _ = try ReceiptUploadImage.prepare(source, redactions: [])
+            return start.duration(to: .now)
+        }
+        var intervals: [Duration] = [], previous = ContinuousClock.now
+        for _ in 0..<5 {
+            try await Task.sleep(for: .milliseconds(10))
+            let now = ContinuousClock.now; intervals.append(previous.duration(to: now)); previous = now
+        }
+        let preparation = try await work.value
+        XCTAssertEqual(intervals.count, 5)
+        // Diagnostics, not a frame-rate or physical-device performance guarantee.
+        print("P806 fictional image preparation: \(preparation); maximum main-actor heartbeat interval: \(intervals.max()!)")
+    }
+
+    func testUploadOfflineAndTimeoutKeepOriginalWithoutRetry() async throws {
+        for code in [URLError.Code.notConnectedToInternet, .timedOut] {
+            reset(); UploadProtocol.state.lock.withLock { UploadProtocol.state.failure = URLError(code) }
+            let w = try await workspace(), source = try image()
+            w.startImport(chooseRecognition: true) { source.bytes }; try await wait { w.flow == .preparingUpload }
+            w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: [])); try await wait { w.flow == .failed }
+            XCTAssertEqual(w.image?.bytes, source.bytes); XCTAssertEqual(calls, 1)
+            XCTAssertTrue(w.aiConnection.canUseAI); XCTAssertNil(w.extraction)
+        }
+    }
+
 }

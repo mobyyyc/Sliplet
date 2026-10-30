@@ -161,4 +161,14 @@ private struct AITester: ReceiptAIConnectionTesting {
         XCTAssertFalse(attrs[kSecAttrSynchronizable as String] as? Bool ?? false)
         try keys.delete(); XCTAssertNil(try keys.load())
     }
+    func testUploadRechecksIdentityAndInvalidatesStaleReadiness() async throws {
+        let keys = AIKeys(), connection = ReceiptAIConnection(keys: AIKeys(), tester: AITester { _ in }, defaults: defaults())
+        XCTAssertThrowsError(try connection.uploadCredential())
+        let c = ReceiptAIConnection(keys: keys, tester: AITester { _ in }, defaults: defaults())
+        try await connect(c, key: first); c.setPrivacyConfirmed(true); c.setEnabled(true)
+        try keys.save(.init(id: UUID(), key: second))
+        XCTAssertThrowsError(try c.uploadCredential()); XCTAssertFalse(c.canUseAI)
+        XCTAssertEqual(c.status, .unverified)
+    }
+
 }

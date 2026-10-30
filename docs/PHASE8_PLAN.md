@@ -300,3 +300,24 @@ time measurement. See `docs/PHASE8_UPLOAD_PREVIEW.md` and
 Next approval: P8-06 — reliability, privacy and device-readiness audit. Physical
 installation and final corpus acceptance remain separate; do not start P8-06
 without Main approval.
+
+
+### P8-06 completed — 2026-10-30
+
+Audited personal-key upload, lifecycle/lock, errors, backup exclusion and preview
+usability. Fixed independent transport cancellation leaving a spinner, stale
+connection readiness/results, cover-limit overflow, accessibility control layout
+and prepared-preview lifetime across temporary presentation. Reconfirmation is
+required when connection readiness/identity changes or privacy covering occurs.
+
+71 unique checks passed; one optional private replay skipped. Release Simulator
+build passed. Light/dark and maximum accessibility-text screenshots inspected.
+One synthetic scheduling sample separated local preparation from main-actor
+heartbeat intervals; no live latency, physical-device or new accuracy claim.
+No provider calls, receipt uploads or phone installation. Details:
+`docs/PHASE8_RELIABILITY_AUDIT.md` and
+`evaluation/receipt-vision-ai/model-comparison/p806-reliability-result.json`.
+
+Next approval: P8-07 — final reference-based acceptance and release decision.
+Physical iPhone update/testing remains a separate explicit action. Do not start
+P8-07 until Main approves it.

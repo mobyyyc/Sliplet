@@ -84,10 +84,16 @@ protocol ReceiptAIConnectionTesting: Sendable {
     }
     /// Re-read Keychain at explicit send time, never cache a developer or old key.
     func uploadCredential() throws -> ReceiptAICredential {
-        guard canUseAI, let credential = try keys.load(), credential.id == preferences.credentialID else {
+        guard canUseAI else { throw ReceiptAIError.secureStorage }
+        do {
+            guard let credential = try keys.load(), credential.id == preferences.credentialID else {
+                reload(); throw ReceiptAIError.secureStorage
+            }
+            return credential
+        } catch {
+            reload()
             throw ReceiptAIError.secureStorage
         }
-        return credential
     }
     func recordUploadFailure(_ error: ReceiptAIError, credentialID: UUID) {
         guard preferences.credentialID == credentialID else { return }

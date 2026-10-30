@@ -209,8 +209,18 @@ final class ReceiptWorkspace {
                 let reading = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 try Task.checkCancellation()
                 guard let self, self.isCurrent(session), self.flow == .reading else { return }
+                if let credentialID, (try? self.aiConnection.uploadCredential().id) != credentialID {
+                    self.errorMessage = "The AI connection changed while reading. This result was not applied. Your original is preserved."
+                    self.flow = .failed; return
+                }
                 self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review
-            } catch is CancellationError { }
+            } catch is CancellationError {
+                // A transport can cancel independently of the user/task. Never leave
+                // the active import spinning, and never touch a newer/locked session.
+                guard !Task.isCancelled, let self, self.isCurrent(session), self.flow == .reading else { return }
+                self.errorMessage = "Reading was interrupted. The image may already have been received. Your original is preserved; no retry was sent."
+                self.flow = .failed
+            }
             catch {
                 guard !Task.isCancelled, let self, self.isCurrent(session), self.flow == .reading else { return }
                 if let error = error as? ReceiptAIError, let credentialID {

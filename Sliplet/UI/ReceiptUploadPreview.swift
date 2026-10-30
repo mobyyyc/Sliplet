@@ -4,6 +4,7 @@ import SwiftUI
 /// same JPEG bytes captured by Send, not an overlay on the original photograph.
 struct ReceiptUploadPreview: View {
     @Bindable var workspace: ReceiptWorkspace
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var ai = false
     @State private var drawing = false
     @State private var redactions: [CGRect] = []
@@ -38,7 +39,7 @@ struct ReceiptUploadPreview: View {
                         .font(.title2.bold())
                     Text(confirming
                          ? "This is the exact image Google will receive. Your unmodified original stays on this device."
-                         : "Turn on Draw covers, then drag across anything to hide it. Turn it off to scroll. Cover membership numbers, payment details or personal information. Keep product names, weights, quantities and prices visible.")
+                         : "Tap Draw, then drag across anything to hide it. Tap Scroll to move through the image. Cover membership numbers, payment details or personal information. Keep product names, weights, quantities and prices visible.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     if let preview {
                         let ratio = CGFloat(preview.cgImage!.height) / CGFloat(preview.cgImage!.width)
@@ -57,7 +58,7 @@ struct ReceiptUploadPreview: View {
                                 .onEnded { value in
                                     guard !confirming else { return }
                                     let rect = rectangle(value, size: geometry.size); drag = nil
-                                    if rect.width > 0.003 && rect.height > 0.003 && redactions.count < 100 {
+                                    if rect.width > 0.003 && rect.height > 0.003 && redactions.count < 98 {
                                         invalidate(); redactions.append(rect)
                                     }
                                 }, including: confirming || !drawing ? .none : .all)
@@ -79,7 +80,7 @@ struct ReceiptUploadPreview: View {
                             Toggle("Cover top 15%", isOn: $hideTop).tint(.green)
                             Toggle("Cover bottom 15%", isOn: $hideBottom).tint(.green)
                         }
-                        Text("\(redactions.count) drawn covers · no automatic redaction").font(.caption).foregroundStyle(.secondary)
+                        Text(redactions.count >= 98 ? "Cover limit reached. Undo or reset to change covers." : "\(redactions.count) drawn covers · no automatic redaction").font(.caption).foregroundStyle(.secondary)
                     } else {
                         Text("Google · \(workspace.aiConnection.preferences.model.title)").font(.headline)
                         Text("Uses your API key and allowance. Free-tier submissions can be used to improve Google’s products and reviewed by people. Do not send sensitive or personal information. Redaction does not guarantee anonymity. Only this image and fixed reading instructions are sent; no OCR text, photo metadata or other receipts.")
@@ -103,10 +104,11 @@ struct ReceiptUploadPreview: View {
         }
         .safeAreaBar(edge: .bottom, spacing: 0) {
             if ai && !confirming {
-                HStack {
+                let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(spacing: 8))
+                layout {
                     Button(drawing ? "Scroll" : "Draw", systemImage: drawing ? "hand.draw" : "pencil.tip.crop.circle") { drawing.toggle() }
                         .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("drawCovers")
-                    Spacer(minLength: 8)
+                    if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
                     Button("Review upload", systemImage: "eye") { confirming = true; drawing = false; acknowledged = false }
                         .buttonStyle(ReceiptProminentStyle()).disabled(upload == nil || preparing)
                         .accessibilityIdentifier("reviewUpload")
@@ -133,7 +135,12 @@ struct ReceiptUploadPreview: View {
             }
         }
         .onChange(of: ai) { _, _ in hideTop = false; hideBottom = false }
-        .onDisappear { upload = nil; preview = nil; acknowledged = false }
+        .onChange(of: workspace.aiConnection.canUseAI) { _, _ in invalidate() }
+        .onChange(of: workspace.aiConnection.preferences.credentialID) { _, _ in invalidate() }
+        .onChange(of: workspace.privacyCovered) { _, covered in if covered { acknowledged = false; drag = nil } }
+        // State is released with this view. Do not erase the prepared image on a
+        // temporary presentation: returning from Original must remain usable.
+        .onDisappear { acknowledged = false; drag = nil }
     }
     // Include selection state so the first AI preview always triggers preparation.
     private var covers: [CGRect] {

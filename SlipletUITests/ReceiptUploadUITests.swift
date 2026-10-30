@@ -36,4 +36,36 @@ import XCTest
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["finishSave"].isEnabled)
     }
+    func testLightPreviewSurvivesOriginalSheet() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.buttons["uploadFixture"].waitForExistence(timeout: 20)); app.buttons["uploadFixture"].tap()
+        XCTAssertTrue(app.buttons["previewAI"].waitForExistence(timeout: 5)); app.buttons["previewAI"].tap()
+        XCTAssertTrue(app.images["uploadImage"].waitForExistence(timeout: 10))
+        app.buttons["original"].tap()
+        XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 5)); app.buttons["sourceDone"].tap()
+        XCTAssertTrue(app.images["uploadImage"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["reviewUpload"].isEnabled)
+        try app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/sliplet-p806-light.png"))
+    }
+    func testAccessibilityTextKeepsBottomControlsWithinScreen() throws {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", "--t05-large-text"]
+        app.launch()
+        XCTAssertTrue(app.buttons["uploadFixture"].waitForExistence(timeout: 20)); app.buttons["uploadFixture"].tap()
+        let ai = app.buttons["previewAI"]; XCTAssertTrue(ai.waitForExistence(timeout: 5)); reveal(ai, in: app); ai.tap()
+        let review = app.buttons["reviewUpload"]; XCTAssertTrue(review.waitForExistence(timeout: 10))
+        let draw = app.buttons["drawCovers"]
+        XCTAssertTrue(draw.isHittable); XCTAssertTrue(review.isHittable)
+        for button in [draw, review] {
+            XCTAssertGreaterThanOrEqual(button.frame.minX, app.frame.minX)
+            XCTAssertLessThanOrEqual(button.frame.maxX, app.frame.maxX)
+        }
+        XCTAssertLessThanOrEqual(draw.frame.maxY, review.frame.minY)
+        try app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/sliplet-p806-large.png"))
+    }
+
 }
