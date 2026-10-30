@@ -321,3 +321,18 @@ No provider calls, receipt uploads or phone installation. Details:
 Next approval: P8-07 — final reference-based acceptance and release decision.
 Physical iPhone update/testing remains a separate explicit action. Do not start
 P8-07 until Main approves it.
+
+### P8-07 acceptance checkpoint — 2026-10-30
+
+Current native request bodies were frozen for the five approved actual receipts.
+The first inference timed out at 120.181 seconds; the run stopped with one
+attempt, zero responses and no retries. Authenticated model metadata subsequently
+returned HTTP 200. Fresh app-path accuracy remains unmeasured.
+
+Retained-response native import/save/reopen checks passed with the actual
+original photos. Historical 65/66 core-purchase accuracy remains historical:
+native JPEG bytes differ from the old lab encoder. Classification is useful
+optional beta, with fresh acceptance pending, not Phase 8 fully passed.
+See `docs/PHASE8_ACCEPTANCE.md` for evidence and the bounded continuation proposal.
+No phone installation was performed. Main approval is required before another
+receipt-inference run.

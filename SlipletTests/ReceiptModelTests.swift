@@ -111,7 +111,7 @@ import XCTest
         for entry in entries {
             let bytes = try JSONSerialization.data(withJSONObject: entry["envelope"]!)
             let (workspace, directory) = try await self.workspace()
-            let image = try SyntheticFixture.imageData()
+            let image = try (entry["imagePath"] as? String).map { try Data(contentsOf: URL(fileURLWithPath: $0)) } ?? SyntheticFixture.imageData()
             workspace.startImport(modelReader: GeminiReceiptReader(model: "recorded-private") { _ in bytes }) { image }
             try await wait { workspace.flow == .review || workspace.flow == .failed }
             XCTAssertTrue(workspace.flow == .review, "Private import")
@@ -121,6 +121,7 @@ import XCTest
             let record = try XCTUnwrap(workspace.selected)
             workspace.open(record); try await wait { workspace.image != nil }; workspace.edit()
             XCTAssertTrue(workspace.draft == actual, "Private draft persistence")
+            XCTAssertTrue(workspace.image?.bytes == image, "Original image persistence")
             XCTAssertTrue(workspace.extraction?.rawParserOutput == bytes, "Private immutable evidence")
             workspace.suspend(); try? FileManager.default.removeItem(at: directory)
             let expected = entry["expected"] as! [String: Any]
@@ -146,4 +147,27 @@ import XCTest
             XCTAssertTrue(actual.subtotal == ((expected["subtotal"] as? NSNumber).map { ExactInput.format($0.int64Value) } ?? ""), "Subtotal parity")
         }
     }
+    /// Explicit owner-only lab export. No key, network, OCR or reference labels.
+    func testExportCurrentAcceptanceRequests() async throws {
+        let path = URL(fileURLWithPath: "/tmp/sliplet-p807-input.json")
+        guard FileManager.default.fileExists(atPath: path.path) else { throw XCTSkip("Acceptance manifest absent") }
+        let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: path)) as! [String: Any]
+        let output = URL(fileURLWithPath: manifest["output"] as! String)
+        let images = manifest["images"] as! [String]
+        XCTAssertEqual(images.count, 5)
+        guard !(0..<images.count).contains(where: { FileManager.default.fileExists(atPath: output.appendingPathComponent("request-\($0).json").path) }) else {
+            throw XCTSkip("Frozen acceptance requests already exist; export never overwrites evidence")
+        }
+        for (index, path) in images.enumerated() {
+            let image = try ReceiptImage.decode(Data(contentsOf: URL(fileURLWithPath: path)))
+            let upload = try await Task.detached { try ReceiptUploadImage.prepare(image, redactions: []) }.value
+            let request = try GeminiReceiptTransport.request(upload: upload, key: "FICTIONAL_EXPORT_ONLY", model: .flash)
+            let body = try XCTUnwrap(request.httpBody)
+            XCTAssertFalse(String(decoding: body, as: UTF8.self).contains("FICTIONAL_EXPORT_ONLY"))
+            let url = output.appendingPathComponent("request-\(index).json")
+            try body.write(to: url, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+        }
+    }
+
 }
