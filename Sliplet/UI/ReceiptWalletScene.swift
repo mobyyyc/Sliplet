@@ -134,9 +134,6 @@ struct ReceiptWalletScene: View {
                                 }
                             } else {
                                 VStack(spacing: 0) {
-                                    if let notice = workspace.notice {
-                                        Text(notice).font(.footnote).padding(.bottom, 16).opacity(selectedID == nil ? 1 : 0)
-                                    }
                                     if elastic {
                                         elasticStack(in: geometry)
                                     } else { LazyVStack(spacing: typeSize.isAccessibilitySize ? 14 : -108) {
@@ -154,7 +151,7 @@ struct ReceiptWalletScene: View {
                                     }.padding(.horizontal, 10) }
                                 }
                                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                                    if presented == nil { stackHeight = $0; measuredCount = records.count }
+                                    stackHeight = $0; measuredCount = records.count
                                 }
                                 .padding(.top, stackTop(in: geometry))
                                 // Even at the last scroll position, the paper stays inside the pocket.
@@ -170,7 +167,7 @@ struct ReceiptWalletScene: View {
                                 let restingEnd = min(viewportHeight, content.size.height)
                                 return max(0, restingEnd - content.frame(in: .named("walletScene")).maxY)
                             } action: { pull in
-                                if presented == nil { endBounce = reduceMotion ? 0 : pull }
+                                endBounce = reduceMotion ? 0 : pull
                             }
                     }
                     .onChange(of: jumpToNewest) { _, _ in
@@ -182,7 +179,7 @@ struct ReceiptWalletScene: View {
                     .accessibilityHidden(true, isEnabled: presented != nil)
                     .scrollBounceBehavior(.always)
                     .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
-                        if presented == nil { scrollOffset = offset }
+                        scrollOffset = offset
                     }
                     .walletScreenEdges(in: geometry)
                 }
@@ -195,7 +192,8 @@ struct ReceiptWalletScene: View {
                         Spacer(minLength: 0)
                         walletPocket { jumpToNewest += 1 }
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("walletScene")) } action: {
-                                if presented == nil { walletHeight = $0.height; walletFrame = $0 }
+                                walletHeight = $0.height
+                                if presented == nil { walletFrame = $0 }
                             }
                             .padding(.horizontal, 20).padding(.bottom, 20)
                     }
@@ -334,7 +332,10 @@ struct ReceiptWalletScene: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .frame(height: CGFloat(max(0, snapshot.count - 1)) * ReceiptStackProjection.pitch + ReceiptStackProjection.paperHeight, alignment: .topLeading)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("walletScene")).minY } action: {
-            if presented == nil { stackSceneY = $0 }
+            // The live ScrollView still relayouts behind the frozen transition.
+            // Discarding its new origin leaves the projection stale until a swipe.
+            // Presentation/return use separate frozen frames, so keep this current.
+            stackSceneY = $0
         }
         .onChange(of: ids, initial: true) { _, visibleIDs in
             if presented == nil { paperFrames = paperFrames.filter { visibleIDs.contains($0.key) } }

@@ -324,6 +324,28 @@ import Vision
         let end = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.18))
         start.press(forDuration: 0.05, thenDragTo: end)
     }
+    func testShortStackReturnsTuckedWithoutCorrectiveSwipe() throws {
+        for mode in ["one", "two", "wallet"] {
+            let app = launch(mode)
+            let count = mode == "one" ? 1 : mode == "two" ? 2 : 3
+            let paper = app.buttons["receipt-\(count - 1)"]
+            XCTAssertTrue(paper.waitForExistence(timeout: 15))
+            let before = paper.frame
+            let pocket = app.staticTexts["walletHeading"].frame
+            for _ in 0..<3 {
+                paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+                XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+                app.buttons["back"].tap()
+                XCTAssertTrue(paper.waitForExistence(timeout: 5))
+                XCTAssertEqual(paper.frame.minY, before.minY, accuracy: 2, "Return must settle without a scroll gesture")
+                XCTAssertEqual(app.staticTexts["walletHeading"].frame.minY, pocket.minY, accuracy: 2)
+                XCTAssertGreaterThan(paper.frame.maxY, pocket.minY, "Paper must remain tucked into the wallet")
+                XCTAssertFalse(app.staticTexts["Unsaved receipt discarded."].exists)
+            }
+            capture(app, "Restored-short-stack-\(mode)")
+            app.terminate()
+        }
+    }
     func testElasticStackHasVariableGapsSpeedsAndReversibleScroll() {
         let app = launch("elastic")
         XCTAssertTrue(app.staticTexts["13 saved"].waitForExistence(timeout: 45))
