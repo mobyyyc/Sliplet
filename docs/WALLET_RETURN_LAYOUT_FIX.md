@@ -8,6 +8,8 @@ Live stack origin, scroll offset, end pull, stack height and pocket height now k
 
 Added a Simulator regression for three repeated detail returns with one, two and three receipts, asserting the original height and wallet overlap without any corrective scroll. The existing repeated-return test covers 13/30 receipts, detail scrolling and the newest receipt.
 
-Validation: app build and UI test build both succeeded with Xcode 27.2. UI execution is pending: Xcode updated, but the running CoreSimulator service was older than the required build and startup/component setup stalled. No passing visual test or physical-phone verification is claimed. The user was asked to finish Xcode component setup. No receipt data was deleted or phone app installed.
+Validation completed after Xcode 27.2 component setup: app and UI test builds succeeded, and both focused Simulator tests passed. Eighteen detail-to-home returns covered stacks of 1, 2, 3, 13 and 30 receipts, including detail scrolling and the newest receipt. Returned card coordinates matched their pre-entry coordinates without a corrective swipe; short stacks remained tucked into the wallet. Inspected the one-receipt and 13-receipt returned screenshots. No stray status notice was visible behind the populated stack. No physical-phone verification or installation was performed.
 
-Logs: `/tmp/sliplet-wallet-build.log`, `/tmp/sliplet-wallet-test-build.log`, `/tmp/sliplet-wallet-return.log`.
+Executed result: `/tmp/sliplet-wallet-return/Logs/Test/Test-T05Workflow-2026.10.30_15-22-33--0400.xcresult`.
+Logs: `/tmp/sliplet-wallet-build.log`, `/tmp/sliplet-wallet-test-build.log`, `/tmp/sliplet-wallet-return-verified.log`.
+Fictional screenshot evidence: `/tmp/sliplet-wallet-return-attachments/`.
