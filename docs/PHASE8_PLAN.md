@@ -353,3 +353,13 @@ the prior production implementation; strict validation remains unchanged.
 compatibility did not. P8-07 remains pending. See
 `PHASE8_STRUCTURED_OUTPUT_CHECK.md` for retained evidence and the next proposed
 fictional-only schema-isolation task; Main approval required.
+
+### P8-07 fictional schema isolation — 2026-10-30
+
+A minimal API-constrained schema passed on the current model in 1.345 seconds.
+The next nullable-field case timed out at 120.057 seconds. The predeclared
+transport stop ended the diagnostic after two of six allowed calls. No actual
+receipt uploads or production changes. Five offline guard tests passed.
+Basic schema support is established; full-schema compatibility is unresolved.
+See `PHASE8_SCHEMA_ISOLATION.md`. Any repeated request requires approval of the
+bounded continuation; P8-07 acceptance remains pending.
