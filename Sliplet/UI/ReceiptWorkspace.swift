@@ -9,7 +9,7 @@ import CryptoKit
 @MainActor @Observable
 final class ReceiptWorkspace {
     enum Availability: Equatable { case closed, opening, ready, failed(String) }
-    enum Flow: Equatable { case wallet, loading, reading, review, detail, failed }
+    enum Flow: Equatable { case wallet, loading, preparingUpload, reading, review, detail, failed }
     var availability: Availability = .closed
     var flow: Flow = .wallet
     var receipts: [ReceiptRecord] = [] { didSet {
@@ -32,6 +32,7 @@ final class ReceiptWorkspace {
         baseline.sourceOpened = false; current.sourceOpened = false
         return current != baseline
     }
+    var aiUploadStarted = false
     var image: ReceiptImage?
     private(set) var readerInput: ReceiptReviewDraft?
     private(set) var readerRevisionID: UUID?
@@ -64,12 +65,8 @@ final class ReceiptWorkspace {
     @ObservationIgnored private var recognition: ReceiptRecognitionJob?
     /// Internal evaluation opt-in; no product setting until the no-regression/latency gate passes.
     var adaptiveReading = false
-    let aiConnection: ReceiptAIConnection = {
-        #if DEBUG
-        if let preview = ReceiptAISettingsFixture.requested() { return preview }
-        #endif
-        return ReceiptAIConnection()
-    }()
+    let aiConnection: ReceiptAIConnection
+    @ObservationIgnored private let aiTransport: GeminiReceiptTransport
     @ObservationIgnored private var permit = ReceiptOperationPermit()
     @ObservationIgnored private var shutdown: Task<Void, Never>?
     #if DEBUG
@@ -78,8 +75,19 @@ final class ReceiptWorkspace {
     @ObservationIgnored private let directory: URL?
     @ObservationIgnored private let keyProvider: (any ReceiptStoreKeyProvider)?
 
-    init(directory: URL? = nil, keyProvider: (any ReceiptStoreKeyProvider)? = nil) {
+    init(directory: URL? = nil, keyProvider: (any ReceiptStoreKeyProvider)? = nil,
+         aiConnection: ReceiptAIConnection? = nil, aiTransport: GeminiReceiptTransport = .init()) {
         self.directory = directory; self.keyProvider = keyProvider
+        #if DEBUG
+        self.aiTransport = ReceiptUploadFixture.enabled ? ReceiptUploadFixture.transport : aiTransport
+        #else
+        self.aiTransport = aiTransport
+        #endif
+        #if DEBUG
+        self.aiConnection = aiConnection ?? ReceiptAISettingsFixture.requested() ?? ReceiptAIConnection()
+        #else
+        self.aiConnection = aiConnection ?? ReceiptAIConnection()
+        #endif
     }
     func activate(protectedDataAvailable: Bool) {
         guard protectedDataAvailable else { suspend(); return }
@@ -112,7 +120,7 @@ final class ReceiptWorkspace {
     }
     /// Synchronous revocation precedes any actor hop. Queued writes fail or roll back before commit.
     func suspend() {
-        active = false; privacyCovered = true; sessionID = UUID()
+        active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false
         aiConnection.cancel()
         permit.revoke(); cancelBackup(); task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil
@@ -129,7 +137,7 @@ final class ReceiptWorkspace {
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
-    func startImport(modelReader: (any ReceiptModelReader)? = nil, _ load: @escaping @Sendable () async throws -> Data) {
+    func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false, _ load: @escaping @Sendable () async throws -> Data) {
         guard active, availability == .ready, !saving else { return }
         cancelImport(showNotice: false)
         flow = .loading; errorMessage = nil; notice = nil
@@ -144,7 +152,9 @@ final class ReceiptWorkspace {
                 let image = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard self.isCurrent(session), self.flow == .loading else { return }
                 self.image = image
-                if let modelReader { self.readModelImage(using: modelReader) } else { self.readImage() }
+                if let modelReader { self.readModelImage(using: modelReader) }
+                else if chooseRecognition { self.flow = .preparingUpload }
+                else { self.readImage() }
             } catch is CancellationError { }
             catch {
                 guard let self, self.isCurrent(session), self.flow == .loading else { return }
@@ -152,8 +162,8 @@ final class ReceiptWorkspace {
             }
         }
     }
-    func importFile(_ url: URL) {
-        startImport {
+    func importFile(_ url: URL, chooseRecognition: Bool = false) {
+        startImport(chooseRecognition: chooseRecognition) {
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { throw ImportFailure.unavailableFile }
@@ -161,9 +171,33 @@ final class ReceiptWorkspace {
             return try Data(contentsOf: url, options: [])
         }
     }
+    func chooseRecognition() {
+        guard active, image != nil, selected == nil, !saving else { return }
+        task?.cancel(); worker?.cancel(); recognition?.cancel()
+        aiUploadStarted = false; errorMessage = nil; flow = .preparingUpload
+    }
+    /// Called only by the exact-payload preview's explicit send button.
+    func sendToAI(_ upload: ReceiptUploadImage) {
+        guard active, !privacyCovered, flow == .preparingUpload, image != nil, !saving else { return }
+        do {
+            let credential = try aiConnection.uploadCredential(), model = aiConnection.preferences.model
+            let transport = aiTransport
+            let reader = GeminiReceiptReader(model: model.rawValue) { _ in
+                // Intentionally ignore the local original. Only reviewed flattened bytes are sent.
+                try await transport.read(upload: upload, key: credential.key, model: model)
+            }
+            aiUploadStarted = true
+            readModelImage(using: reader, credentialID: credential.id)
+        } catch { errorMessage = "AI is not ready. Check your connection in Settings or use on-device reading." }
+    }
+    func stopAIReading() {
+        guard active, aiUploadStarted, flow == .reading else { return }
+        task?.cancel(); task = nil; flow = .failed
+        errorMessage = "Request cancelled. Google may already have received the image; cancellation cannot recall it. Your original is still here."
+    }
     /// Opt-in integration boundary. Existing imports continue to use local Vision.
     /// No in-flight response may overwrite edits, a new import, or a locked session.
-    private func readModelImage(using reader: any ReceiptModelReader) {
+    private func readModelImage(using reader: any ReceiptModelReader, credentialID: UUID? = nil) {
         guard let image, active, !saving, selected == nil else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel(); recognition = nil
         draft = ReceiptReviewDraft(); extraction = nil; sourceVisible = false
@@ -179,13 +213,24 @@ final class ReceiptWorkspace {
             } catch is CancellationError { }
             catch {
                 guard !Task.isCancelled, let self, self.isCurrent(session), self.flow == .reading else { return }
-                self.errorMessage = "The model could not read this receipt. Try on-device reading or review the original manually."
+                if let error = error as? ReceiptAIError, let credentialID {
+                    self.aiConnection.recordUploadFailure(error, credentialID: credentialID)
+                }
+                let message: String
+                switch error as? ReceiptAIError {
+                case .timedOut: message = "Reading timed out. No automatic retry was sent."
+                case .invalidResponse: message = "Google returned an incomplete or unreadable result."
+                case .some(let safe): message = safe.message
+                case .none: message = "The model returned an incomplete or unsupported receipt."
+                }
+                self.errorMessage = message + " Your original is preserved. Choose on-device reading, manual entry, or preview a new AI request."
                 self.flow = .failed
             }
         }
     }
     func readImage() {
         guard let image, active, !saving else { return }
+        aiUploadStarted = false
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         draft = ReceiptReviewDraft(); extraction = nil; selected = nil; sourceVisible = false
         flow = .reading; errorMessage = nil
@@ -236,6 +281,7 @@ final class ReceiptWorkspace {
     func cancelImport(showNotice: Bool = true) {
         guard !saving else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
+        aiUploadStarted = false
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
         readerInput = nil; readerRevisionID = nil
         reviewBaseline = nil

@@ -82,6 +82,19 @@ protocol ReceiptAIConnectionTesting: Sendable {
             status = preferences.lastFailure.map(Status.failed) ?? (preferences.checkedAt == nil ? .unverified : .verified)
         } catch { status = .failed(.secureStorage); preferences.enabled = false; persist() }
     }
+    /// Re-read Keychain at explicit send time, never cache a developer or old key.
+    func uploadCredential() throws -> ReceiptAICredential {
+        guard canUseAI, let credential = try keys.load(), credential.id == preferences.credentialID else {
+            throw ReceiptAIError.secureStorage
+        }
+        return credential
+    }
+    func recordUploadFailure(_ error: ReceiptAIError, credentialID: UUID) {
+        guard preferences.credentialID == credentialID else { return }
+        if [.invalidKey, .accessDenied, .modelUnavailable, .billingRequired].contains(error) {
+            preferences.lastFailure = error; preferences.enabled = false; status = .failed(error); persist()
+        }
+    }
     func setPrivacyConfirmed(_ value: Bool) {
         preferences.privacyVersion = value ? Self.privacyVersion : nil
         if !value { setEnabled(false) }

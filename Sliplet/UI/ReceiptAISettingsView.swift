@@ -65,7 +65,7 @@ struct ReceiptAISettingsView: View {
                             .accessibilityIdentifier("enableAIRecognition")
                         if connection.privacyConfirmed { Text("Privacy acknowledgment recorded by you; not verified with Google.").font(.footnote).foregroundStyle(.secondary) }
                     } header: { Text("Your choice") } footer: {
-                        Text("Google’s free-tier terms may allow submitted content to improve its products. Connection verification does not establish private processing or zero retention. Imports continue to use on-device recognition in this version; receipt upload preview is coming next.")
+                        Text("Google’s free-tier terms may allow submitted content to improve its products. Connection verification does not establish private processing or zero retention. Each import offers on-device reading or an image preview. Nothing is uploaded until you explicitly approve that image.")
                     }
                     Section {
                         Button("Replace key") { replacing = true; key = "" }.disabled(connection.checking || replacing)

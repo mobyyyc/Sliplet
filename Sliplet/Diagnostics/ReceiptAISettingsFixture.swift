@@ -17,11 +17,19 @@ import Foundation
         }
     }
     static func requested() -> ReceiptAIConnection? {
-        guard ProcessInfo.processInfo.arguments.contains("--p804-ai-settings-fixture") else { return nil }
+        let upload = ProcessInfo.processInfo.arguments.contains("--p805-upload-fixture") && SyntheticNativePreview.enabled
+        guard upload || ProcessInfo.processInfo.arguments.contains("--p804-ai-settings-fixture") else { return nil }
         let suite = "com.sliplet.p804.ui-fixture"
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
-        return ReceiptAIConnection(keys: Keys(), tester: Test(), defaults: defaults)
+        let keys = Keys()
+        if upload {
+            let credential = ReceiptAICredential(id: UUID(), key: "FICTIONAL_UI_TEST_KEY_NOT_REAL")
+            try? keys.save(credential)
+            let preferences = ReceiptAIConnection.Preferences(credentialID: credential.id, checkedAt: Date(), privacyVersion: ReceiptAIConnection.privacyVersion, enabled: true)
+            defaults.set(try? JSONEncoder().encode(preferences), forKey: "ai.gemini.connection.v1")
+        }
+        return ReceiptAIConnection(keys: keys, tester: Test(), defaults: defaults)
     }
 }
 #endif

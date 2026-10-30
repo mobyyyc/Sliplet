@@ -280,3 +280,23 @@ limits. Local recognition remains the import default and only exposed import pat
 Next approval: P8-05, exact upload preview/redaction and explicit local-versus-AI
 import choice feeding the existing review flow. Enabling the connection preference
 does not itself authorize sending receipts. Await Main's next user approval.
+
+
+### P8-05 completed — 2026-10-30
+
+Camera/Photos/Files now offer local reading or an optional Gemini preview. The AI
+path strips source metadata, flattens user-drawn covers into a fresh image, shows
+the exact bytes to be sent, and requires per-image consent using the verified
+personal key. A single bounded image-only request uses the evaluated prompt and
+schema. Errors/cancellation retain the original for local/manual recovery; edits,
+source review, CAD provenance and finalization gates remain intact.
+
+Validation: 37 native checks and one fictional Simulator UI walkthrough passed;
+one optional private replay check skipped because its local fixture was absent.
+No live API calls, actual receipt uploads, new accuracy score or human correction
+time measurement. See `docs/PHASE8_UPLOAD_PREVIEW.md` and
+`evaluation/receipt-vision-ai/model-comparison/p805-upload-result.json`.
+
+Next approval: P8-06 — reliability, privacy and device-readiness audit. Physical
+installation and final corpus acceptance remain separate; do not start P8-06
+without Main approval.

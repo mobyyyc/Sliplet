@@ -43,7 +43,7 @@ struct ReceiptHome: View {
                         ToolbarItem(placement: .topBarLeading) {
                             Button(workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
                                 if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
-                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading { editing = nil; discard = true }
+                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload { editing = nil; discard = true }
                                 else { workspace.backToWallet() }
                             }.disabled(workspace.saving).accessibilityIdentifier("back")
                         }
@@ -100,6 +100,14 @@ struct ReceiptHome: View {
                             }.accessibilityIdentifier("searchDemoImport")
                         }
                     }
+                    if ReceiptUploadFixture.enabled && workspace.flow == .wallet {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Fictional import") {
+                                let bytes = SyntheticNativePreview.fixture(index: 0).0
+                                workspace.startImport(chooseRecognition: true) { bytes }
+                            }.accessibilityIdentifier("uploadFixture")
+                        }
+                    }
                     if WorkflowTestInput.enabled {
                         if workspace.flow == .wallet {
                             ToolbarItem(placement: .topBarTrailing) {
@@ -131,12 +139,12 @@ struct ReceiptHome: View {
                 Button("Take a photo") { camera = true }
                 Button("Photo library") { photos = true }
                 Button("Files") { files = true }
-            } message: { Text("Choose a receipt image. Recognition stays on this device.") }
+            } message: { Text("Choose an image, then choose on-device reading or preview an optional AI upload.") }
             .fullScreenCover(isPresented: $camera, onDismiss: {
                 let result = cameraResult; cameraResult = nil
                 guard session == workspace.sessionID, workspace.active else { return }
                 switch result {
-                case .photo(let bytes): workspace.startImport { bytes }
+                case .photo(let bytes): workspace.startImport(chooseRecognition: true) { bytes }
                 case .existingImage: importChoices = true
                 default: break
                 }
@@ -147,13 +155,13 @@ struct ReceiptHome: View {
                 ReceiptPhotoPicker { loader in
                     photos = false
                     guard session == workspace.sessionID, let loader else { return }
-                    workspace.startImport { try await loader.load() }
+                    workspace.startImport(chooseRecognition: true) { try await loader.load() }
                 }.ignoresSafeArea()
             }
             .fileImporter(isPresented: $files, allowedContentTypes: [.png, .jpeg, .heic, .heif], allowsMultipleSelection: false) { result in
                 guard session == workspace.sessionID else { return }
                 switch result {
-                case .success(let urls): if let url = urls.first { workspace.importFile(url) }
+                case .success(let urls): if let url = urls.first { workspace.importFile(url, chooseRecognition: true) }
                 case .failure(let error):
                     if (error as NSError).code != CocoaError.userCancelled.rawValue { workspace.notice = ImportFailure.unavailableFile.message }
                 }
@@ -222,7 +230,7 @@ struct ReceiptHome: View {
                 }.buttonStyle(ReceiptProminentStyle())
                     .disabled(!workspace.draft.canFinalize || workspace.saving).accessibilityIdentifier("finishSave")
             }.frame(maxWidth: .infinity) }
-        case .loading, .reading, .failed: EmptyView()
+        case .loading, .preparingUpload, .reading, .failed: EmptyView()
         }
     }
     private var editAction: some View {
@@ -237,7 +245,7 @@ struct ReceiptHome: View {
         case .review: "Review receipt"
         case .detail: "Receipt"
         case .failed: "Import needs attention"
-        case .loading, .reading: "Import receipt"
+        case .loading, .preparingUpload, .reading: "Import receipt"
         }
     }
     @ViewBuilder private var flow: some View {
@@ -250,14 +258,20 @@ struct ReceiptHome: View {
                     .accessibilityHidden(true, isEnabled: workspace.flow == .review)
                 if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
             }
+        case .preparingUpload: ReceiptUploadPreview(workspace: workspace)
         case .loading, .reading:
             VStack(spacing: 24) {
-                ProgressView(workspace.flow == .loading ? "Loading image" : "Reading receipt")
+                ProgressView(workspace.flow == .loading ? "Loading image" : (workspace.aiUploadStarted ? "Reading with Gemini" : "Reading on device"))
+                if workspace.aiUploadStarted {
+                    Text("Google may have received the image. Cancelling stops waiting but cannot recall an upload. No automatic retries.").font(.footnote)
+                }
                 Text("Nothing is saved yet.")
                     .font(.subheadline).foregroundStyle(.primary).multilineTextAlignment(.center)
                 Text("You can leave this screen or cancel. Returning from the background discards unsaved work.")
                     .font(.footnote).foregroundStyle(.primary).multilineTextAlignment(.center)
-                Button("Cancel import", role: .cancel) { workspace.cancelImport() }
+                Button("Cancel import", role: .cancel) {
+                    if workspace.aiUploadStarted { workspace.stopAIReading() } else { workspace.cancelImport() }
+                }
                     .buttonStyle(ReceiptSecondaryStyle()).frame(minHeight: 44).accessibilityIdentifier("cancelImport")
             }.padding(28).accessibilityElement(children: .contain).accessibilityIdentifier("processing")
         case .failed:
@@ -267,7 +281,8 @@ struct ReceiptHome: View {
                     Text(workspace.errorMessage ?? "Choose another image or try again.")
                     if workspace.image != nil {
                         Button("View original", systemImage: "doc.viewfinder") { workspace.showSource() }.buttonStyle(ReceiptSecondaryStyle())
-                        Button("Retry reading", systemImage: "arrow.clockwise", action: workspace.readImage).buttonStyle(ReceiptSecondaryStyle())
+                        Button("Read on device", systemImage: "arrow.clockwise", action: workspace.readImage).buttonStyle(ReceiptSecondaryStyle())
+                        Button("Choose recognition", action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle())
                         Button("Enter manually", systemImage: "pencil", action: workspace.manualReview).buttonStyle(ReceiptProminentStyle())
                             .accessibilityIdentifier("manual")
                     }
@@ -311,7 +326,7 @@ private struct WalletInformationView: View {
             List {
                 Section {
                     Label("Private by default", systemImage: "lock")
-                    Text("Recognition and receipt storage stay on this device.")
+                    Text("On-device recognition is always available. Optional AI sends only the image you preview and approve. Receipt storage stays on this device.")
                 }
                 Section("Storage") {
                     Text("Receipts stay on this device. Export a password-encrypted backup in Settings so you can restore them later. Automatic backup is excluded.")

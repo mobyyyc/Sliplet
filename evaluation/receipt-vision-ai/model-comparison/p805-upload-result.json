@@ -1,0 +1,48 @@
+{
+  "milestone": "P8-05",
+  "date": "2026-10-30",
+  "native_checks_passed": 37,
+  "ui_walkthroughs_passed": 1,
+  "skipped": {
+    "count": 1,
+    "reason": "Optional P8-03 private replay fixture absent"
+  },
+  "live_provider_requests": 0,
+  "real_receipt_uploads": 0,
+  "new_accuracy_measurement": false,
+  "human_correction_time_measured": false,
+  "native_log": "/tmp/sliplet-p805-tests-final.log",
+  "ui_log": "/tmp/sliplet-p805-ui-final.log",
+  "validation": [
+    "orientation baked",
+    "source metadata removed; encoder dimensions allowed",
+    "redaction pixels flattened",
+    "undo regenerates from original",
+    "long image whole aspect retained",
+    "invalid rectangles rejected",
+    "preview bytes equal request image",
+    "request has no OCR or original metadata",
+    "bounded responses",
+    "safe error categories; no retry",
+    "choice makes no request",
+    "explicit fictional send reaches review",
+    "original save and reopen preserved",
+    "CAD default provenance",
+    "review gate preserved",
+    "cancel retains original",
+    "background and disabled connection prevent upload",
+    "UI drawing and consent invalidation"
+  ],
+  "limitations": [
+    "Five exposed receipts remain the earlier accuracy corpus; no held-out validation added",
+    "Extremely narrow long receipts may lose legibility at the 1600-pixel long-side bound",
+    "No live API, physical-phone or human-effort validation in this milestone",
+    "No claim that optional covers remove all personal information"
+  ],
+  "sources": [
+    "https://ai.google.dev/gemini-api/terms",
+    "https://ai.google.dev/gemini-api/docs/image-understanding"
+  ],
+  "release_build": "passed",
+  "release_log": "/tmp/sliplet-p805-release.log"
+}
