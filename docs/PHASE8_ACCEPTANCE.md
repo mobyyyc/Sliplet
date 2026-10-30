@@ -33,3 +33,35 @@ The optional personal-key route and local OCR fallback remain. P8-06's 71 checks
 ## Next proposed boundary
 
 Approve one fresh bounded continuation using the same five originals, exact frozen native payloads and model: at most five new attempts, one per receipt, 95-second spacing, stop on the first failure, no automatic retries or model changes. Keep this failed run intact and use a separate ledger. Score only returned complete results against the unchanged references and replay successful results through native save/reopen. If it fails again, investigate inference reliability before proposing any model or timeout change. Physical-phone updating remains a separate approval.
+
+## Approved continuation — 2026-10-30
+
+Separate private run `p8-07-current-app-02` retained identical request bytes and
+verified the original run's frozen hashes before dispatch. One request returned
+in **13.013 seconds**, with finish reason STOP, but strict validation failed;
+the other four were not sent. No automatic retry or configuration change occurred.
+The response used 2,794 input and 2,644 output tokens (5,438 reported total).
+
+Local diagnosis: after the already-supported Markdown fence removal, the response
+is valid JSON. It includes all nine expected root fields plus one unexpected
+field, causing `schema_keys`. This is a response-contract failure, not malformed
+JSON, truncation, or measured recognition inaccuracy. Both the lab validator and
+native adapter require the exact root field set. The private raw response and
+safe diagnosis are retained; no fields were removed to manufacture a pass.
+No fresh five-receipt score or successful fresh native save/reopen is claimed.
+
+The production request currently embeds the schema in prompt text, with only
+output-token and thinking options in generationConfig. It does not request
+API-enforced structured output. Google's structured-output documentation describes
+API-level JSON Schema support including additionalProperties controls:
+https://ai.google.dev/gemini-api/docs/generate-content/structured-output
+This identifies a concrete next experiment, not a proven accuracy improvement.
+
+Revised next milestone for approval: configure the existing schema through the
+provider's structured-output API, retain strict local validation, add fictional
+contract regression checks, and run a bounded fictional compatibility probe on
+the selected model before sending actual receipts. If the probe passes, freeze
+the revised request configuration and evaluate the same five approved originals
+once each, stopping on failure. Keep all prior failed runs intact and compare
+accuracy against unchanged references. No model change, relaxed money rules or
+phone installation is included.

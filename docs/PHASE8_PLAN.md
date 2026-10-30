@@ -336,3 +336,10 @@ optional beta, with fresh acceptance pending, not Phase 8 fully passed.
 See `docs/PHASE8_ACCEPTANCE.md` for evidence and the bounded continuation proposal.
 No phone installation was performed. Main approval is required before another
 receipt-inference run.
+
+P8-07 approved continuation: the first response arrived in 13.013 seconds but
+had one unexpected root field. JSON syntax was valid; strict schema validation
+rejected it. Remaining uploads stopped. Fresh acceptance remains pending.
+The next proposed milestone is API-enforced structured output, fictional
+compatibility validation, then a newly frozen bounded real-receipt evaluation.
+See the continuation section in `PHASE8_ACCEPTANCE.md`; approval required.
