@@ -17,6 +17,15 @@ struct ReceiptHome: View {
     @FocusState private var editing: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    private func anchoredImportChoices<Trigger: View>(@ViewBuilder trigger: () -> Trigger) -> some View {
+        trigger()
+            .confirmationDialog("Import a receipt", isPresented: $importChoices, titleVisibility: .visible) {
+                Button("Take a photo") { camera = true }
+                Button("Photo library") { photos = true }
+                Button("Files") { files = true }
+            } message: { Text("Choose an image, then choose on-device reading or preview an optional AI upload.") }
+    }
+
     var body: some View {
         let session = workspace.sessionID
         NavigationStack {
@@ -57,8 +66,10 @@ struct ReceiptHome: View {
                     if workspace.flow == .wallet {
                         if workspace.library {
                             ToolbarItem(placement: .topBarTrailing) {
-                                Button("Import receipt", systemImage: "plus") { importChoices = true }
-                                    .accessibilityIdentifier("import")
+                                anchoredImportChoices {
+                                    Button("Import receipt", systemImage: "plus") { importChoices = true }
+                                        .accessibilityIdentifier("import")
+                                }
                             }
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Wallet", systemImage: "chevron.left") { workspace.library = false }
@@ -135,11 +146,6 @@ struct ReceiptHome: View {
                     bottomActions.modifier(ReceiptActionBarLayout())
                 }
             }
-            .confirmationDialog("Import a receipt", isPresented: $importChoices, titleVisibility: .visible) {
-                Button("Take a photo") { camera = true }
-                Button("Photo library") { photos = true }
-                Button("Files") { files = true }
-            } message: { Text("Choose an image, then choose on-device reading or preview an optional AI upload.") }
             .fullScreenCover(isPresented: $camera, onDismiss: {
                 let result = cameraResult; cameraResult = nil
                 guard session == workspace.sessionID, workspace.active else { return }
@@ -190,11 +196,12 @@ struct ReceiptHome: View {
         case .wallet:
             HStack {
                 Spacer()
-                Button { importChoices = true } label: {
-                    Image(systemName: "plus")
-                        .font(.title2.weight(.bold))
-                }.buttonStyle(ReceiptSecondaryStyle(circular: true))
-                    .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
+                anchoredImportChoices {
+                    Button { importChoices = true } label: {
+                        Image(systemName: "plus").font(.system(size: 32, weight: .bold))
+                    }.buttonStyle(ReceiptSecondaryStyle(circular: true))
+                        .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
+                }
                 Spacer()
             }
         case .detail:

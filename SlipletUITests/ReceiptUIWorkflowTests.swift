@@ -267,8 +267,12 @@ import Vision
                 app.buttons["walletTab"].tap()
                 XCTAssertTrue(app.buttons["receipt-0"].waitForExistence(timeout: 10))
             }
+            let anchor = importer.frame
             importer.tap()
-            XCTAssertTrue(app.buttons["Files"].waitForExistence(timeout: 5), "Pocket backing must not intercept the bottom import control")
+            let files = app.buttons["Files"]
+            XCTAssertTrue(files.waitForExistence(timeout: 5))
+            XCTAssertGreaterThan(files.frame.midY, app.frame.midY, "Wallet import choices should open near the bottom plus")
+            XCTAssertLessThan(files.frame.maxY, anchor.maxY)
             app.terminate()
         }
     }
