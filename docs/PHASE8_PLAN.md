@@ -363,3 +363,8 @@ receipt uploads or production changes. Five offline guard tests passed.
 Basic schema support is established; full-schema compatibility is unresolved.
 See `PHASE8_SCHEMA_ISOLATION.md`. Any repeated request requires approval of the
 bounded continuation; P8-07 acceptance remains pending.
+
+October 31 continuation confirmed the missing-date case. The item-row request
+ended with HTTP 503. The full-schema and fictional-image cases were unsent.
+P8-07 is pending. Next proposed task is an offline accuracy and contract audit
+of the retained rejected response, described in `PHASE8_SCHEMA_ISOLATION.md`.

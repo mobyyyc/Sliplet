@@ -30,5 +30,38 @@
       "seconds": 120.057
     }
   ],
-  "conclusion": "Minimal schema accepted. Nullable case timed out; nullable support and full-schema failure remain unresolved. Stopped by predeclared transport-failure rule."
+  "conclusion": "Minimal schema accepted. Nullable case timed out; nullable support and full-schema failure remain unresolved. Stopped by predeclared transport-failure rule.",
+  "continuation": {
+    "maximum_calls": 4,
+    "calls": 2,
+    "actual_receipt_uploads": 0,
+    "results": [
+      {
+        "case": "nullable",
+        "passed": true,
+        "status": "received",
+        "usage": {
+          "promptTokenCount": 44,
+          "candidatesTokenCount": 12,
+          "totalTokenCount": 56,
+          "promptTokensDetails": [
+            {
+              "modality": "TEXT",
+              "tokenCount": 44
+            }
+          ],
+          "serviceTier": "standard"
+        },
+        "seconds": 2.093
+      },
+      {
+        "case": "enum_rows",
+        "passed": false,
+        "status": "provider_error",
+        "http_status": 503,
+        "seconds": 38.146
+      }
+    ],
+    "full_schema_tested": false
+  }
 }

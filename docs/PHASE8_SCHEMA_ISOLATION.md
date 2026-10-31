@@ -55,3 +55,27 @@ rows, the full text schema and finally the fictional image. Stop on another
 transport/auth/quota failure, do not automatically retry or change models, and
 upload no actual receipts. Another timeout should lead to a reliability/model
 route decision rather than continued prompt tuning or a claimed accuracy fix.
+
+## Continuation on October 31
+
+The separate four-call continuation sent two fictional text requests. Its first
+request matched the SHA-256 of the prior timed-out payload. It returned the exact
+merchant and null date in 2.093 seconds. The second added an array of item rows
+with a constrained kind and nullable amount. The provider returned HTTP 503 in
+38.146 seconds. The stop rule ended the run before the full text schema and
+fictional image. The HTTP status leaves item-row compatibility unresolved.
+The two live results and call ledger agree. Private evidence is under
+`private-receipts/evaluation/p8-07-schema-isolation-02/`.
+
+Basic structure and a missing date now have positive live evidence. The earlier
+full-schema HTTP 400 responses still have an unknown cause. The production
+request is unchanged and current five-receipt accuracy is unmeasured.
+
+The proposed next task is an offline diagnostic on the retained real response
+that failed the exact-key check. Preserve the original rejection, inventory the
+unexpected field privately, and independently test whether the nine expected
+fields and every item satisfy all existing rules and match the owner's checked
+reference. Report usability separately from recognition accuracy. This would
+show whether another provider experiment is warranted or a narrowly scoped
+adapter change merits evaluation. Any proposed change to accepted input would
+require separate review.
