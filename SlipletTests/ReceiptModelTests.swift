@@ -61,6 +61,21 @@ import XCTest
             XCTAssertThrowsError(try decode(bytes))
         }
     }
+    func testAcceptsOnlyFalseBooleanSchemaEchoAtRoot() throws {
+        let bytes = try envelope { $0["additionalProperties"] = false }
+        let reading = try decode(bytes)
+        XCTAssertEqual(reading.draft.total, "2.50")
+        XCTAssertFalse(reading.draft.sourceChecked)
+        XCTAssertEqual(reading.extraction.rawParserOutput, bytes)
+        for value: Any in [true, 0, "false", NSNull()] as [Any] {
+            XCTAssertThrowsError(try decode(envelope { $0["additionalProperties"] = value }))
+        }
+        XCTAssertThrowsError(try decode(envelope { $0["additionalProperties"] = false; $0["extra"] = false }))
+        XCTAssertThrowsError(try decode(envelope { $0["additionalProperties"] = false; $0.removeValue(forKey: "total") }))
+        var nested = row()
+        nested["additionalProperties"] = false
+        XCTAssertThrowsError(try decode(envelope(rows: [nested]) { $0["additionalProperties"] = false }))
+    }
     func wait(_ predicate: @escaping @MainActor () -> Bool) async throws {
         for _ in 0..<500 { if predicate() { return }; try await Task.sleep(for: .milliseconds(20)) }
         XCTFail("Model workflow did not reach expected state")

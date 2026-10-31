@@ -374,3 +374,7 @@ found 18/18 core purchases and 4/4 adjustments correct after isolating the
 single echoed schema keyword. See the offline audit in
 `PHASE8_SCHEMA_ISOLATION.md`. Next proposed task is a narrowly scoped native
 adapter fix and offline save/reopen regression check. P8-07 remains pending.
+
+### October 31 · Native replay of the schema echo
+
+The receipt reader now accepts the exact top-level Boolean `additionalProperties: false` echoed by the model. The original envelope remains in the extraction record. Regression checks cover numeric zero, true, string, null, other unknown keys, missing required fields, and a nested echo. The previously rejected response and original photo passed Simulator import, draft save/reopen, field parity, and source-evidence checks. Eleven tests passed and the optional export test skipped. The run used local fixtures only. P8-07 five-receipt acceptance remains pending.

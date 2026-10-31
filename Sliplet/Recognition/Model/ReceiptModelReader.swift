@@ -1,3 +1,4 @@
+import CoreFoundation
 import Foundation
 
 /// Implementations receive only the explicitly selected image. No OCR, labels or credentials
@@ -129,7 +130,16 @@ enum ReceiptModelAdapter {
 
     static func decode(_ envelope: Data, provider: String, model: String) throws -> ReceiptModelReading {
         let bytes = try candidate(from: envelope)
-        guard let object = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], Set(object.keys) == rootKeys,
+        guard var object = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+            throw ReceiptModelError.unsupportedShape
+        }
+        // The model sometimes copies this literal from the request schema.
+        // Check its JSON type explicitly: NSNumber also bridges numeric zero to Bool.
+        if let echo = object["additionalProperties"] as? NSNumber,
+           CFGetTypeID(echo) == CFBooleanGetTypeID(), !echo.boolValue {
+            object.removeValue(forKey: "additionalProperties")
+        }
+        guard Set(object.keys) == rootKeys,
               let rows = object["rows"] as? [[String: Any]], rows.count <= 150 else { throw ReceiptModelError.unsupportedShape }
         func validStrings(_ object: [String: Any], excluding: Set<String>) -> Bool {
             object.filter { !excluding.contains($0.key) }.values.allSatisfy { $0 is NSNull || (($0 as? String).map { $0.utf8.count <= 8192 } ?? false) }
