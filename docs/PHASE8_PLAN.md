@@ -368,3 +368,9 @@ October 31 continuation confirmed the missing-date case. The item-row request
 ended with HTTP 503. The full-schema and fictional-image cases were unsent.
 P8-07 is pending. Next proposed task is an offline accuracy and contract audit
 of the retained rejected response, described in `PHASE8_SCHEMA_ISOLATION.md`.
+
+The October 31 offline audit reproduced the exact schema-key rejection and
+found 18/18 core purchases and 4/4 adjustments correct after isolating the
+single echoed schema keyword. See the offline audit in
+`PHASE8_SCHEMA_ISOLATION.md`. Next proposed task is a narrowly scoped native
+adapter fix and offline save/reopen regression check. P8-07 remains pending.

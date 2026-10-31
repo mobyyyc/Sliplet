@@ -79,3 +79,35 @@ reference. Report usability separately from recognition accuracy. This would
 show whether another provider experiment is warranted or a narrowly scoped
 adapter change merits evaluation. Any proposed change to accepted input would
 require separate review.
+
+## Offline audit of the rejected response · October 31
+
+The original parser reproduced the exact-key rejection. Gemini returned the
+schema keyword `"additionalProperties": false` alongside all nine required
+receipt fields. For diagnosis, the audit removed only that exact Boolean from
+an in-memory copy. The existing validator accepted every remaining field and
+row and the existing adapter reported no issues. The original response and
+app rejection are preserved.
+
+On this one previously checked receipt, 14 purchases matched individually.
+Two groups of indistinguishable purchases accounted for the other four. Names,
+amounts, kinds and group counts matched for all 18 purchases. All three
+discounts and the single tax charge matched on kind, description and amount.
+Merchant, date, subtotal, total and both independently scorable item tax markers
+matched. There were zero unrelated output rows. Currency, quantities, unit
+prices, units, product codes and tax rate lack sufficient checked evidence here.
+This is a single exposed receipt with zero held-out purchases. It does not
+establish overall accuracy or live service reliability.
+
+The offline audit verifies the request and reference hashes against the frozen
+run, reproduces the original failure, then uses the existing strict scorer
+and duplicate-group rules. No model call or production code change.
+Run `audit_rejected_receipt.py` under the model-comparison directory to reproduce
+the checked-in aggregate `rejected-receipt-audit-result.json`.
+
+Proposed next task: allow exactly the known, top-level schema echo with Boolean
+false in the native adapter. Preserve the full response as original evidence,
+validate every other field and row as before, and reject other values, unknown
+keys, and nested extras. Add fictional positive and negative cases, then replay
+the saved envelope through native draft save/reopen. Keep source review and
+reconciliation requirements. This narrow compatibility change needs approval.

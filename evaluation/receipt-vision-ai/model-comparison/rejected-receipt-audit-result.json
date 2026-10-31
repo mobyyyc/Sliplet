@@ -1,0 +1,74 @@
+{
+  "adjustments": {
+    "discount_correct": 3,
+    "discount_expected": 3,
+    "tax_correct": 1,
+    "tax_expected": 1
+  },
+  "fields": {
+    "amount": {
+      "ambiguous_identity": 4,
+      "correct": 18
+    },
+    "currency": {
+      "unscorable": 1
+    },
+    "date": {
+      "correct": 1
+    },
+    "description": {
+      "ambiguous_identity": 4,
+      "correct": 18
+    },
+    "kind": {
+      "ambiguous_identity": 4,
+      "correct": 18
+    },
+    "merchant": {
+      "correct": 1
+    },
+    "quantity": {
+      "ambiguous_identity": 4,
+      "unscorable": 14
+    },
+    "rate": {
+      "unscorable": 4
+    },
+    "sku": {
+      "ambiguous_identity": 4,
+      "unscorable": 14
+    },
+    "subtotal": {
+      "correct": 1
+    },
+    "taxMarker": {
+      "ambiguous_identity": 4,
+      "correct": 2,
+      "unscorable": 12
+    },
+    "total": {
+      "correct": 1
+    },
+    "unit": {
+      "ambiguous_identity": 4,
+      "unscorable": 14
+    },
+    "unitPrice": {
+      "ambiguous_identity": 4,
+      "unscorable": 14
+    }
+  },
+  "issues": [],
+  "original_accepted": false,
+  "projected_shape_valid": true,
+  "purchases": {
+    "confirmed_duplicate_group_purchases": 4,
+    "confirmed_duplicate_groups": 2,
+    "core_correct_purchases_including_groups": 18,
+    "eligible_indistinguishable_purchases": 4,
+    "expected_purchases": 18,
+    "individual_duplicate_source_identity_verified": false,
+    "strict_exact_purchase_pairs": 14
+  },
+  "unrelated_output_rows": 0
+}
