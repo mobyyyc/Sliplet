@@ -1,23 +1,27 @@
+import SwiftUI
 import UIKit
 
 /// Scene notifications are used explicitly: scene-based apps need not call legacy app callbacks.
 @MainActor enum ReceiptPrivacyCover {
-    private static var covers: [UIView] = []
+    private static var covers: [UIHostingController<ReceiptLockScreen>] = []
     static var isCovered: Bool { !covers.isEmpty }
     static func show(_ application: UIApplication = .shared) {
         guard covers.isEmpty else { return }
         for window in application.connectedScenes.compactMap({ $0 as? UIWindowScene }).flatMap(\.windows) {
-            let cover = UIView(frame: window.bounds)
+            let host = UIHostingController(rootView: ReceiptLockScreen())
+            let cover = host.view!
+            cover.frame = window.bounds
+            cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            cover.backgroundColor = .systemGroupedBackground
+            cover.isOpaque = true
+            cover.accessibilityViewIsModal = true
             cover.accessibilityIdentifier = "privacyCover"
-            cover.backgroundColor = .systemBackground; cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            let label = UILabel(); label.text = "Wallet locked"; label.font = .preferredFont(forTextStyle: .headline)
-            label.textAlignment = .center; label.translatesAutoresizingMaskIntoConstraints = false
-            cover.addSubview(label)
-            NSLayoutConstraint.activate([label.centerXAnchor.constraint(equalTo: cover.centerXAnchor), label.centerYAnchor.constraint(equalTo: cover.centerYAnchor)])
-            window.addSubview(cover); covers.append(cover)
+            window.addSubview(cover)
+            cover.layoutIfNeeded()
+            covers.append(host)
         }
     }
-    static func hide() { covers.forEach { $0.removeFromSuperview() }; covers = [] }
+    static func hide() { covers.forEach { $0.view.removeFromSuperview() }; covers = [] }
 }
 
 @MainActor final class ReceiptPrivacyDelegate: NSObject, UIApplicationDelegate {

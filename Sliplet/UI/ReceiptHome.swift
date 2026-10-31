@@ -21,7 +21,7 @@ struct ReceiptHome: View {
         let session = workspace.sessionID
         NavigationStack {
             Group {
-                if workspace.privacyCovered { ContentUnavailableView("Receipts locked", systemImage: "lock", description: Text("Return to the app after unlocking.")) }
+                if workspace.privacyCovered { ReceiptLockScreen() }
                 else {
                     switch workspace.availability {
                     case .closed, .opening: ProgressView("Opening local wallet")

@@ -116,16 +116,19 @@ enum ReceiptLockDelay: Int, CaseIterable, Identifiable {
 }
 
 struct ReceiptLockScreen: View {
-    @Bindable var lock: ReceiptAppLock
+    // The inactive privacy cover uses the same layout without an unlock action.
+    var lock: ReceiptAppLock? = nil
     var body: some View {
         VStack(spacing: 20) {
             Image(systemName: "lock.shield").font(.system(size: 48, weight: .light)).foregroundStyle(.secondary)
             Text("Sliplet is locked").font(.title2.weight(.semibold))
             Text("Unlock to view your receipts.").font(.subheadline).foregroundStyle(.secondary)
-            if let message = lock.message { Text(message).font(.footnote).multilineTextAlignment(.center) }
-            Button { Task { await lock.unlock() } } label: {
-                Label(lock.busy ? "Unlocking…" : "Unlock", systemImage: "faceid")
-            }.buttonStyle(ReceiptProminentStyle()).disabled(lock.busy).accessibilityIdentifier("unlockApp")
+            if let message = lock?.message { Text(message).font(.footnote).multilineTextAlignment(.center) }
+            Button { Task { await lock?.unlock() } } label: {
+                Label(lock?.busy == true ? "Unlocking…" : "Unlock", systemImage: "faceid")
+            }.buttonStyle(ReceiptProminentStyle()).disabled(lock?.busy != false)
+                .opacity(lock == nil ? 0 : 1).accessibilityHidden(lock == nil)
+                .accessibilityIdentifier("unlockApp")
         }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(uiColor: .systemGroupedBackground)).tint(.primary)
     }

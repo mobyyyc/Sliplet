@@ -323,7 +323,8 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         NotificationCenter.default.post(name: UIScene.willDeactivateNotification, object: window.windowScene)
         XCTAssertTrue(ReceiptPrivacyCover.isCovered)
         XCTAssertNotNil(window.subviews.first { $0.accessibilityIdentifier == "privacyCover" })
-        XCTAssertEqual(window.subviews.last?.backgroundColor, .systemBackground)
+        XCTAssertEqual(window.subviews.last?.backgroundColor, .systemGroupedBackground)
+        XCTAssertTrue(window.subviews.last?.isOpaque == true)
         ReceiptPrivacyCover.hide()
         XCTAssertFalse(ReceiptPrivacyCover.isCovered)
     }
