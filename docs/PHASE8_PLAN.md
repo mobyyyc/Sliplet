@@ -378,3 +378,7 @@ adapter fix and offline save/reopen regression check. P8-07 remains pending.
 ### October 31 · Native replay of the schema echo
 
 The receipt reader now accepts the exact top-level Boolean `additionalProperties: false` echoed by the model. The original envelope remains in the extraction record. Regression checks cover numeric zero, true, string, null, other unknown keys, missing required fields, and a nested echo. The previously rejected response and original photo passed Simulator import, draft save/reopen, field parity, and source-evidence checks. Eleven tests passed and the optional export test skipped. The run used local fixtures only. P8-07 five-receipt acceptance remains pending.
+
+### October 31 · P8-07 fresh evaluation completed
+
+Five of five fresh native-payload responses were usable, with 65/66 core purchases, 9/9 adjustments, 5/5 totals and 4/5 dates. All five drafts passed Simulator save/reopen and original-evidence checks. Classification is useful optional personal beta. See the October 31 fresh acceptance section in `PHASE8_ACCEPTANCE.md` for the remaining error, comparison with local OCR and limits on interpretation. Next proposed milestone is a separate personal iPhone update and usability check.

@@ -65,3 +65,13 @@ the revised request configuration and evaluate the same five approved originals
 once each, stopping on failure. Keep all prior failed runs intact and compare
 accuracy against unchanged references. No model change, relaxed money rules or
 phone installation is included.
+
+## Fresh acceptance with the schema-echo fix · October 31
+
+All five exact native image payloads produced usable responses on the first attempt. The owner-approved run used the original model, images, request bodies and checked reference. Only the evaluator’s handling of the top-level Boolean schema echo changed to match the shipped reader. Offline checks verified the saved response and six invalid variants before scoring. One fresh response used this exception. The experiment made five generation requests. Reported usage was 25,057 tokens and response times ranged from 17.7 to 45.2 seconds (median 38.2).
+
+The scorer found **65/66 core purchases (98.5%)**. It matched 55 individually and 10 through the checked counts and prices of five indistinguishable duplicate groups. The strict miss had a same-price candidate with a similar description and remained a miss. Merchants and totals matched on 5/5 receipts, checked subtotals on 4/4, discounts on 6/6, tax charges on 3/3 and dates on 4/5. One date remained missing. The local baseline was 59/66 purchases, 4/9 adjustments, 3/5 totals and 5/5 dates. The model exceeded the 95% core-purchase target on these five exposed receipts; date coverage regressed against the local baseline. Quantity, unit price, currency, tax rate and most item tax markers lacked independent labels. Correction time and unseen-receipt accuracy remain unmeasured.
+
+All five fresh responses passed native Simulator import, draft save, reopen, field parity, original-photo and raw-response preservation in the explicit private parity test. This replay used the exported app payloads and stored provider envelopes. It did not measure live iPhone networking. Classification: useful optional personal beta. P8-07's fresh five-receipt evaluation is complete. Full unattended receipt recognition remains outside the verified scope. Human original review and exact reconciliation still govern finalization.
+
+Public counters are in `evaluation/receipt-vision-ai/model-comparison/echo-acceptance-result.json`. Private artifacts are in `private-receipts/evaluation/p8-07-echo-acceptance-01/`. Physical-phone updating requires separate approval.
