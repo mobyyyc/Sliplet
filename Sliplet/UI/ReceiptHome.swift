@@ -191,8 +191,10 @@ struct ReceiptHome: View {
             HStack {
                 Spacer()
                 Button { importChoices = true } label: {
-                    Label("Import receipt", systemImage: "plus")
-                }.buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("import")
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.bold))
+                }.buttonStyle(ReceiptSecondaryStyle(circular: true))
+                    .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
                 Spacer()
             }
         case .detail:

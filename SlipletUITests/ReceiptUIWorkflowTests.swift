@@ -258,7 +258,7 @@ import Vision
             XCTAssertFalse(app.buttons["walletTab"].exists)
             XCTAssertTrue(importer.isHittable)
             app.buttons["walletInformation"].tap()
-            XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Receipts are excluded from automatic backup.")).firstMatch.waitForExistence(timeout: 10))
+            XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Receipts stay on this device.")).firstMatch.waitForExistence(timeout: 10))
             app.buttons["Done"].tap()
             if mode == "wallet" {
                 app.buttons["allReceipts"].tap()
