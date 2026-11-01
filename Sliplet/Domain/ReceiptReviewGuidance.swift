@@ -152,6 +152,7 @@ enum ReceiptFocusedCorrection {
         }
         for line in input.lines {
             let old = baseline.lines.first { $0.id == line.id }
+            if line.editableUnitPrice != old?.editableUnitPrice && !line.editableUnitPrice.isEmpty && ExactInput.money(line.editableUnitPrice, scale: scale) == nil { return false }
             if line.amount != old?.amount && !line.amount.isEmpty && ExactInput.money(line.amount, scale: scale) == nil { return false }
             if line.quantity != old?.quantity && !line.quantity.isEmpty && ExactInput.decimal(line.quantity) == nil { return false }
         }

@@ -15,29 +15,44 @@ struct ReceiptReviewView: View {
         Binding(get: { workspace.draft[keyPath: key] }, set: { value in workspace.updateDraft { $0[keyPath: key] = value } })
     }
     @State private var openedEditor = false
+    @State private var hasShownPaper = false
 
     var body: some View {
-        if !openedEditor, workspace.selected == nil, workspace.draft.reconciliation.issues.isEmpty {
+        if !openedEditor, workspace.selected == nil, hasShownPaper || workspace.draft.reconciliation.issues.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("Compare with the original before saving.").font(.subheadline)
+                        Text("Tap a line to edit, or compare with Original.").font(.subheadline)
                         Spacer()
                         Button("Edit") { openedEditor = true }
                             .buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("Edit receipt fields")
                             .accessibilityIdentifier("editReviewFields")
                     }
-                    ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft)
+                    ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft, editLine: { id in
+                        guard let line = workspace.draft.lines.first(where: { $0.id == id }) else { return }
+                        focusedCheck = ReceiptReviewGuidance(id: "line-" + id.uuidString,
+                            title: "Edit line", message: "Compare this line with the original receipt.",
+                            target: .line(id), sourceLineIDs: line.sourceLineIDs, requiresCorrection: true)
+                    })
+                    ForEach(checks.filter { !$0.isChecked(in: workspace.draft) }) { check in checkButton(check) }
                     if let error = workspace.errorMessage {
                         Label(error, systemImage: "exclamationmark.triangle").accessibilityIdentifier("saveError")
                     }
                 }.padding(.horizontal, 20).padding(.vertical, 12)
             }
+            .onAppear { hasShownPaper = true }
+            .sheet(item: $focusedCheck) { ReceiptFocusedCorrectionView(workspace: workspace, check: $0) }
             .accessibilityIdentifier("paperReview")
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let issue = workspace.draft.reconciliation.issues.first {
+                        Label(issue, systemImage: "exclamationmark.circle")
+                            .font(.footnote).accessibilityIdentifier("paperReviewIssue")
+                    }
+                    Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
                     .tint(.green).disabled(!workspace.draft.sourceOpened || workspace.saving)
                     .accessibilityIdentifier("sourceCheck")
+                }
                     .padding(.horizontal, 20).padding(.vertical, 8)
                     .background(.regularMaterial)
             }
@@ -290,6 +305,7 @@ struct ReceiptPaper: View {
     var input: ReceiptReviewDraft? = nil
     var showsSurface = true
     var reviewed = false
+    var editLine: ((UUID) -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
     private func money(_ value: ReceiptMoney?, raw: String? = nil) -> String {
         value.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? raw?.nilIfEmpty ?? "Missing"
@@ -311,29 +327,48 @@ struct ReceiptPaper: View {
             Divider()
             Text("Items").font(.headline)
             ForEach(fields.items) { item in
-                VStack(alignment: .leading, spacing: 5) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top) { Text(item.description ?? "Description missing"); Spacer(minLength: 20); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
-                        VStack(alignment: .leading, spacing: 4) { Text(item.description ?? "Description missing"); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
-                    }
-                    Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" + (item.unit.map { " " + $0 } ?? "") } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
-                    if let price = item.unitPrice {
-                        Text("Unit price " + money(price)).font(.caption)
-                    }
-                    if let marker = item.taxMarker, !marker.isEmpty {
-                        Text("Tax marker " + marker).font(.caption)
-                    }
-                }.accessibilityElement(children: .combine)
+                editableRow(item.id) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(alignment: .top) { Text(item.description ?? "Description missing"); Spacer(minLength: 20); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
+                            VStack(alignment: .leading, spacing: 4) { Text(item.description ?? "Description missing"); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
+                        }
+                        Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" + (item.unit.map { " " + $0 } ?? "") } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
+                        if let price = item.unitPrice {
+                            Text("Unit price " + money(price)).font(.caption)
+                        }
+                        if let marker = item.taxMarker, !marker.isEmpty {
+                            Text("Tax marker " + marker).font(.caption)
+                        }
+                    }.accessibilityElement(children: .combine)
+                }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
             Divider()
             amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
-            ForEach(fields.adjustments.filter { $0.kind == .discount }) { adjustment in amountRow(adjustment.label ?? "Discount", adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }
-            ForEach(fields.adjustments.filter { $0.kind == .tax }) { adjustment in amountRow(adjustment.label ?? "Tax", adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }
-            ForEach(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax }) { adjustment in amountRow(adjustment.label ?? adjustment.kind.rawValue.capitalized, adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }
+            adjustmentRows(fields.adjustments.filter { $0.kind == .discount })
+            adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
+            adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
             Divider()
             amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
+        ForEach(adjustments) { adjustment in
+            editableRow(adjustment.id) {
+                amountRow(adjustment.label ?? adjustment.kind.rawValue.capitalized, adjustment.amount,
+                          raw: input?.lines.first { $0.id == adjustment.id }?.amount)
+            }
+        }
+    }
+    @ViewBuilder private func editableRow<Content: View>(_ id: UUID, @ViewBuilder content: () -> Content) -> some View {
+        if let editLine {
+            Button { editLine(id) } label: {
+                content().frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityHint("Edit this line").accessibilityIdentifier("paperLine-" + id.uuidString)
+        } else {
+            content()
+        }
     }
     private func amountRow(_ name: String, _ value: ReceiptMoney?, raw: String? = nil) -> some View {
         LabeledContent(name) { Text(money(value, raw: raw)).monospacedDigit().foregroundStyle(.primary) }.foregroundStyle(.primary).accessibilityElement(children: .combine)

@@ -142,6 +142,16 @@ struct ReceiptFocusedCorrectionView: View {
                                 ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                             }
                             LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
+                            if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
+                                LabeledContent("Unit") {
+                                    TextField("Unknown", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }))
+                                        .accessibilityIdentifier("focusedUnit")
+                                }
+                                LabeledContent("Unit price") {
+                                    TextField("Unknown", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }))
+                                        .keyboardType(.numbersAndPunctuation).accessibilityIdentifier("focusedUnitPrice")
+                                }
+                            }
                             Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
                         } header: { Text("Focused line") }
                     }

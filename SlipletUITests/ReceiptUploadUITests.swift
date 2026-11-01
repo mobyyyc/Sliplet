@@ -113,20 +113,53 @@ extension ReceiptUploadUITests {
         let paper = app.scrollViews["paperReview"]
         XCTAssertTrue(paper.waitForExistence(timeout: 10))
         paper.swipeUp()
-        let row = paper.staticTexts.matching(NSPredicate(format: "label CONTAINS 'FICTIONAL ITEM'"))
+        let row = paper.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'"))
             .allElementsBoundByIndex.first { $0.isHittable && $0.frame.midY > app.frame.midY }
         guard let row else { return XCTFail("Expected a visible purchase after scrolling") }
-        let label = row.label
+        let id = row.identifier
         let y = row.frame.midY
         app.buttons["original"].tap()
         app.buttons["sourceDone"].tap()
-        let returned = paper.staticTexts[label]
+        let returned = paper.buttons[id]
         XCTAssertTrue(returned.isHittable)
         XCTAssertEqual(returned.frame.midY, y, accuracy: 3)
+        returned.tap()
+        let quantity = app.textFields["focusedQuantity"]
+        reveal(quantity, in: app)
+        quantity.tap(); quantity.typeText("2")
+        app.buttons["cancelFocusedCorrection"].tap()
+        XCTAssertEqual(returned.frame.midY, y, accuracy: 3)
+        XCTAssertFalse(returned.label.contains("Quantity 2"))
+        returned.tap()
+        reveal(quantity, in: app)
+        quantity.tap(); quantity.typeText("3")
+        app.buttons["applyFocusedCorrection"].tap()
+        XCTAssertTrue(returned.label.contains("Quantity 3"))
+        XCTAssertEqual(returned.frame.midY, y, accuracy: 3)
+        XCTAssertEqual(paper.buttons.matching(NSPredicate(format: "label CONTAINS 'Quantity 3'")).count, 1)
         let check = app.switches["sourceCheck"]
         XCTAssertTrue(check.isHittable)
         check.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
         app.buttons["finishSave"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+    }
+
+    func testPaperAmountMismatchCanBeSavedAsDraft() {
+        let app = sendAuditFixture("--p901-clean-read")
+        let paper = app.scrollViews["paperReview"]
+        let row = paper.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let amount = app.textFields["focusedLineAmount"]
+        reveal(amount, in: app)
+        amount.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        amount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "2.00")
+        XCTAssertEqual(amount.value as? String, "2.00")
+        app.buttons["applyFocusedCorrection"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["paperReviewIssue"].waitForExistence(timeout: 5))
+        XCTAssertTrue(paper.exists)
+        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
+        app.buttons["saveDraft"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
     }
 
