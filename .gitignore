@@ -47,3 +47,6 @@ private-receipts/
 
 # Private Phase 8 reference-review exports (including browser duplicate names).
 /sliplet-p8-reference-checked*.json
+
+# Generated Python bytecode
+__pycache__/
