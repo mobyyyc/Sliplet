@@ -268,6 +268,8 @@ import Vision
                 XCTAssertTrue(app.buttons["receipt-0"].waitForExistence(timeout: 10))
             }
             let anchor = importer.frame
+            XCTAssertEqual(anchor.width, 64, accuracy: 1)
+            XCTAssertEqual(anchor.height, 64, accuracy: 1)
             importer.tap()
             let files = app.buttons["Files"]
             XCTAssertTrue(files.waitForExistence(timeout: 5))
@@ -283,7 +285,7 @@ import Vision
             app.launch()
             let button = app.buttons["import"]
             XCTAssertTrue(button.waitForExistence(timeout: 30))
-            XCTAssertEqual(button.frame.height, 44, accuracy: 1, "Import must match the visible 44-point navigation glass control")
+            XCTAssertEqual(button.frame.height, 64, accuracy: 1)
             let measured = try XCTUnwrap(pixelContrast(button.screenshot()))
             XCTAssertEqual(measured.foreground, mode == "dark" ? "#000000" : "#FFFFFF")
             XCTAssertGreaterThanOrEqual(measured.ratio, 7)

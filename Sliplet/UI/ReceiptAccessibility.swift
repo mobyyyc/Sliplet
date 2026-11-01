@@ -47,6 +47,7 @@ struct ReceiptActionBarLayout: ViewModifier {
 
 struct ReceiptSecondaryStyle: PrimitiveButtonStyle {
     var circular = false
+    var diameter: CGFloat = 44
     @Environment(\.accessibilityReduceTransparency) private var opaque
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.isEnabled) private var enabled
@@ -54,7 +55,7 @@ struct ReceiptSecondaryStyle: PrimitiveButtonStyle {
         let solid = ReceiptAccessibility.reduceTransparency(opaque) || ReceiptAccessibility.contrast(contrast) == .increased
         if circular {
             let button = Button(role: configuration.role, action: configuration.trigger) {
-                configuration.label.frame(width: 44, height: 44)
+                configuration.label.frame(width: diameter, height: diameter).contentShape(Circle())
             }.buttonStyle(.plain).foregroundStyle(.primary).opacity(enabled ? 1 : 0.4)
             if solid {
                 button.background { Circle().fill(Color(uiColor: .secondarySystemGroupedBackground)) }

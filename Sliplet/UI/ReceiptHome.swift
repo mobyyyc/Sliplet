@@ -198,8 +198,8 @@ struct ReceiptHome: View {
                 Spacer()
                 anchoredImportChoices {
                     Button { importChoices = true } label: {
-                        Image(systemName: "plus").font(.system(size: 32, weight: .bold))
-                    }.buttonStyle(ReceiptSecondaryStyle(circular: true))
+                        Image(systemName: "plus").font(.title2.weight(.bold))
+                    }.buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 64))
                         .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
                 }
                 Spacer()
