@@ -15,4 +15,4 @@
 
 Use the existing leather pocket, paper edges and layer shadows as the visual foundation. Reserve Liquid Glass for interactive controls and keep paper readable. Use a reachable primary action and native controls across screens. Prefer a clear reading hierarchy before adding gestures.
 
-Main handles one approved task at a time, records the result and commit, and presents the next task for approval. This roadmap is design only. P9-01 is the proposed first task.
+Main handles one approved task at a time, records the result and commit, and presents the next task for approval. The [P9-01 audit and screen sketches](design/phase9/UX_AUDIT.md) document the current experience. P9-02 is the next implementation decision.

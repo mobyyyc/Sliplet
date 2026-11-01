@@ -11,11 +11,22 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
+        if ProcessInfo.processInfo.arguments.contains("--p901-failed-read") {
+            client?.urlProtocol(self, didFailWithError: URLError(.timedOut))
+            return
+        }
         var row = Dictionary(uniqueKeysWithValues: ReceiptModelAdapter.rowKeys.map { ($0, NSNull() as Any) })
         row["kind"] = "purchase"; row["description"] = "FICTIONAL APPLES"; row["amount"] = "1.00"
         row["raw_text"] = "FICTIONAL APPLES 1.00"
         var candidate = Dictionary(uniqueKeysWithValues: ReceiptModelAdapter.rootKeys.map { ($0, NSNull() as Any) })
         candidate["merchant"] = "FICTIONAL PREVIEW"; candidate["rows"] = [row]; candidate["total"] = "1.00"
+        if ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
+            candidate["date_raw"] = "2026-10-24"
+            candidate["date"] = "2026-10-24"
+            candidate["currency_raw"] = "CAD"
+            candidate["currency"] = "CAD"
+            candidate["subtotal"] = "1.00"
+        }
         let text = String(decoding: try! JSONSerialization.data(withJSONObject: candidate), as: UTF8.self)
         let data = try! JSONSerialization.data(withJSONObject: ["candidates": [["finishReason": "STOP", "content": ["parts": [["text": text]]]]]])
         client?.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!, cacheStoragePolicy: .notAllowed)

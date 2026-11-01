@@ -69,3 +69,51 @@ import XCTest
     }
 
 }
+
+extension ReceiptUploadUITests {
+    private func sendAuditFixture(_ scenario: String) -> XCUIApplication {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", scenario, "--t05-light"]
+        app.launch()
+        for id in ["uploadFixture", "previewAI", "reviewUpload"] {
+            let button = app.buttons[id]
+            XCTAssertTrue(button.waitForExistence(timeout: 20))
+            button.tap()
+        }
+        let consent = app.switches["uploadConsent"]
+        reveal(consent, in: app)
+        consent.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        let send = app.buttons["sendReceiptAI"]
+        reveal(send, in: app)
+        send.tap()
+        return app
+    }
+
+    func testCleanReviewWithoutEditingFields() {
+        let app = sendAuditFixture("--p901-clean-read")
+        XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
+        let before = XCTAttachment(screenshot: app.screenshot())
+        before.name = "Clean read before review"; before.lifetime = .keepAlways; add(before)
+        app.buttons["original"].tap()
+        app.buttons["sourceDone"].tap()
+        let checked = app.switches["sourceCheck"]
+        reveal(checked, in: app)
+        checked.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertTrue(app.buttons["finishSave"].isEnabled)
+        app.buttons["finishSave"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+    }
+
+    func testFailedReadKeepsOriginalForManualEntry() {
+        let app = sendAuditFixture("--p901-failed-read")
+        let manual = app.buttons["manual"]
+        XCTAssertTrue(manual.waitForExistence(timeout: 10))
+        let failure = XCTAttachment(screenshot: app.screenshot())
+        failure.name = "Read recovery"; failure.lifetime = .keepAlways; add(failure)
+        app.buttons["View original"].tap()
+        app.buttons["sourceDone"].tap()
+        manual.tap()
+        XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
+    }
+}
