@@ -20,12 +20,22 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
         row["raw_text"] = "FICTIONAL APPLES 1.00"
         var candidate = Dictionary(uniqueKeysWithValues: ReceiptModelAdapter.rootKeys.map { ($0, NSNull() as Any) })
         candidate["merchant"] = "FICTIONAL PREVIEW"; candidate["rows"] = [row]; candidate["total"] = "1.00"
-        if ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
+        let longRead = ProcessInfo.processInfo.arguments.contains("--p902-long-read")
+        if longRead || ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
             candidate["date_raw"] = "2026-10-24"
             candidate["date"] = "2026-10-24"
             candidate["currency_raw"] = "CAD"
             candidate["currency"] = "CAD"
             candidate["subtotal"] = "1.00"
+            if longRead {
+                candidate["rows"] = (1...36).map { index in
+                    var item = row
+                    item["description"] = "FICTIONAL ITEM " + String(index)
+                    item["raw_text"] = "FICTIONAL ITEM " + String(index) + " 1.00"
+                    return item
+                }
+                candidate["subtotal"] = "36.00"; candidate["total"] = "36.00"
+            }
         }
         let text = String(decoding: try! JSONSerialization.data(withJSONObject: candidate), as: UTF8.self)
         let data = try! JSONSerialization.data(withJSONObject: ["candidates": [["finishReason": "STOP", "content": ["parts": [["text": text]]]]]])

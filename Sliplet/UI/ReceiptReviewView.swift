@@ -14,7 +14,39 @@ struct ReceiptReviewView: View {
     private func field(_ key: WritableKeyPath<ReceiptReviewDraft, String>) -> Binding<String> {
         Binding(get: { workspace.draft[keyPath: key] }, set: { value in workspace.updateDraft { $0[keyPath: key] = value } })
     }
+    @State private var openedEditor = false
+
     var body: some View {
+        if !openedEditor, workspace.selected == nil, workspace.draft.reconciliation.issues.isEmpty {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Compare with the original before saving.").font(.subheadline)
+                        Spacer()
+                        Button("Edit") { openedEditor = true }
+                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("Edit receipt fields")
+                            .accessibilityIdentifier("editReviewFields")
+                    }
+                    ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft)
+                    if let error = workspace.errorMessage {
+                        Label(error, systemImage: "exclamationmark.triangle").accessibilityIdentifier("saveError")
+                    }
+                }.padding(.horizontal, 20).padding(.vertical, 12)
+            }
+            .accessibilityIdentifier("paperReview")
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
+                    .tint(.green).disabled(!workspace.draft.sourceOpened || workspace.saving)
+                    .accessibilityIdentifier("sourceCheck")
+                    .padding(.horizontal, 20).padding(.vertical, 8)
+                    .background(.regularMaterial)
+            }
+        } else {
+            editor.onAppear { openedEditor = true }
+        }
+    }
+
+    private var editor: some View {
         Form {
             Section {
                 let pending = checks.filter { !$0.isChecked(in: workspace.draft) }
@@ -273,6 +305,9 @@ struct ReceiptPaper: View {
                 if reviewed { ReceiptReviewedMark() }
             }
             Text("\(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing") · \(fields.currency?.code ?? "Currency missing")").font(.subheadline).foregroundStyle(.primary)
+            if let context = input?.currencyContextMessage {
+                Text(context).font(.footnote).accessibilityIdentifier("currencyContext")
+            }
             Divider()
             Text("Items").font(.headline)
             ForEach(fields.items) { item in
@@ -282,11 +317,17 @@ struct ReceiptPaper: View {
                         VStack(alignment: .leading, spacing: 4) { Text(item.description ?? "Description missing"); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
                     }
                     Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" + (item.unit.map { " " + $0 } ?? "") } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
+                    if let price = item.unitPrice {
+                        Text("Unit price " + money(price)).font(.caption)
+                    }
+                    if let marker = item.taxMarker, !marker.isEmpty {
+                        Text("Tax marker " + marker).font(.caption)
+                    }
                 }.accessibilityElement(children: .combine)
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
             Divider()
-            amountRow("Subtotal", fields.subtotal, raw: input?.subtotal)
+            amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
             ForEach(fields.adjustments.filter { $0.kind == .discount }) { adjustment in amountRow(adjustment.label ?? "Discount", adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }
             ForEach(fields.adjustments.filter { $0.kind == .tax }) { adjustment in amountRow(adjustment.label ?? "Tax", adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }
             ForEach(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax }) { adjustment in amountRow(adjustment.label ?? adjustment.kind.rawValue.capitalized, adjustment.amount, raw: input?.lines.first { $0.id == adjustment.id }?.amount) }

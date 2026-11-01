@@ -93,6 +93,9 @@ extension ReceiptUploadUITests {
     func testCleanReviewWithoutEditingFields() {
         let app = sendAuditFixture("--p901-clean-read")
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.scrollViews["paperReview"].exists)
+        XCTAssertTrue(app.switches["sourceCheck"].isHittable)
+        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
         let before = XCTAttachment(screenshot: app.screenshot())
         before.name = "Clean read before review"; before.lifetime = .keepAlways; add(before)
         app.buttons["original"].tap()
@@ -101,6 +104,28 @@ extension ReceiptUploadUITests {
         reveal(checked, in: app)
         checked.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["finishSave"].isEnabled)
+        app.buttons["finishSave"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+    }
+
+    func testLongPaperKeepsPositionDuringOriginalComparison() {
+        let app = sendAuditFixture("--p902-long-read")
+        let paper = app.scrollViews["paperReview"]
+        XCTAssertTrue(paper.waitForExistence(timeout: 10))
+        paper.swipeUp()
+        let row = paper.staticTexts.matching(NSPredicate(format: "label CONTAINS 'FICTIONAL ITEM'"))
+            .allElementsBoundByIndex.first { $0.isHittable && $0.frame.midY > app.frame.midY }
+        guard let row else { return XCTFail("Expected a visible purchase after scrolling") }
+        let label = row.label
+        let y = row.frame.midY
+        app.buttons["original"].tap()
+        app.buttons["sourceDone"].tap()
+        let returned = paper.staticTexts[label]
+        XCTAssertTrue(returned.isHittable)
+        XCTAssertEqual(returned.frame.midY, y, accuracy: 3)
+        let check = app.switches["sourceCheck"]
+        XCTAssertTrue(check.isHittable)
+        check.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
         app.buttons["finishSave"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
     }
