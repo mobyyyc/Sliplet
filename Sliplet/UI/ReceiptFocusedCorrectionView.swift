@@ -152,12 +152,13 @@ struct ReceiptFocusedCorrectionView: View {
                                 if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }
                                 if let marker = input.lines[index].taxMarker { LabeledContent("Printed tax marker", value: marker) }
                                 LabeledContent("Unit") {
-                                    TextField("Unknown", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }))
-                                        .accessibilityIdentifier("focusedUnit")
+                                    TextField("", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }), prompt: Text("Unknown"))
+                                        .focused($editing, equals: "unit").accessibilityIdentifier("focusedUnit")
                                 }
                                 LabeledContent("Unit price") {
-                                    TextField("Unknown", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }))
-                                        .keyboardType(.numbersAndPunctuation).accessibilityIdentifier("focusedUnitPrice")
+                                    TextField("", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }), prompt: Text("Unknown"))
+                                        .keyboardType(.numbersAndPunctuation).focused($editing, equals: "unitPrice")
+                                        .accessibilityIdentifier("focusedUnitPrice")
                                 }
                                 Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
                             } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {

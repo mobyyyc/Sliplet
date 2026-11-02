@@ -124,6 +124,16 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(returned.isHittable)
         XCTAssertEqual(returned.frame.midY, y, accuracy: 3)
         returned.tap()
+        for (identifier, label) in [("focusedUnit", "Unit"), ("focusedUnitPrice", "Unit price")] {
+            let field = app.textFields[identifier]
+            reveal(field, in: app)
+            XCTAssertEqual(field.label, label)
+            field.tap()
+            let done = app.buttons["focusedKeyboardDone"]
+            XCTAssertTrue(done.isHittable)
+            done.tap()
+            XCTAssertTrue(done.waitForNonExistence(timeout: 5))
+        }
         let quantity = app.textFields["focusedQuantity"]
         reveal(quantity, in: app)
         quantity.tap(); quantity.typeText("2")
