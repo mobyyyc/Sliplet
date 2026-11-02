@@ -813,7 +813,6 @@ private struct ReceiptSwipePaper: View {
 private struct ReceiptPreviewSurface: View {
     let record: ReceiptRecord
     var body: some View {
-        // Only the item text fades. The receipt paper and its torn edge stay opaque.
         ReceiptPreviewPaper(record: record).equatable()
             .background { ReceiptPaperBackground() }
             .receiptPaperStyle()
@@ -855,11 +854,6 @@ struct ReceiptPreviewPaper: View, Equatable {
             }
             .frame(maxHeight: typeSize.isAccessibilitySize ? nil : (long ? 126 : 68), alignment: .top)
             .clipped()
-            .mask {
-                if long && !typeSize.isAccessibilitySize {
-                    LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
-                } else { Color.black }
-            }
             if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             if !long || typeSize.isAccessibilitySize { HStack {
                 Text("\(fields.items.count) \(fields.items.count == 1 ? "item" : "items")")
