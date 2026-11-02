@@ -62,10 +62,11 @@ final class ReceiptCameraDriver: NSObject, AVCapturePhotoCaptureDelegate, @unche
     func capture(angle: CGFloat) {
         queue.async { [self] in
             guard session.isRunning, !takingPhoto else { emit(.failed("The camera isn’t ready. Try again.")); return }
-            takingPhoto = true; receivedPhoto = false
-            if let connection = output.connection(with: .video), connection.isVideoRotationAngleSupported(angle) {
-                connection.videoRotationAngle = angle
+            guard let connection = output.connection(with: .video), connection.isVideoRotationAngleSupported(angle) else {
+                emit(.failed("Camera orientation isn’t ready. Try again.")); return
             }
+            connection.videoRotationAngle = angle
+            takingPhoto = true; receivedPhoto = false
             let settings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
             settings.maxPhotoDimensions = output.maxPhotoDimensions
             settings.photoQualityPrioritization = .balanced
@@ -98,7 +99,7 @@ final class ReceiptCameraDriver: NSObject, AVCapturePhotoCaptureDelegate, @unche
     enum State: Equatable { case starting, live, capturing, review, denied, restricted, unavailable, failed(String) }
     var state: State = .starting
     var preview: UIImage?
-    var captureAngle: CGFloat = 90
+    @ObservationIgnored weak var previewLayer: AVCaptureVideoPreviewLayer?
     @ObservationIgnored let driver = ReceiptCameraDriver()
     @ObservationIgnored private var bytes: Data?
     @ObservationIgnored private var ended = false
@@ -163,7 +164,12 @@ final class ReceiptCameraDriver: NSObject, AVCapturePhotoCaptureDelegate, @unche
             return
         }
         #endif
-        driver.capture(angle: captureAngle)
+        // A downward-facing camera can report a different gravity-based capture angle
+        // from the visible guide. Freeze the actual viewfinder orientation at shutter time.
+        guard let connection = previewLayer?.connection else {
+            state = .failed("The camera preview isn’t ready. Try again."); return
+        }
+        driver.capture(angle: connection.videoRotationAngle)
     }
     private func checkPhoto(_ data: Data) {
         driver.stop()
@@ -215,9 +221,7 @@ struct ReceiptCameraView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             if [.live, .capturing, .starting].contains(model.state) {
-                ReceiptCameraPreview(driver: model.driver) { angle in
-                    Task { @MainActor in if model.captureAngle != angle { model.captureAngle = angle } }
-                }.ignoresSafeArea()
+                ReceiptCameraPreview(model: model).ignoresSafeArea()
                 #if DEBUG
                 if model.fixture != nil { fictionalPreview.ignoresSafeArea().accessibilityHidden(true) }
                 #endif
@@ -393,27 +397,23 @@ private struct ReceiptCameraCorners: Shape {
 }
 
 private struct ReceiptCameraPreview: UIViewRepresentable {
-    let driver: ReceiptCameraDriver
-    let angleChanged: (CGFloat) -> Void
+    let model: ReceiptCameraModel
     func makeUIView(context: Context) -> CameraPreviewView {
         let view = CameraPreviewView()
-        view.previewLayer.session = driver.session
+        view.previewLayer.session = model.driver.session
         view.previewLayer.videoGravity = .resizeAspectFill
-        view.angleChanged = angleChanged
-        if let device = driver.device {
+        model.previewLayer = view.previewLayer
+        if let device = model.driver.device {
             view.rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: view.previewLayer)
             view.observation = view.rotation?.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.initial, .new]) { [weak view] _, _ in
                 Task { @MainActor in view?.applyRotation() }
             }
         }
-        view.captureObservation = view.rotation?.observe(\.videoRotationAngleForHorizonLevelCapture, options: [.new]) { [weak view] _, _ in
-            Task { @MainActor in view?.applyRotation() }
-        }
         return view
     }
     func updateUIView(_ view: CameraPreviewView, context: Context) { view.applyRotation() }
     static func dismantleUIView(_ view: CameraPreviewView, coordinator: ()) {
-        view.observation?.invalidate(); view.captureObservation?.invalidate(); view.previewLayer.session = nil
+        view.observation?.invalidate(); view.previewLayer.session = nil
     }
 }
 
@@ -422,13 +422,10 @@ private struct ReceiptCameraPreview: UIViewRepresentable {
     var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     var rotation: AVCaptureDevice.RotationCoordinator?
     var observation: NSKeyValueObservation?
-    var captureObservation: NSKeyValueObservation?
-    var angleChanged: ((CGFloat) -> Void)?
     override func layoutSubviews() { super.layoutSubviews(); applyRotation() }
     func applyRotation() {
-        guard let rotation else { return }
+        guard window != nil, let rotation else { return }
         let angle = rotation.videoRotationAngleForHorizonLevelPreview
         if let connection = previewLayer.connection, connection.isVideoRotationAngleSupported(angle) { connection.videoRotationAngle = angle }
-        angleChanged?(rotation.videoRotationAngleForHorizonLevelCapture)
     }
 }
