@@ -142,6 +142,14 @@ extension ReceiptUploadUITests {
         check.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
         app.buttons["finishSave"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+        let reader = app.scrollViews["detailScreen"]
+        let total = reader.descendants(matching: .any)["receiptPaperTotal"]
+        for _ in 0..<14 {
+            if total.isHittable && total.frame.maxY < app.buttons["edit"].frame.minY { break }
+            reader.swipeUp()
+        }
+        XCTAssertTrue(total.isHittable)
+        XCTAssertLessThan(total.frame.maxY, app.buttons["edit"].frame.minY)
     }
 
     func testPaperAmountMismatchCanBeSavedAsDraft() {

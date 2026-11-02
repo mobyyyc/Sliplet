@@ -112,7 +112,7 @@ import XCTest
             if total.exists && total.isHittable && total.frame.maxY < app.buttons["edit"].frame.minY - 12 { break }
             app.scrollViews["detailScreen"].swipeUp()
         }
-        XCTAssertTrue(total.isHittable); let y = total.frame.minY
+        XCTAssertTrue(total.isHittable, "Total frame \(total.frame), reader \(app.scrollViews["detailScreen"].frame), Edit \(app.buttons["edit"].frame)"); let y = total.frame.minY
         capture(app, "reader-before-edit")
         app.buttons["edit"].tap(); XCTAssertTrue(app.buttons["finishSave"].waitForExistence(timeout: 5))
         app.buttons["back"].tap(); XCTAssertTrue(app.buttons["finishSave"].waitForNonExistence(timeout: 5))

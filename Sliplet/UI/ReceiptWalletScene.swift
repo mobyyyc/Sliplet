@@ -75,6 +75,7 @@ struct ReceiptWalletScene: View {
     var requestDelete: (ReceiptRecord) -> Void
     @State private var presented: ReceiptRecord?
     @State private var expanded = false
+    @State private var readerSettled = false
     @State private var paperFrames: [UUID: CGRect] = [:]
     @State private var origin = CGRect.zero
     @State private var departingPapers: [WalletDepartingPaper] = []
@@ -253,6 +254,7 @@ struct ReceiptWalletScene: View {
                     if presented?.id != record.id { preparePresentation(record, geometry: geometry) }
                 } else if presented != nil {
                     let returningID = presented?.id
+                    readerSettled = false
                     withAnimation(motion, completionCriteria: .removed) { expanded = false } completion: {
                         guard selectedID == nil, presented?.id == returningID else { return }
                         var transaction = Transaction(animation: nil)
@@ -299,6 +301,7 @@ struct ReceiptWalletScene: View {
         walletTravel = geometry.size.height + geometry.safeAreaInsets.bottom + 60 - walletFrame.minY
         // All siblings mount at their home positions before the next display frame.
         expanded = false
+        readerSettled = false
         presented = record
     }
     private func projection(in geometry: GeometryProxy) -> ReceiptStackProjection {
@@ -397,19 +400,21 @@ struct ReceiptWalletScene: View {
     }
     private func liftedPaper(_ record: ReceiptRecord, geometry: GeometryProxy) -> some View {
         let current = workspace.selected?.id == record.id ? workspace.selected! : record
-        return WalletReadingScene(record: current, input: workspace.readerInput, contentReady: workspace.readerRevisionID == current.current.id || workspace.errorMessage != nil, expanded: expanded, origin: origin,
+        return WalletReadingScene(record: current, input: workspace.readerInput, contentReady: workspace.readerRevisionID == current.current.id || workspace.errorMessage != nil, expanded: expanded, settled: readerSettled, origin: origin,
                            tilt: selectedTilt, reduceMotion: reduceMotion,
                            error: workspace.errorMessage,
                            loading: selectedID != nil && workspace.image == nil && workspace.errorMessage == nil,
                            visibleToAccessibility: selectedID != nil && workspace.flow != .review) {
             guard selectedID == record.id, presented?.id == record.id, !expanded else { return }
-            withAnimation(motion) { expanded = true }
+            withAnimation(motion, completionCriteria: .removed) { expanded = true } completion: {
+                if expanded && selectedID == record.id { readerSettled = true }
+            }
         }.id(record.id)
     }
 }
 
-/// The reader keeps its full scroll extent while the paper returns. Its single paper
-/// lives in scene coordinates, so native inset/offset clamping cannot teleport it.
+/// The full paper participates in native scroll layout. A scene-space copy handles
+/// the wallet transition without making the scroll extent depend on animation geometry.
 private struct WalletReadingScene: View {
     let record: ReceiptRecord
     let expanded: Bool
@@ -424,65 +429,67 @@ private struct WalletReadingScene: View {
     private let contentReady: Bool
     @State private var retainedInput: ReceiptReviewDraft?
     @State private var fullHeight: CGFloat = 0
-    @State private var statusHeight: CGFloat = 0
-    @State private var statusMeasured = false
-    @State private var footerMeasured = false
-    @State private var footerHeight: CGFloat = 0
+    let settled: Bool
+    @State private var paperTop: CGFloat = 0
     @State private var canvasY: CGFloat = 0
     @State private var canvasMeasured = false
     @State private var returnCanvasY: CGFloat?
-    init(record: ReceiptRecord, input: ReceiptReviewDraft?, contentReady: Bool, expanded: Bool, origin: CGRect, tilt: Double,
+    init(record: ReceiptRecord, input: ReceiptReviewDraft?, contentReady: Bool, expanded: Bool, settled: Bool, origin: CGRect, tilt: Double,
          reduceMotion: Bool, error: String?, loading: Bool, visibleToAccessibility: Bool,
          onReady: @escaping () -> Void) {
-        self.record = record; self.expanded = expanded; self.origin = origin; self.tilt = tilt
+        self.record = record; self.expanded = expanded; self.settled = settled; self.origin = origin; self.tilt = tilt
         self.reduceMotion = reduceMotion; self.error = error; self.loading = loading
         self.visibleToAccessibility = visibleToAccessibility; self.onReady = onReady
         reviewInput = input; self.contentReady = contentReady
     }
-    private var paperTop: CGFloat { max(12, statusHeight + 12) }
-    private var ready: Bool { contentReady && fullHeight > 0 && statusMeasured && footerMeasured && canvasMeasured }
+    private var ready: Bool { contentReady && fullHeight > 0 && paperTop > 0 && canvasMeasured }
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
                 ScrollView {
-                    ZStack(alignment: .topLeading) {
-                        Color.clear
+                    VStack(alignment: .leading, spacing: 0) {
                         HStack {
                             if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle") }
                             Spacer()
                             if record.isStarred { Image(systemName: "star.fill").accessibilityLabel("Starred") }
                         }.font(.footnote.weight(.medium)).fixedSize(horizontal: false, vertical: true)
                             .padding(.horizontal, 34).padding(.top, 10)
-                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { statusHeight = $0; statusMeasured = true }
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paperTop = $0 + 12 }
                             .opacity(expanded ? 1 : 0)
+                        ReceiptPaper(fields: record.current.fields, input: reviewInput ?? retainedInput,
+                                     reviewed: ReceiptCompletion.isComplete(record))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
+                            .padding(.horizontal, 30).padding(.top, 12)
+                            .opacity(settled ? 1 : 0)
+                            .accessibilityHidden(!settled || !visibleToAccessibility)
                         VStack(alignment: .leading, spacing: 18) {
                             if loading { ProgressView("Loading original").font(.footnote) }
                             if let error { Text(error).font(.subheadline) }
                             if record.current.fields.currency == nil { Text("Currency needs confirmation. Edit to check the saved amounts.").font(.footnote) }
                         }.padding(.horizontal, 30).fixedSize(horizontal: false, vertical: true)
-                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0; footerMeasured = true }
-                            .offset(y: fullHeight + paperTop + 22).opacity(expanded ? 1 : 0)
+                            .padding(.top, 22).opacity(expanded ? 1 : 0)
                     }
-                    .frame(width: max(0, geometry.size.width), height: max(0, fullHeight + paperTop + 22 + footerHeight))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("walletScene")).minY } action: {
                         canvasY = $0; canvasMeasured = true
                     }
                 }
                 .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
-                .contentMargins(.bottom, geometry.safeAreaInsets.bottom + 12, for: .scrollContent)
-                .scrollDisabled(!expanded)
+                .contentMargins(.bottom, 12, for: .scrollContent)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .scrollDisabled(!settled)
                 .allowsHitTesting(expanded)
                 .accessibilityIdentifier("detailScreen")
 
-                WalletMorphingPaper(reviewInput: reviewInput ?? retainedInput, record: record, expanded: expanded,
-                                    progress: expanded ? 1 : 0,
-                                    visibleToAccessibility: visibleToAccessibility,
+                WalletMorphingPaper(reviewInput: reviewInput ?? retainedInput, record: record,
+                                    settled: settled, progress: expanded ? 1 : 0,
                                     origin: origin,
                                     destination: CGRect(x: 30, y: paperTop + (expanded ? canvasY : returnCanvasY ?? canvasY),
                                                         width: max(0, geometry.size.width - 60), height: max(origin.height, fullHeight)),
-                                    tilt: tilt, reduceMotion: reduceMotion) { fullHeight = $0 }
-                    .allowsHitTesting(false)
+                                    tilt: tilt, reduceMotion: reduceMotion)
+                    .allowsHitTesting(false).accessibilityRepresentation { EmptyView() }
                 readerScreenEdges(in: geometry).opacity(expanded ? 1 : 0)
             }
             .onChange(of: reviewInput, initial: true) { _, value in
@@ -517,29 +524,29 @@ private struct WalletReadingScene: View {
 private struct WalletMorphingPaper: View, Animatable {
     let reviewInput: ReceiptReviewDraft?
     let record: ReceiptRecord
-    let expanded: Bool
+    let settled: Bool
     var progress: CGFloat
-    let visibleToAccessibility: Bool
     let origin: CGRect
     let destination: CGRect
     let tilt: Double
     let reduceMotion: Bool
-    var onFullHeight: (CGFloat) -> Void
     nonisolated var animatableData: CGFloat {
         get { progress }
         set { progress = newValue }
     }
     private func blend(_ start: CGFloat, _ end: CGFloat) -> CGFloat { start + (end - start) * progress }
     var body: some View {
+        if !settled { transitionPaper }
+    }
+    private var transitionPaper: some View {
         let start = reduceMotion ? destination : origin
         let width = max(0, blend(start.width, destination.width))
         let height = max(0, blend(start.height, destination.height))
-        ZStack(alignment: .topLeading) {
+        return ZStack(alignment: .topLeading) {
             WalletReadingContent(fields: record.current.fields, input: reviewInput, reviewed: ReceiptCompletion.isComplete(record)).equatable()
                 .frame(width: destination.width).fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onFullHeight($0) }
                 .scaleEffect(x: destination.width > 0 ? width / destination.width : 1, y: 1, anchor: .topLeading)
-                .opacity(progress).accessibilityHidden(true, isEnabled: !expanded || !visibleToAccessibility)
+                .opacity(progress)
             ReceiptPreviewPaper(record: record).equatable()
                 .frame(width: origin.width, height: origin.height, alignment: .topLeading)
                 .scaleEffect(x: origin.width > 0 ? width / origin.width : 1, y: 1, anchor: .topLeading)
