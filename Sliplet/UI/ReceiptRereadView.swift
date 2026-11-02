@@ -99,7 +99,7 @@ struct ReceiptRereadView: View {
                     } header: { Text("Choose a reading") }
                     footer: { Text("Check the photo before using a value. The focused editor still needs Apply; this does not mark the whole receipt reviewed.") }
                 }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
-                    .atmosphericScreen().navigationTitle("Reread area").navigationBarTitleDisplayMode(.inline)
+                    .navigationTitle("Reread area").navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) { Button("Cancel") { stop(); dismiss() }.accessibilityIdentifier("rereadCancel") }
                         ToolbarItem(placement: .confirmationAction) {

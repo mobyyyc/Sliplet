@@ -16,7 +16,7 @@ struct FoundationView: View {
                 }
                 #endif
             }
-            .atmosphericScreen().navigationTitle("Sliplet")
+            .navigationTitle("Sliplet")
             #if DEBUG
             .sheet(isPresented: .constant(ProcessInfo.processInfo.arguments.contains("--synthetic-diagnostics"))) {
                 NavigationStack { DiagnosticsView(autoRun: true) }

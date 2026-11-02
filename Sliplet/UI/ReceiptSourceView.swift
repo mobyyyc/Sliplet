@@ -34,7 +34,7 @@ struct ReceiptSourceView: View {
                         if workspace.extraction?.rawOCR.isEmpty ?? true { Text("No recognized text. Compare against the original image.") }
                     }
                 }
-            }.atmosphericScreen().navigationTitle("Original evidence").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("Original evidence").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { workspace.sourceVisible = false; dismiss() }.accessibilityIdentifier("sourceDone") } }
         }.tint(.primary).accessibilityIdentifier("sourceScreen")
     }
@@ -57,7 +57,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> UIScrollView {
         let view = ReceiptZoomScrollView()
-        view.backgroundColor = UIColor { $0.userInterfaceStyle == .dark ? .clear : .systemBackground }
+        view.backgroundColor = .systemBackground
         view.contentInsetAdjustmentBehavior = .never
         view.delegate = context.coordinator
         view.maximumZoomScale = 8; view.minimumZoomScale = 0.01

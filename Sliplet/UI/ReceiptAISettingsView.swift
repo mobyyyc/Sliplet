@@ -79,7 +79,7 @@ struct ReceiptAISettingsView: View {
                 }
             }
         }
-        .atmosphericScreen().navigationTitle("AI recognition").navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("AI recognition").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Disconnect Gemini?", isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Remove key from this device", role: .destructive) { clearEntry(); connection.disconnect(); replacing = false }
         }

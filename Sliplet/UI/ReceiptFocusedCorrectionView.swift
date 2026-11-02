@@ -196,7 +196,7 @@ struct ReceiptFocusedCorrectionView: View {
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
                 .contentMargins(.bottom, 28, for: .scrollContent)
                 .accessibilityIdentifier("focusedCorrectionForm")
-                .atmosphericScreen().navigationTitle(check.title).navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(check.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil; dismiss() }.disabled(workspace.saving).accessibilityIdentifier("cancelFocusedCorrection") }
                     ToolbarItem(placement: .confirmationAction) {
@@ -229,7 +229,7 @@ struct ReceiptFocusedCorrectionView: View {
                             VStack {
                                 ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: expandedZoomTarget, rasterID: "expandedSourceRaster")
                                 ReceiptSourceZoomControls(target: expandedZoomTarget, prefix: "expanded").padding()
-                            }.atmosphericScreen().navigationTitle("Original image").navigationBarTitleDisplayMode(.inline)
+                            }.navigationTitle("Original image").navigationBarTitleDisplayMode(.inline)
                                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { expanded = false }.accessibilityIdentifier("closeExpandedOriginal") } }
                         }
                     }

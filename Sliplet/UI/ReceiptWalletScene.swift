@@ -925,7 +925,7 @@ struct ReceiptWalletSettingsView: View {
                 }
                 if let notice = workspace.notice { Section { Text(notice) } }
             }
-            .atmosphericScreen().navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .disabled(workspace.saving && !workspace.backupBusy)
         }.tint(.primary)

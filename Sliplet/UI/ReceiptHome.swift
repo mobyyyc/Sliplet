@@ -43,7 +43,14 @@ struct ReceiptHome: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background { AtmosphericBackground().ignoresSafeArea() }
+            .background {
+                if workspace.availability == .ready && !workspace.privacyCovered &&
+                    (workspace.flow == .detail || (workspace.flow == .wallet && !workspace.library)) {
+                    AtmosphericBackground().ignoresSafeArea()
+                } else {
+                    Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+                }
+            }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library ? .large : .inline)
             .toolbar {
@@ -354,7 +361,7 @@ private struct WalletInformationView: View {
                     Section("Development") { NavigationLink("Synthetic diagnostics") { DiagnosticsView() } }
                 }
                 #endif
-            }.atmosphericScreen().navigationTitle("Your local wallet").navigationBarTitleDisplayMode(.inline)
+            }.navigationTitle("Your local wallet").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

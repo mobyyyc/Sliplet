@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ReceiptReviewView: View {
-    @Environment(\.colorScheme) private var scheme
     @Bindable var workspace: ReceiptWorkspace
     var editing: FocusState<String?>.Binding
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -153,7 +152,7 @@ struct ReceiptReviewView: View {
                     .font(.footnote).foregroundStyle(.primary).accessibilityIdentifier("reviewStorageFooter")
             }
 
-        }.scrollContentBackground(scheme == .dark ? .hidden : .automatic).listSectionSpacing(20).scrollDismissesKeyboard(.interactively)
+        }.listSectionSpacing(20).scrollDismissesKeyboard(.interactively)
         .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
         .contentMargins(.bottom, 28, for: .scrollContent)
         .accessibilityIdentifier("reviewScreen")
@@ -172,7 +171,7 @@ struct ReceiptReviewView: View {
                             workspace.updateDraft { $0.date = "" }; selectingDate = false
                         }.accessibilityIdentifier("clearReceiptDate")
                     }
-                }.padding().atmosphericScreen().navigationTitle("Purchase date").navigationBarTitleDisplayMode(.inline)
+                }.padding().navigationTitle("Purchase date").navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Cancel") { selectingDate = false }.accessibilityIdentifier("cancelReceiptDate")
