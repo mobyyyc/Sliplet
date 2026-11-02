@@ -31,7 +31,10 @@ import XCTest
         XCTAssertTrue(app.buttons["cameraShutter"].waitForExistence(timeout: 10))
         app.buttons["cameraShutter"].tap()
         XCTAssertTrue(app.buttons["cameraUse"].waitForExistence(timeout: 10)); app.buttons["cameraUse"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["reviewScreen"].waitForExistence(timeout: 25), "Photo must use the real Vision/parser import")
+        let local = app.buttons["readLocal"]
+        XCTAssertTrue(local.waitForExistence(timeout: 10))
+        local.tap()
+        XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 25), "On-device reading should open review")
         XCTAssertFalse(app.buttons["finishSave"].isEnabled)
         app.buttons["original"].tap()
         XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); app.buttons["sourceDone"].tap()

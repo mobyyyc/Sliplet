@@ -11,6 +11,10 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
+        if ProcessInfo.processInfo.arguments.contains("--p904-offline") {
+            client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet))
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("--p901-failed-read") {
             client?.urlProtocol(self, didFailWithError: URLError(.timedOut))
             return

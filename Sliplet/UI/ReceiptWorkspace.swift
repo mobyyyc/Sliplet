@@ -32,6 +32,12 @@ final class ReceiptWorkspace {
         baseline.sourceOpened = false; current.sourceOpened = false
         return current != baseline
     }
+    struct UploadCovers {
+        var drawn: [CGRect] = []
+        var top = false
+        var bottom = false
+    }
+    private(set) var retryCovers: UploadCovers?
     var aiUploadStarted = false
     var image: ReceiptImage?
     private(set) var readerInput: ReceiptReviewDraft?
@@ -133,7 +139,7 @@ final class ReceiptWorkspace {
     }
     /// Synchronous revocation precedes any actor hop. Queued writes fail or roll back before commit.
     func suspend() {
-        active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false
+        active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; retryCovers = nil
         aiConnection.cancel()
         permit.revoke(); cancelBackup(); task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil
@@ -190,7 +196,7 @@ final class ReceiptWorkspace {
         aiUploadStarted = false; errorMessage = nil; flow = .preparingUpload
     }
     /// Called only by the exact-payload preview's explicit send button.
-    func sendToAI(_ upload: ReceiptUploadImage) {
+    func sendToAI(_ upload: ReceiptUploadImage, covers: UploadCovers = UploadCovers()) {
         guard active, !privacyCovered, flow == .preparingUpload, image != nil, !saving else { return }
         do {
             let credential = try aiConnection.uploadCredential(), model = aiConnection.preferences.model
@@ -199,14 +205,16 @@ final class ReceiptWorkspace {
                 // Intentionally ignore the local original. Only reviewed flattened bytes are sent.
                 try await transport.read(upload: upload, key: credential.key, model: model)
             }
+            retryCovers = covers
             aiUploadStarted = true
             readModelImage(using: reader, credentialID: credential.id)
         } catch { errorMessage = "AI is not ready. Check your connection in Settings or use on-device reading." }
     }
-    func stopAIReading() {
-        guard active, aiUploadStarted, flow == .reading else { return }
-        task?.cancel(); task = nil; flow = .failed
-        errorMessage = "Request cancelled. Google may already have received the image; cancellation cannot recall it. Your original is still here."
+    func stopReading() {
+        guard active, flow == .reading else { return }
+        task?.cancel(); worker?.cancel(); recognition?.cancel()
+        task = nil; worker = nil; recognition = nil; flow = .failed
+        errorMessage = aiUploadStarted ? "Stopped waiting. Google may have received the image; stopping cannot recall the upload." : "On-device reading stopped."
     }
     /// Opt-in integration boundary. Existing imports continue to use local Vision.
     /// No in-flight response may overwrite edits, a new import, or a locked session.
@@ -226,7 +234,7 @@ final class ReceiptWorkspace {
                     self.errorMessage = "The AI connection changed while reading. This result was not applied. Your original is preserved."
                     self.flow = .failed; return
                 }
-                self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review
+                self.retryCovers = nil; self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review
             } catch is CancellationError {
                 // A transport can cancel independently of the user/task. Never leave
                 // the active import spinning, and never touch a newer/locked session.
@@ -246,14 +254,14 @@ final class ReceiptWorkspace {
                 case .some(let safe): message = safe.message
                 case .none: message = "The model returned an incomplete or unsupported receipt."
                 }
-                self.errorMessage = message + " Your original is preserved. Choose on-device reading, manual entry, or preview a new AI request."
+                self.errorMessage = message
                 self.flow = .failed
             }
         }
     }
     func readImage() {
         guard let image, active, !saving else { return }
-        aiUploadStarted = false
+        aiUploadStarted = false; retryCovers = nil
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         draft = ReceiptReviewDraft(); extraction = nil; selected = nil; sourceVisible = false
         flow = .reading; errorMessage = nil
@@ -299,12 +307,12 @@ final class ReceiptWorkspace {
             let result = OCRResult(lines: [], revision: 0)
             extraction = try? ReceiptParser.extraction(result)
         }
-        draft = ReceiptReviewDraft(); draft.applyDefaultCurrency(); flow = .review; sourceVisible = false
+        retryCovers = nil; draft = ReceiptReviewDraft(); draft.applyDefaultCurrency(); flow = .review; sourceVisible = false
     }
     func cancelImport(showNotice: Bool = true) {
         guard !saving else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
-        aiUploadStarted = false
+        aiUploadStarted = false; retryCovers = nil
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
         readerInput = nil; readerRevisionID = nil
         reviewBaseline = nil

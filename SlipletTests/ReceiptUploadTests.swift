@@ -140,7 +140,7 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         w.startImport(chooseRecognition: true) { original.bytes }
         try await wait { w.flow == .preparingUpload }; XCTAssertEqual(calls, 0)
         let upload = try ReceiptUploadImage.prepare(original, redactions: [CGRect(x: 0, y: 0, width: 1, height: 0.2)])
-        w.sendToAI(upload); try await wait { w.flow == .review }
+        w.sendToAI(upload); w.sendToAI(upload); try await wait { w.flow == .review }
         XCTAssertEqual(calls, 1); XCTAssertEqual(w.image?.bytes, original.bytes)
         XCTAssertFalse(w.draft.sourceChecked); XCTAssertFalse(w.draft.canFinalize)
         XCTAssertEqual(w.draft.currencyOrigin, .defaultCAD); XCTAssertNil(w.extraction?.fields.currency)
@@ -153,9 +153,26 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         let w = try await workspace(), source = try image()
         w.startImport(chooseRecognition: true) { source.bytes }; try await wait { w.flow == .preparingUpload }
         w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: [])); try await wait { self.calls == 1 }
-        w.stopAIReading(); XCTAssertEqual(w.flow, .failed); XCTAssertEqual(w.image?.bytes, source.bytes)
+        w.stopReading(); XCTAssertEqual(w.flow, .failed); XCTAssertEqual(w.image?.bytes, source.bytes)
         XCTAssertTrue(w.errorMessage!.contains("cannot recall")); w.manualReview()
         try await Task.sleep(for: .milliseconds(100)); XCTAssertEqual(w.flow, .review); XCTAssertEqual(calls, 1)
+    }
+    func testStoppedCloudReadKeepsCoversUntilSwitchingToLocal() async throws {
+        reset(delay: true)
+        let w = try await workspace(), source = try image()
+        w.startImport(chooseRecognition: true) { source.bytes }
+        try await wait { w.flow == .preparingUpload }
+        let box = CGRect(x: 0.1, y: 0.1, width: 0.3, height: 0.1)
+        w.sendToAI(try ReceiptUploadImage.prepare(source, redactions: [box]), covers: .init(drawn: [box]))
+        try await wait { self.calls == 1 }
+        w.stopReading(); w.chooseRecognition()
+        XCTAssertEqual(w.retryCovers?.drawn, [box]); XCTAssertEqual(calls, 1)
+        w.readImage(); w.stopReading()
+        XCTAssertEqual(w.flow, .failed); XCTAssertNil(w.retryCovers)
+        XCTAssertEqual(w.image?.bytes, source.bytes)
+        w.manualReview()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(w.flow, .review); XCTAssertEqual(calls, 1)
     }
     func testDisabledConnectionAndBackgroundCannotUpload() async throws {
         reset()

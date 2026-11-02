@@ -23,7 +23,7 @@ struct ReceiptHome: View {
                 Button("Take a photo") { camera = true }
                 Button("Photo library") { photos = true }
                 Button("Files") { files = true }
-            } message: { Text("Choose an image, then choose on-device reading or preview an optional AI upload.") }
+            } message: { Text("Choose your receipt photo. You’ll select how to read it next.") }
     }
 
     var body: some View {
@@ -176,7 +176,10 @@ struct ReceiptHome: View {
                 switch result {
                 case .success(let urls): if let url = urls.first { workspace.importFile(url, chooseRecognition: true) }
                 case .failure(let error):
-                    if (error as NSError).code != CocoaError.userCancelled.rawValue { workspace.notice = ImportFailure.unavailableFile.message }
+                    if (error as NSError).code != CocoaError.userCancelled.rawValue {
+                        workspace.errorMessage = ImportFailure.unavailableFile.message
+                        workspace.flow = .failed
+                    }
                 }
             }
             .confirmationDialog("Discard unsaved changes?", isPresented: $discard, titleVisibility: .visible) {
@@ -196,7 +199,7 @@ struct ReceiptHome: View {
             .disabled(workspace.saving)
         }
         .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
-            if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopAIReading() }
+            if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopReading() }
         }
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
@@ -284,32 +287,41 @@ struct ReceiptHome: View {
         case .loading, .reading:
             VStack(spacing: 24) {
                 ProgressView(workspace.flow == .loading ? "Loading image" : (workspace.aiUploadStarted ? "Reading with Gemini" : "Reading on device"))
-                if workspace.aiUploadStarted {
-                    Text("Google may have received the image. Cancelling stops waiting but cannot recall an upload. No automatic retries.").font(.footnote)
-                }
-                Text("Nothing is saved yet.")
-                    .font(.subheadline).foregroundStyle(.primary).multilineTextAlignment(.center)
-                Text("You can leave this screen or cancel. Returning from the background discards unsaved work.")
-                    .font(.footnote).foregroundStyle(.primary).multilineTextAlignment(.center)
-                Button("Cancel import", role: .cancel) {
-                    if workspace.aiUploadStarted { workspace.stopAIReading() } else { workspace.cancelImport() }
+                Text(workspace.aiUploadStarted
+                     ? "Waiting for Google’s response. Stopping keeps your photo here but cannot recall the upload."
+                     : workspace.flow == .loading ? "Opening your photo on this device." : "Looking for items and totals in your photo. No upload is needed.")
+                    .font(.subheadline).multilineTextAlignment(.center)
+                Text("Keep Sliplet open until you save your receipt.").font(.footnote).foregroundStyle(.secondary)
+                Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
+                    if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
                 }
                     .buttonStyle(ReceiptSecondaryStyle()).frame(minHeight: 44).accessibilityIdentifier("cancelImport")
             }.padding(28).accessibilityElement(children: .contain).accessibilityIdentifier("processing")
         case .failed:
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    Label("Reading needs attention", systemImage: "exclamationmark.triangle").font(.title2)
-                    Text(workspace.errorMessage ?? "Choose another image or try again.")
+                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Continue with this photo",
+                          systemImage: workspace.image == nil ? "photo" : "doc.viewfinder").font(.title2)
+                    if let message = workspace.errorMessage { Text(message) }
                     if workspace.image != nil {
-                        Button("View original", systemImage: "doc.viewfinder") { workspace.showSource() }.buttonStyle(ReceiptSecondaryStyle())
-                        Button("Read on device", systemImage: "arrow.clockwise", action: workspace.readImage).buttonStyle(ReceiptSecondaryStyle())
-                        Button("Choose recognition", action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle())
-                        Button("Enter manually", systemImage: "pencil", action: workspace.manualReview).buttonStyle(ReceiptProminentStyle())
-                            .accessibilityIdentifier("manual")
+                        if workspace.aiUploadStarted {
+                            Button("Read on device", systemImage: "iphone", action: workspace.readImage)
+                                .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("recoverLocal")
+                            Text("Uses the original photo already here. Works offline.").font(.footnote).foregroundStyle(.secondary)
+                            Button(workspace.aiConnection.canUseAI ? "Preview another Gemini request" : "Recognition options",
+                                   action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("recoverPreview")
+                            Button("Enter manually", action: workspace.manualReview).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("manual")
+                        } else {
+                            Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
+                                .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("manual")
+                            Button("Recognition options", action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle())
+                        }
                     }
-                    Button("Choose another image", systemImage: "photo") { workspace.cancelImport(showNotice: false); importChoices = true }.buttonStyle(ReceiptSecondaryStyle())
-                    Button("Return to wallet", action: workspace.backToWallet).buttonStyle(ReceiptSecondaryStyle())
+                    anchoredImportChoices {
+                        Button("Choose another image", systemImage: "photo") { importChoices = true }
+                            .buttonStyle(ReceiptSecondaryStyle())
+                    }
+
                 }.padding(24)
             }
         }

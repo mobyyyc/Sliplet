@@ -18,12 +18,22 @@ struct ReceiptUploadPreview: View {
     @State private var settings = false
     @State private var hideTop = false
     @State private var hideBottom = false
+    init(workspace: ReceiptWorkspace) {
+        self.workspace = workspace
+        if let covers = workspace.retryCovers, workspace.aiConnection.canUseAI {
+            _ai = State(initialValue: true)
+            _redactions = State(initialValue: covers.drawn)
+            _hideTop = State(initialValue: covers.top)
+            _hideBottom = State(initialValue: covers.bottom)
+        }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 if !ai {
                     Label("Choose how to read", systemImage: "doc.viewfinder").font(.title2.bold())
-                    Text("Your original stays in your wallet. Both options create a draft for you to check.").foregroundStyle(.secondary)
+                    Text("Your photo is ready. Choose how to read it, then check the receipt before saving.").foregroundStyle(.secondary)
                     Button("Read on device", systemImage: "iphone") { workspace.readImage() }
                         .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("readLocal")
                     Text("Private, offline reading with Apple Vision. No image is uploaded.").font(.footnote)
@@ -90,7 +100,7 @@ struct ReceiptUploadPreview: View {
                             .tint(.green).accessibilityIdentifier("uploadConsent")
                         Button("Send to Gemini", systemImage: "arrow.up") {
                             guard acknowledged, let upload, !preparing else { return }
-                            workspace.sendToAI(upload)
+                            workspace.sendToAI(upload, covers: .init(drawn: redactions, top: hideTop, bottom: hideBottom))
                         }.buttonStyle(ReceiptProminentStyle())
                             .disabled(!acknowledged || upload == nil || preparing || !workspace.aiConnection.canUseAI)
                             .accessibilityIdentifier("sendReceiptAI")

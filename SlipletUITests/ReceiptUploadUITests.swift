@@ -207,13 +207,25 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
     }
 
+    func testOfflineRecoveryPreviewsAgainBeforeSending() {
+        let app = sendAuditFixture("--p904-offline")
+        XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+        app.buttons["recoverPreview"].tap()
+        let review = app.buttons["reviewUpload"]
+        XCTAssertTrue(review.waitForExistence(timeout: 10))
+        review.tap()
+        let send = app.buttons["sendReceiptAI"]
+        reveal(send, in: app)
+        XCTAssertFalse(send.isEnabled)
+    }
+
     func testFailedReadKeepsOriginalForManualEntry() {
         let app = sendAuditFixture("--p901-failed-read")
         let manual = app.buttons["manual"]
         XCTAssertTrue(manual.waitForExistence(timeout: 10))
         let failure = XCTAttachment(screenshot: app.screenshot())
         failure.name = "Read recovery"; failure.lifetime = .keepAlways; add(failure)
-        app.buttons["View original"].tap()
+        app.buttons["original"].tap()
         app.buttons["sourceDone"].tap()
         manual.tap()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
