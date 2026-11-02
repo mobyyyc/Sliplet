@@ -330,6 +330,38 @@ import Vision
         let end = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.18))
         start.press(forDuration: 0.05, thenDragTo: end)
     }
+    func testCrowdedWalletRoundTripHitches() {
+        let app = launch("many")
+        let paper = app.buttons["receipt-1"]
+        XCTAssertTrue(paper.waitForExistence(timeout: 10))
+        let position = paper.frame.minY
+        let options = XCTMeasureOptions()
+        options.iterationCount = 3
+        measure(metrics: [XCTHitchMetric(application: app)], options: options) {
+            paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.07)).tap()
+            app.buttons["back"].tap()
+            XCTAssertEqual(paper.frame.minY, position, accuracy: 2)
+        }
+        app.terminate()
+    }
+    func testReversingSwipeRestoresPaperAcrossWalletSizes() {
+        for mode in ["one", "wallet", "many"] {
+            let app = launch(mode)
+            let paper = app.buttons["receipt-0"]
+            let action = app.buttons["swipeAction-receipt-0"]
+            XCTAssertTrue(paper.waitForExistence(timeout: 10))
+            let position = paper.frame.origin
+            swipeHeader(paper, left: true)
+            XCTAssertTrue(action.waitForExistence(timeout: 5))
+            XCTAssertEqual(action.label, "Archive")
+            paper.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.14))
+                .press(forDuration: 0.05, thenDragTo: paper.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
+            XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+            XCTAssertEqual(paper.frame.minX, position.x, accuracy: 2)
+            XCTAssertEqual(paper.frame.minY, position.y, accuracy: 2)
+            app.terminate()
+        }
+    }
     func testShortStackReturnsTuckedWithoutCorrectiveSwipe() throws {
         for mode in ["one", "two", "wallet"] {
             let app = launch(mode)
@@ -392,7 +424,7 @@ import Vision
         try VNImageRequestHandler(cgImage: image).perform([request])
         return (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
             .filter { $0.range(of: "^DEMO [0-9]{2}", options: .regularExpression) != nil || $0.contains("SYNTHETIC ") || $0.contains("saved") }
-            .map { $0.replacingOccurrences(of: "•", with: "·") }
+            .map { $0.replacingOccurrences(of: #" *[•·] *"#, with: " · ", options: .regularExpression) }
     }
     func testDetailContainsOnlySelectedPaperAcrossRepeatedReturns() throws {
         for mode in ["elastic", "many"] {

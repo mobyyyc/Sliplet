@@ -87,6 +87,8 @@ struct ReceiptWalletScene: View {
     @State private var walletHeight: CGFloat = 110
     @State private var endBounce: CGFloat = 0
     @State private var scrollOffset: CGFloat = 0
+    @State private var walletScroll = ScrollPosition()
+    @State private var openingOffset: CGFloat = 0
     @State private var jumpToNewest = 0
     @State private var stackHeight: CGFloat = 0
     @State private var measuredCount = 0
@@ -97,7 +99,7 @@ struct ReceiptWalletScene: View {
     @State private var revealedID: UUID?
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemMotion) }
     private var selectedID: UUID? { [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil }
-    private var records: [ReceiptRecord] { retainedRecords ?? Array(workspace.orderedReceipts.filter { !$0.isArchived }.reversed()) }
+    private var records: [ReceiptRecord] { retainedRecords ?? workspace.walletReceipts }
     private var motion: Animation { reduceMotion ? .easeOut(duration: 0.12) : .easeInOut(duration: 0.38) }
     // A bounded follow-through in both directions. Overscroll moves the leather at
     // 22% of the paper's end pull; normal scrolling adds at most 22 points of drift.
@@ -179,6 +181,7 @@ struct ReceiptWalletScene: View {
                     .allowsHitTesting(presented == nil)
                     .accessibilityHidden(true, isEnabled: presented != nil)
                     .scrollBounceBehavior(.always)
+                    .scrollPosition($walletScroll)
                     .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
                         scrollOffset = offset
                     }
@@ -254,6 +257,7 @@ struct ReceiptWalletScene: View {
                     if presented?.id != record.id { preparePresentation(record, geometry: geometry) }
                 } else if presented != nil {
                     let returningID = presented?.id
+                    walletScroll.scrollTo(y: openingOffset)
                     readerSettled = false
                     withAnimation(motion, completionCriteria: .removed) { expanded = false } completion: {
                         guard selectedID == nil, presented?.id == returningID else { return }
@@ -269,6 +273,7 @@ struct ReceiptWalletScene: View {
         }
     }
     private func preparePresentation(_ record: ReceiptRecord, geometry: GeometryProxy) {
+        openingOffset = scrollOffset
         let snapshot = records
         var frames = paperFrames
         if elastic {
@@ -315,7 +320,6 @@ struct ReceiptWalletScene: View {
         let curve = projection(in: geometry)
         let baseY = stackSceneY ?? stackTop(in: geometry)
         let visible = curve.visibleIndices(baseY: baseY, count: snapshot.count, endPull: endBounce)
-        let ids = visible.map { snapshot[$0].id }
         return ZStack(alignment: .topLeading) {
             ForEach(visible, id: \.self) { index in
                 let record = snapshot[index]
@@ -325,11 +329,6 @@ struct ReceiptWalletScene: View {
                     .id(record.id).zIndex(revealedID == record.id ? Double(records.count + 1) : Double(index + 1))
                     .rotationEffect(.degrees(tilt(index)))
                     .offset(y: y - baseY + pocketMotion)
-                    .onGeometryChange(for: CGRect.self) { proxy in
-                        let bounds = proxy.frame(in: .named("walletScene"))
-                        return CGRect(x: bounds.midX - proxy.size.width / 2, y: bounds.midY - proxy.size.height / 2,
-                                      width: proxy.size.width, height: proxy.size.height)
-                    } action: { if presented == nil { paperFrames[record.id] = $0 } }
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -339,9 +338,6 @@ struct ReceiptWalletScene: View {
             // Discarding its new origin leaves the projection stale until a swipe.
             // Presentation/return use separate frozen frames, so keep this current.
             stackSceneY = $0
-        }
-        .onChange(of: ids, initial: true) { _, visibleIDs in
-            if presented == nil { paperFrames = paperFrames.filter { visibleIDs.contains($0.key) } }
         }
         .padding(.horizontal, 10)
     }
@@ -893,6 +889,14 @@ struct ReceiptWalletSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Collections") {
+                    Button("Archive", systemImage: "archivebox") {
+                        workspace.collection = "Archive"; workspace.library = true; dismiss()
+                    }.accessibilityIdentifier("openArchive")
+                    Button("Starred", systemImage: "star") {
+                        workspace.collection = "Starred"; workspace.library = true; dismiss()
+                    }.accessibilityIdentifier("openStarred")
+                }
                 ReceiptAppLockSettings()
                 Section {
                     NavigationLink {
@@ -915,14 +919,6 @@ struct ReceiptWalletSettingsView: View {
                     actionPicker("Swipe left", left: true).accessibilityIdentifier("leftSwipeSetting")
                     actionPicker("Swipe right", left: false).accessibilityIdentifier("rightSwipeSetting")
                 } header: { Text("Receipt actions") } footer: { Text("Swipe to reveal an action, then tap it. Delete always asks for confirmation.") }
-                Section {
-                    Button("Archive", systemImage: "archivebox") {
-                        workspace.collection = "Archive"; workspace.library = true; dismiss()
-                    }.accessibilityIdentifier("openArchive")
-                    Button("Starred", systemImage: "star") {
-                        workspace.collection = "Starred"; workspace.library = true; dismiss()
-                    }.accessibilityIdentifier("openStarred")
-                }
                 if let notice = workspace.notice { Section { Text(notice) } }
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)

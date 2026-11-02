@@ -16,10 +16,12 @@ final class ReceiptWorkspace {
         if let preparedSearchIndex { searchIndex = preparedSearchIndex; self.preparedSearchIndex = nil }
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
+        walletReceipts = orderedReceipts.reversed().filter { !$0.isArchived }
     } }
     private(set) var searchIndex = ReceiptSearchIndex()
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
     private(set) var orderedReceipts: [ReceiptRecord] = []
+    private(set) var walletReceipts: [ReceiptRecord] = []
     var searchQuery = ""
     var includeArchived = false
     var searchMatch: ReceiptSearchIndex.Match?
