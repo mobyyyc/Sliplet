@@ -152,6 +152,42 @@ extension ReceiptUploadUITests {
         XCTAssertLessThan(total.frame.maxY, app.buttons["edit"].frame.minY)
     }
 
+    func testSavedDetailLineCancelAndSaveDraft() {
+        let app = XCUIApplication()
+        continueAfterFailure = false
+        app.launchArguments = ["--t05-synthetic-preview", "split", "--t05-light"]
+        app.launch()
+        let reader = app.scrollViews["detailScreen"]
+        let row = reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 30))
+        let id = row.identifier
+        let original = row.label
+        row.tap()
+        let quantity = app.textFields["focusedQuantity"]
+        reveal(quantity, in: app)
+        quantity.tap(); quantity.typeText("7")
+        app.buttons["cancelFocusedCorrection"].tap()
+        XCTAssertEqual(reader.buttons[id].label, original)
+        reader.buttons[id].tap()
+        reveal(quantity, in: app)
+        quantity.tap(); quantity.typeText("7")
+        let save = app.buttons["applyFocusedCorrection"]
+        XCTAssertEqual(save.label, "Save draft")
+        save.tap()
+        XCTAssertTrue(save.waitForNonExistence(timeout: 10))
+        XCTAssertNotEqual(reader.buttons[id].label, original)
+        XCTAssertTrue(app.staticTexts["Needs review"].exists)
+        let tax = reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label CONTAINS 'FICTIONAL TAX'")).firstMatch
+        reveal(tax, in: app); tax.tap()
+        let name = app.textFields["focusedLineName"]
+        reveal(name, in: app)
+        XCTAssertEqual(name.value as? String, "FICTIONAL TAX")
+        XCTAssertFalse(app.textFields["focusedQuantity"].exists)
+        app.buttons["applyFocusedCorrection"].tap()
+        app.buttons["edit"].tap()
+        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
+    }
+
     func testPaperAmountMismatchCanBeSavedAsDraft() {
         let app = sendAuditFixture("--p901-clean-read")
         let paper = app.scrollViews["paperReview"]

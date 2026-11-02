@@ -60,6 +60,14 @@ import Vision
         XCTAssertTrue(footer.isHittable, "The whole long receipt must remain scrollable")
         XCTAssertTrue(!original.isHittable || original.frame.minY < originalY - 100,
                       "Match context must scroll away with the receipt instead of staying over it")
+        let row = app.scrollViews["detailScreen"].buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'"))
+            .allElementsBoundByIndex.last { $0.isHittable && $0.frame.midY < app.buttons["edit"].frame.minY - 20 }
+        guard let row else { return XCTFail("Expected a visible saved line") }
+        let position = row.frame.midY
+        row.tap()
+        let done = app.buttons["applyFocusedCorrection"]
+        XCTAssertEqual(done.label, "Done"); done.tap()
+        XCTAssertEqual(row.frame.midY, position, accuracy: 4)
         capture(app, "history-detail-bottom")
         reveal(original, app: app)
         XCTAssertGreaterThan(status.frame.minY, original.frame.maxY)

@@ -21,7 +21,8 @@ struct ReceiptSearchDetailView: View {
                             if record.isStarred { Image(systemName: "star.fill").accessibilityLabel("Starred") }
                         }.font(.footnote.weight(.medium)).fixedSize(horizontal: false, vertical: true)
                         ReceiptPaper(fields: record.current.fields,
-                                     input: workspace.readerInput, reviewed: ReceiptCompletion.isComplete(record))
+                                     input: workspace.readerInput, reviewed: ReceiptCompletion.isComplete(record),
+                                     editLine: { workspace.openDetailLine($0) })
                         VStack(alignment: .leading, spacing: 18) {
                             if workspace.image == nil && workspace.errorMessage == nil { ProgressView("Loading original").font(.footnote) }
                             if let error = workspace.errorMessage { Text(error).font(.subheadline) }

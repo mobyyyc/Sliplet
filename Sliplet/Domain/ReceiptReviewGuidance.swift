@@ -11,6 +11,11 @@ struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
     let requiresCorrection: Bool
 
 
+    static func forLine(_ line: EditableReceiptLine) -> Self {
+        Self(id: "line-" + line.id.uuidString, title: "Line details", message: "Compare this line with the original receipt.",
+             target: .line(line.id), sourceLineIDs: line.sourceLineIDs, requiresCorrection: true)
+    }
+
     func rereadFields(lineID: UUID?) -> [ReceiptAssistedField] {
         switch target {
         case .receipt: [.merchant]

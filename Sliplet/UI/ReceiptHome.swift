@@ -179,6 +179,9 @@ struct ReceiptHome: View {
                 Button("Delete receipt and original", role: .destructive) { if let deleteTarget { workspace.deleteReceipt(deleteTarget) }; deleteTarget = nil }
                 Button("Cancel", role: .cancel) { deleteTarget = nil }
             } message: { Text("This removes all revisions and the original from this app. Copies in Photos or Files remain there.") }
+            .sheet(item: $workspace.detailLine) { line in
+                ReceiptFocusedCorrectionView(workspace: workspace, check: line.check, detailLine: line)
+            }
             .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }

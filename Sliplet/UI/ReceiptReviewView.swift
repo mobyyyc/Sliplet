@@ -30,9 +30,7 @@ struct ReceiptReviewView: View {
                     }
                     ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft, editLine: { id in
                         guard let line = workspace.draft.lines.first(where: { $0.id == id }) else { return }
-                        focusedCheck = ReceiptReviewGuidance(id: "line-" + id.uuidString,
-                            title: "Edit line", message: "Compare this line with the original receipt.",
-                            target: .line(id), sourceLineIDs: line.sourceLineIDs, requiresCorrection: true)
+                        focusedCheck = .forLine(line)
                     })
                     ForEach(checks.filter { !$0.isChecked(in: workspace.draft) }) { check in checkButton(check) }
                     if let error = workspace.errorMessage {
@@ -362,12 +360,13 @@ struct ReceiptPaper: View {
         }
     }
     @ViewBuilder private func editableRow<Content: View>(_ id: UUID, @ViewBuilder content: () -> Content) -> some View {
+        let row = content().frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         if let editLine {
             Button { editLine(id) } label: {
-                content().frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+                row.contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityHint("Edit this line").accessibilityIdentifier("paperLine-" + id.uuidString)
         } else {
-            content()
+            row
         }
     }
     private func amountRow(_ name: String, _ value: ReceiptMoney?, raw: String? = nil) -> some View {

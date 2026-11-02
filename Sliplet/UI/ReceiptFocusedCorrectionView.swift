@@ -21,11 +21,17 @@ struct ReceiptFocusedCorrectionView: View {
     @State private var error: String?
     @FocusState private var editing: String?
     private let baseline: ReceiptReviewDraft
-    init(workspace: ReceiptWorkspace, check: ReceiptReviewGuidance) {
-        self.workspace = workspace; self.check = check; baseline = workspace.draft
-        _input = State(initialValue: workspace.draft)
+    private let detailLine: ReceiptWorkspace.DetailLine?
+    private var baselineIsCurrent: Bool {
+        if let detailLine { return workspace.selected?.current.id == detailLine.revision && workspace.flow == .detail }
+        return workspace.draft == baseline
+    }
+    init(workspace: ReceiptWorkspace, check: ReceiptReviewGuidance, detailLine: ReceiptWorkspace.DetailLine? = nil) {
+        self.detailLine = detailLine
+        self.workspace = workspace; self.check = check; baseline = detailLine?.input ?? workspace.draft
+        _input = State(initialValue: baseline)
         if case .line(let id) = check.target { _lineID = State(initialValue: id) }
-        _purchaseDate = State(initialValue: ReceiptDateSelection.date(workspace.draft.date) ?? Date())
+        _purchaseDate = State(initialValue: ReceiptDateSelection.date(baseline.date) ?? Date())
     }
     private var sources: [ReceiptOCRLine] {
         (workspace.extraction?.rawOCR ?? []).filter { check.sourceLineIDs.contains($0.id) }
@@ -141,8 +147,10 @@ struct ReceiptFocusedCorrectionView: View {
                             Picker("Type", selection: lineField(\.kind)) {
                                 ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                             }
-                            LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
                             if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
+                                LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
+                                if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }
+                                if let marker = input.lines[index].taxMarker { LabeledContent("Printed tax marker", value: marker) }
                                 LabeledContent("Unit") {
                                     TextField("Unknown", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }))
                                         .accessibilityIdentifier("focusedUnit")
@@ -151,8 +159,10 @@ struct ReceiptFocusedCorrectionView: View {
                                     TextField("Unknown", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }))
                                         .keyboardType(.numbersAndPunctuation).accessibilityIdentifier("focusedUnitPrice")
                                 }
+                                Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
+                            } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {
+                                LabeledContent("Printed rate", value: ExactInput.quantity(rate))
                             }
-                            Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
                         } header: { Text("Focused line") }
                     }
                 }
@@ -178,16 +188,19 @@ struct ReceiptFocusedCorrectionView: View {
                         Toggle("I checked all \(sources.count) source rows", isOn: $groupChecked).tint(.green).accessibilityIdentifier("focusedGroupChecked")
                     }
                     if let error { Label(error, systemImage: "exclamationmark.circle").accessibilityIdentifier("focusedError") }
-                    Text("Applying keeps only your explicit edits. This check does not confirm the entire receipt; Finish still requires full original review and matching totals.").font(.footnote)
+                    if detailLine != nil {
+                        Text("Saving a changed line marks this receipt as a draft for review.").font(.footnote)
+                        if let message = workspace.errorMessage { Text(message).font(.footnote) }
+                    } else { Text("Applying keeps only your explicit edits. This check does not confirm the entire receipt; Finish still requires full original review and matching totals.").font(.footnote) }
                 }
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
                 .contentMargins(.bottom, 28, for: .scrollContent)
                 .accessibilityIdentifier("focusedCorrectionForm")
                 .navigationTitle(check.title).navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil; dismiss() }.accessibilityIdentifier("cancelFocusedCorrection") }
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil; dismiss() }.disabled(workspace.saving).accessibilityIdentifier("cancelFocusedCorrection") }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button(check.requiresCorrection || input != baseline ? "Apply" : "Checked") { apply() }
+                        Button(detailLine != nil ? (input == baseline ? "Done" : "Save draft") : (check.requiresCorrection || input != baseline ? "Apply" : "Checked")) { apply() }
                             .disabled(workspace.saving || !workspace.active || workspace.privacyCovered || workspace.image == nil || (isSourceGroup && !groupChecked && input == baseline))
                             .accessibilityIdentifier("applyFocusedCorrection")
                     }
@@ -201,7 +214,7 @@ struct ReceiptFocusedCorrectionView: View {
                 .sheet(isPresented: $rereading) {
                     if let image = workspace.image, !rereadFields.isEmpty {
                         ReceiptRereadView(workspace: workspace, image: image, boxes: boxes, fields: rereadFields, lineID: lineID, input: input) { event in
-                            guard workspace.draft == baseline, workspace.active, !workspace.privacyCovered else { return false }
+                            guard baselineIsCurrent, workspace.active, !workspace.privacyCovered else { return false }
                             do {
                                 try input.useAssistedReading(event)
                                 if event.field == .date, let date = ReceiptDateSelection.date(input.date) { purchaseDate = date }
@@ -221,7 +234,7 @@ struct ReceiptFocusedCorrectionView: View {
                         }
                     }
                 }
-        }.tint(.primary).accessibilityIdentifier("focusedCorrectionScreen")
+        }.interactiveDismissDisabled(workspace.saving).tint(.primary).accessibilityIdentifier("focusedCorrectionScreen")
             #if DEBUG
             .dynamicTypeSize(SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize)
             #endif
@@ -232,8 +245,14 @@ struct ReceiptFocusedCorrectionView: View {
 
     private func apply() {
         editing = nil
-        guard workspace.draft == baseline else { error = "The receipt changed. Cancel and reopen this check."; return }
+        guard baselineIsCurrent else { error = "The receipt changed. Cancel and reopen this check."; return }
         guard ReceiptFocusedCorrection.canApply(input, replacing: baseline) else { error = "Check typed dates, amounts and quantities. Missing values may stay blank."; return }
+        if let detailLine {
+            if input == baseline { dismiss(); return }
+            guard input.canSaveDraft else { error = "Check the typed quantities, prices and amounts before saving."; return }
+            workspace.saveDetailLine(input, revision: detailLine.revision)
+            return
+        }
         workspace.applyFocusedCorrection(input, check: check, markChecked: !isSourceGroup || groupChecked)
         dismiss()
     }

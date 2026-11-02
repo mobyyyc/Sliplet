@@ -37,6 +37,19 @@ final class ReceiptWorkspace {
     private(set) var readerInput: ReceiptReviewDraft?
     private(set) var readerRevisionID: UUID?
     var extraction: ReceiptExtraction?
+    struct DetailLine: Identifiable {
+        let id: UUID
+        let revision: UUID
+        let input: ReceiptReviewDraft
+        let check: ReceiptReviewGuidance
+    }
+    var detailLine: DetailLine?
+    func openDetailLine(_ id: UUID) {
+        guard flow == .detail, active, !privacyCovered, !saving, image != nil, let selected,
+              let input = savedReviewDraft, let line = input.lines.first(where: { $0.id == id }) else { return }
+        errorMessage = nil
+        detailLine = DetailLine(id: id, revision: selected.current.id, input: input, check: .forLine(line))
+    }
     var splitVisible = false
     var sourceVisible = false
     var sourceLineIDs: [UUID] = []
@@ -129,7 +142,7 @@ final class ReceiptWorkspace {
         shutdown = Task { await previous?.value; try? await closing?.close() }
         preparedSearchIndex = nil; receipts = []; selected = nil; image = nil; extraction = nil
         readerInput = nil; readerRevisionID = nil
-        draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; splitVisible = false; sourceLineIDs = []
+        draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; detailLine = nil; splitVisible = false; sourceLineIDs = []
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         searchQuery = ""; searchMatch = nil; includeArchived = false
@@ -330,16 +343,21 @@ final class ReceiptWorkspace {
             }
         }
     }
-    func edit() {
-        guard let selected, image != nil, !saving else { return }
-        searchMatch = nil
-        if readerRevisionID == selected.current.id, let readerInput { draft = readerInput }
-        else if let bytes = selected.current.reviewInput, let input = try? JSONDecoder().decode(ReceiptReviewDraft.self, from: bytes) { draft = input }
-        else { draft = ReceiptReviewDraft(fields: selected.current.fields) }
+    private var savedReviewDraft: ReceiptReviewDraft? {
+        guard let selected else { return nil }
+        if readerRevisionID == selected.current.id, let readerInput { return readerInput }
+        if let bytes = selected.current.reviewInput, let input = try? JSONDecoder().decode(ReceiptReviewDraft.self, from: bytes) { return input }
+        var input = ReceiptReviewDraft(fields: selected.current.fields)
         if selected.current.reviewInput == nil, ReceiptCompletion.isComplete(selected) {
-            draft.subtotalNotPrinted = selected.current.fields.subtotal == nil
-            draft.sourceOpened = true; draft.sourceChecked = true
+            input.subtotalNotPrinted = selected.current.fields.subtotal == nil
+            input.sourceOpened = true; input.sourceChecked = true
         }
+        return input
+    }
+    func edit() {
+        guard let input = savedReviewDraft, image != nil, !saving else { return }
+        searchMatch = nil
+        draft = input
         reviewBaseline = draft
         flow = .review; errorMessage = nil
     }
@@ -368,7 +386,14 @@ final class ReceiptWorkspace {
             draft.guidanceChecks?[check.id] = nil
         }
     }
-    func save(asDraft: Bool) {
+    func saveDetailLine(_ input: ReceiptReviewDraft, revision: UUID) {
+        guard flow == .detail, !privacyCovered, selected?.current.id == revision else { return }
+        var corrected = input
+        corrected.sourceChecked = false
+        save(asDraft: true, input: corrected)
+    }
+    func save(asDraft: Bool, input: ReceiptReviewDraft? = nil) {
+        let draft = input ?? self.draft
         guard active, !saving, let image, let extraction,
               asDraft ? draft.canSaveDraft : draft.canFinalize else { return }
         if !asDraft, selected?.current.review == .sourceReviewed, !hasUnsavedReviewChanges {
@@ -379,9 +404,10 @@ final class ReceiptWorkspace {
         let fields = draft.fields
         let review: ReceiptRevision.Review = asDraft ? .draft : .sourceReviewed
         let session = sessionID, lease = permit, old = selected
+        let inputFromDetail = input != nil
         let savedInput = draft
-        let input: Data
-        do { input = try JSONEncoder().encode(draft); try fields.validate() }
+        let encodedInput: Data
+        do { encodedInput = try JSONEncoder().encode(draft); try fields.validate() }
         catch { errorMessage = "Check the entered values before saving."; return }
         saving = true; errorMessage = nil
         task = Task { [weak self] in
@@ -389,14 +415,15 @@ final class ReceiptWorkspace {
                 try lease.check()
                 let saved: ReceiptRecord
                 if let old {
-                    saved = try await store.revise(id: old.id, expectedRevision: old.current.id, fields: fields, review: review, reviewInput: input, permit: lease)
+                    saved = try await store.revise(id: old.id, expectedRevision: old.current.id, fields: fields, review: review, reviewInput: encodedInput, permit: lease)
                 } else {
                     saved = try await store.create(extraction: extraction, originalImage: image.bytes, mediaType: image.mediaType,
-                        correction: fields, review: review, reviewInput: input, permit: lease)
+                        correction: fields, review: review, reviewInput: encodedInput, permit: lease)
                 }
                 try lease.check()
                 guard let self, self.isCurrent(session) else { return }
                 // Reflect the committed identity before refreshing. A failed list must not allow duplicate creation on retry.
+                if inputFromDetail { self.detailLine = nil; self.searchMatch = nil }
                 self.selected = saved; self.readerInput = savedInput; self.readerRevisionID = saved.current.id
                 self.draft = ReceiptReviewDraft(); self.flow = .detail
                 if let index = self.receipts.firstIndex(where: { $0.id == saved.id }) { self.receipts[index] = saved }
@@ -409,7 +436,7 @@ final class ReceiptWorkspace {
             } catch is CancellationError { }
             catch {
                 guard let self, self.isCurrent(session) else { return }
-                self.saving = false; self.errorMessage = self.flow == .detail ? "Receipt saved, but the wallet could not refresh. Return to the wallet and reopen it." : Self.storageMessage(error)
+                self.saving = false; self.errorMessage = self.selected?.current.id != old?.current.id && self.flow == .detail ? "Receipt saved, but the wallet could not refresh. Return to the wallet and reopen it." : Self.storageMessage(error)
                 if error as? ReceiptStoreError == .editConflict { self.errorMessage = "This receipt changed elsewhere. Return to the wallet and reopen it before editing again." }
             }
         }

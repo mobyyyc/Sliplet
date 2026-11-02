@@ -404,7 +404,8 @@ struct ReceiptWalletScene: View {
                            tilt: selectedTilt, reduceMotion: reduceMotion,
                            error: workspace.errorMessage,
                            loading: selectedID != nil && workspace.image == nil && workspace.errorMessage == nil,
-                           visibleToAccessibility: selectedID != nil && workspace.flow != .review) {
+                           visibleToAccessibility: selectedID != nil && workspace.flow != .review,
+                           editLine: { workspace.openDetailLine($0) }) {
             guard selectedID == record.id, presented?.id == record.id, !expanded else { return }
             withAnimation(motion, completionCriteria: .removed) { expanded = true } completion: {
                 if expanded && selectedID == record.id { readerSettled = true }
@@ -424,6 +425,7 @@ private struct WalletReadingScene: View {
     let error: String?
     let loading: Bool
     let visibleToAccessibility: Bool
+    let editLine: ((UUID) -> Void)?
     var onReady: () -> Void
     private let reviewInput: ReceiptReviewDraft?
     private let contentReady: Bool
@@ -436,10 +438,11 @@ private struct WalletReadingScene: View {
     @State private var returnCanvasY: CGFloat?
     init(record: ReceiptRecord, input: ReceiptReviewDraft?, contentReady: Bool, expanded: Bool, settled: Bool, origin: CGRect, tilt: Double,
          reduceMotion: Bool, error: String?, loading: Bool, visibleToAccessibility: Bool,
-         onReady: @escaping () -> Void) {
+         editLine: ((UUID) -> Void)?, onReady: @escaping () -> Void) {
         self.record = record; self.expanded = expanded; self.settled = settled; self.origin = origin; self.tilt = tilt
         self.reduceMotion = reduceMotion; self.error = error; self.loading = loading
         self.visibleToAccessibility = visibleToAccessibility; self.onReady = onReady
+        self.editLine = editLine
         reviewInput = input; self.contentReady = contentReady
     }
     private var ready: Bool { contentReady && fullHeight > 0 && paperTop > 0 && canvasMeasured }
@@ -458,7 +461,7 @@ private struct WalletReadingScene: View {
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paperTop = $0 + 12 }
                             .opacity(expanded ? 1 : 0)
                         ReceiptPaper(fields: record.current.fields, input: reviewInput ?? retainedInput,
-                                     reviewed: ReceiptCompletion.isComplete(record))
+                                     reviewed: ReceiptCompletion.isComplete(record), editLine: editLine)
                             .fixedSize(horizontal: false, vertical: true)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
                             .padding(.horizontal, 30).padding(.top, 12)
