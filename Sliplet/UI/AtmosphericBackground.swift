@@ -31,21 +31,28 @@ struct AtmosphericBackground: View {
     private static let lightPlate = plate(dark: false)
 
     private static func plate(dark: Bool) -> UIImage? {
-        let glow = Color(white: dark ? 0.43 : 1)
+        // The bend and uneven illumination keep the sweep from reading as a straight stripe.
+        let sweep = Path { path in
+            path.move(to: CGPoint(x: -70, y: 705))
+            path.addCurve(to: CGPoint(x: 220, y: 514),
+                          control1: CGPoint(x: 42, y: 585), control2: CGPoint(x: 129, y: 573))
+            path.addCurve(to: CGPoint(x: 500, y: 253),
+                          control1: CGPoint(x: 312, y: 469), control2: CGPoint(x: 359, y: 346))
+        }
+        let highlight = Color(white: dark ? 0.76 : 1)
+        let ridge = LinearGradient(stops: [
+            .init(color: highlight.opacity(0.16), location: 0),
+            .init(color: highlight.opacity(0.30), location: 0.36),
+            .init(color: highlight.opacity(dark ? 0.70 : 0.90), location: 0.68),
+            .init(color: highlight.opacity(0.32), location: 1)
+        ], startPoint: .leading, endPoint: .trailing)
         let lighting = ZStack {
-            Color(white: dark ? 5.0 / 255 : 0.88)
-            LinearGradient(colors: [.clear, Color(white: dark ? 0.12 : 0.68).opacity(dark ? 0.28 : 0.18), .clear],
-                           startPoint: .topTrailing, endPoint: .bottomLeading)
-            Ellipse()
-                .fill(RadialGradient(colors: [glow.opacity(dark ? 0.40 : 0.86), glow.opacity(dark ? 0.17 : 0.38), .clear],
-                                     center: .center, startRadius: 0, endRadius: 250))
-                .frame(width: 500, height: 500)
-                .scaleEffect(x: 1.9, y: 0.48)
-                .rotationEffect(.degrees(-30))
-                .blur(radius: 24)
-                .offset(x: -42, y: 118)
-            RadialGradient(colors: [Color(white: dark ? 0.33 : 1).opacity(dark ? 0.13 : 0.24), .clear],
-                           center: UnitPoint(x: 0.95, y: 0.52), startRadius: 0, endRadius: 330)
+            Color(white: dark ? 5.0 / 255 : 0.92)
+            sweep.stroke(Color(white: dark ? 0.38 : 0.51).opacity(dark ? 0.56 : 0.40), lineWidth: 172)
+                .offset(y: 31).blur(radius: 55)
+            sweep.stroke(highlight.opacity(dark ? 0.20 : 0.40), lineWidth: 85)
+                .blur(radius: 35)
+            sweep.stroke(ridge, lineWidth: 32).blur(radius: 20)
             if let grain {
                 Image(decorative: grain, scale: 1).resizable(resizingMode: .tile).opacity(0.012)
             }
