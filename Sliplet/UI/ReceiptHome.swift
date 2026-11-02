@@ -43,7 +43,7 @@ struct ReceiptHome: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background { AtmosphericBackground().ignoresSafeArea() }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library ? .large : .inline)
             .toolbar {
@@ -354,7 +354,7 @@ private struct WalletInformationView: View {
                     Section("Development") { NavigationLink("Synthetic diagnostics") { DiagnosticsView() } }
                 }
                 #endif
-            }.navigationTitle("Your local wallet").navigationBarTitleDisplayMode(.inline)
+            }.atmosphericScreen().navigationTitle("Your local wallet").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

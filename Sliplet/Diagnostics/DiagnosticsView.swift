@@ -36,7 +36,7 @@ struct DiagnosticsView: View {
                 Text("Could not save aggregate debug results.")
             }
         }
-        .navigationTitle("Synthetic checks")
+        .atmosphericScreen().navigationTitle("Synthetic checks")
         .task { if autoRun { await diagnostics.run() } }
     }
 }

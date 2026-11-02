@@ -382,7 +382,7 @@ struct ReceiptWalletScene: View {
         // Keep the existing feather above the fully opaque lower backing.
         let feather: CGFloat = 32
         let upwardTravel = max(0, -pocketMotion)
-        return Color(uiColor: .systemGroupedBackground)
+        return AtmosphericBackground(alignedToWindow: true)
             .frame(width: geometry.size.width, height: 32 + geometry.safeAreaInsets.bottom + feather + upwardTravel)
             .mask {
                 VStack(spacing: 0) {
@@ -925,7 +925,7 @@ struct ReceiptWalletSettingsView: View {
                 }
                 if let notice = workspace.notice { Section { Text(notice) } }
             }
-            .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
+            .atmosphericScreen().navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .disabled(workspace.saving && !workspace.backupBusy)
         }.tint(.primary)

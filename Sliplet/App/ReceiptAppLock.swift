@@ -130,7 +130,7 @@ struct ReceiptLockScreen: View {
                 .opacity(lock == nil ? 0 : 1).accessibilityHidden(lock == nil)
                 .accessibilityIdentifier("unlockApp")
         }.padding(30).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(uiColor: .systemGroupedBackground)).tint(.primary)
+            .background { AtmosphericBackground().ignoresSafeArea() }.tint(.primary)
     }
 }
 

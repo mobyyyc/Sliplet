@@ -88,7 +88,7 @@ struct ReceiptBackupView: View {
                     }
                 }
             }
-            .navigationTitle(mode == .export ? "Export backup" : "Restore backup").navigationBarTitleDisplayMode(.inline)
+            .atmosphericScreen().navigationTitle(mode == .export ? "Export backup" : "Restore backup").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) {
                 Button("Close") { clearPasswords(); workspace.cancelBackup(); dismiss() }.accessibilityIdentifier("closeBackup")
             } }

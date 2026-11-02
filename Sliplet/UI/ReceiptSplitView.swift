@@ -131,10 +131,10 @@ struct ReceiptSplitView: View {
                     if let adjustment = record?.current.fields.adjustments.first(where: { $0.id == id }) { policyEditor(adjustment) }
                 case .summary:
                     ScrollView { Text(summary ?? "Finalize this split first.").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(20) }
-                        .navigationTitle("Split summary").modifier(SplitEditorBack())
+                        .atmosphericScreen().navigationTitle("Split summary").modifier(SplitEditorBack())
                 }
             }
-            .navigationTitle("Split receipt").navigationBarTitleDisplayMode(.inline)
+            .atmosphericScreen().navigationTitle("Split receipt").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if path.isEmpty {
                 ToolbarItem(placement: .topBarLeading) {
@@ -214,7 +214,7 @@ struct ReceiptSplitView: View {
                     })).accessibilityIdentifier("splitOwner-\(person.name)")
                 }
             } header: { Text("Assign to").foregroundStyle(Color(uiColor: .label)) }
-        }.navigationTitle("Item owners").modifier(SplitEditorBack())
+        }.atmosphericScreen().navigationTitle("Item owners").modifier(SplitEditorBack())
     }
     private func policy(_ adjustment: ReceiptAdjustment) -> SplitAdjustmentPolicy {
         plan.policies.first { $0.id == adjustment.id } ?? .init(id: adjustment.id)
@@ -267,7 +267,7 @@ struct ReceiptSplitView: View {
                     setPolicy(adjustment) { $0.accepted = accepted }
                 })).accessibilityIdentifier("splitPolicyAccepted")
             }
-        }.navigationTitle("Allocation policy").modifier(SplitEditorBack())
+        }.atmosphericScreen().navigationTitle("Allocation policy").modifier(SplitEditorBack())
     }
     private func selection(_ adjustment: ReceiptAdjustment, id: UUID) -> Binding<Bool> {
         Binding(get: { policy(adjustment).selectedIDs.contains(id) }, set: { selected in

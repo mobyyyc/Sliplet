@@ -45,6 +45,7 @@ struct ReceiptSearchDetailView: View {
 }
 
 struct ReceiptPurchaseHistoryView: View {
+    @Environment(\.colorScheme) private var scheme
     @Bindable var workspace: ReceiptWorkspace
     private var results: [ReceiptSearchIndex.Result] {
         workspace.searchIndex.results(query: workspace.searchQuery, collection: workspace.collection,
@@ -106,6 +107,7 @@ struct ReceiptPurchaseHistoryView: View {
                 } header: { Text(ReceiptHistory.monthTitle(key.isEmpty ? nil : key)).foregroundStyle(Color(uiColor: .label)) }
             }
         }
+        .scrollContentBackground(scheme == .dark ? .hidden : .automatic)
         .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or SKU")
         .autocorrectionDisabled()
         .scrollDismissesKeyboard(.interactively)
@@ -190,12 +192,12 @@ struct ReceiptSearchContext: View {
                         originalButton(iconOnly: false)
                     }
                 }
-            }.padding(.horizontal, 20).padding(.bottom, 10).background(Color(uiColor: .systemGroupedBackground))
+            }.padding(.horizontal, 20).padding(.bottom, 10)
                 .accessibilityElement(children: .contain)
                 .sheet(isPresented: $details) {
                     NavigationStack {
                         ScrollView { ReceiptSearchMatchLabel(match: match, record: record).padding(24).frame(maxWidth: .infinity, alignment: .leading) }
-                            .navigationTitle("Match details").navigationBarTitleDisplayMode(.inline)
+                            .atmosphericScreen().navigationTitle("Match details").navigationBarTitleDisplayMode(.inline)
                             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { details = false } } }
                     }
                 }
