@@ -55,17 +55,18 @@ struct ReceiptHome: View {
             .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library ? .large : .inline)
             .toolbar {
                 if workspace.availability == .ready && !workspace.privacyCovered {
-                    if workspace.flow != .wallet {
+                    if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
                         ToolbarItem(placement: .topBarLeading) {
                             Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
-                                if workspace.flow == .preparingUpload && workspace.importStep > 0 { workspace.importForward = false; workspace.importStep -= 1 }
+                                if workspace.flow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
+                                else if workspace.flow == .preparingUpload && workspace.importStep > 0 { workspace.importForward = false; workspace.importStep -= 1 }
                                 else if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
                                 else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload { editing = nil; discard = true }
                                 else { workspace.backToWallet() }
                             }.disabled(workspace.saving).accessibilityIdentifier("back")
                         }
                     }
-                    if workspace.image != nil {
+                    if workspace.image != nil && workspace.flow != .reading && workspace.flow != .loading {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button { editing = nil; workspace.showSource() } label: { Text("Original") }
                                 .accessibilityIdentifier("original").disabled(workspace.saving)
@@ -158,7 +159,7 @@ struct ReceiptHome: View {
                 let result = cameraResult; cameraResult = nil
                 guard session == workspace.sessionID, workspace.active else { return }
                 switch result {
-                case .photo(let bytes): workspace.startImport(chooseRecognition: true) { bytes }
+                case .photo(let bytes): workspace.startImport(chooseRecognition: true, fromCamera: true) { bytes }
                 case .existingImage: importChoices = true
                 default: break
                 }
@@ -284,19 +285,19 @@ struct ReceiptHome: View {
                     .accessibilityHidden(true, isEnabled: workspace.flow == .review)
                 if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
             }
-        case .preparingUpload: ReceiptUploadPreview(workspace: workspace)
+        case .preparingUpload: ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
         case .loading, .reading:
             VStack(spacing: 24) {
                 ProgressView().controlSize(.large)
                 Text(workspace.flow == .loading ? "Opening photo" : "Reading receipt").font(.title2.bold())
                 Text(workspace.aiUploadStarted ? "Using Gemini" : "On your iPhone")
                     .font(.subheadline).foregroundStyle(.secondary)
-                DisclosureGroup("Details") {
+                VStack(spacing: 12) {
                     Text(workspace.aiUploadStarted
                          ? "Waiting for Google’s response. Stopping cannot recall an upload already sent."
                          : "Your photo stays on this device.")
                     Text("Keep Sliplet open until you save your receipt.")
-                }.font(.callout)
+                }.font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
             }.padding(28).frame(maxHeight: .infinity)
                 .accessibilityElement(children: .contain).accessibilityIdentifier("processing")
                 .safeAreaBar(edge: .bottom, spacing: 0) {
@@ -316,8 +317,8 @@ struct ReceiptHome: View {
                         if workspace.aiUploadStarted {
                             Button("Read on device", systemImage: "iphone", action: workspace.readImage)
                                 .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("recoverLocal")
-                            Text("Uses the original photo already here. Works offline.").font(.footnote).foregroundStyle(.secondary)
-                            Button(workspace.aiConnection.canUseAI ? "Preview another Gemini request" : "Recognition options",
+                            Text("Reads your prepared photo offline.").font(.footnote).foregroundStyle(.secondary)
+                            Button(workspace.aiConnection.canUseAI ? "Review upload again" : "Reading options",
                                    action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("recoverPreview")
                             Button("Enter manually", action: workspace.manualReview).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("manual")
                         } else {

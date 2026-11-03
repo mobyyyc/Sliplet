@@ -275,3 +275,44 @@ extension ReceiptUploadUITests {
         XCTAssertFalse(app.buttons["sendReceiptAI"].exists)
     }
 }
+
+
+extension ReceiptUploadUITests {
+    func testExplicitCropWithInsetCornersAndApply() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.buttons["uploadFixture"].waitForExistence(timeout: 20)); app.buttons["uploadFixture"].tap()
+        XCTAssertTrue(app.buttons["cropImportPhoto"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Check photo"].exists)
+        XCTAssertTrue(app.staticTexts["Photo tips"].exists)
+        app.buttons["cropImportPhoto"].tap()
+        app.buttons["back"].tap()
+        XCTAssertTrue(app.staticTexts["Check photo"].waitForExistence(timeout: 5))
+        app.buttons["cropImportPhoto"].tap()
+        let corner = app.descendants(matching: .any)["importHandle-0-4"]
+        XCTAssertTrue(corner.waitForExistence(timeout: 5))
+        XCTAssertTrue(corner.isHittable)
+        XCTAssertGreaterThan(corner.frame.minX, 20)
+        XCTAssertLessThan(corner.frame.maxX, app.frame.width - 20)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Inset white crop corners"; shot.lifetime = .keepAlways; add(shot)
+        let start = corner.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: -45, dy: -30)))
+        app.buttons["adjustPhotoContinue"].tap()
+        XCTAssertTrue(app.staticTexts["Check photo"].waitForExistence(timeout: 5))
+        XCTAssertFalse(corner.exists)
+        app.buttons["adjustPhotoContinue"].tap()
+        XCTAssertTrue(app.buttons["readLocal"].waitForExistence(timeout: 5))
+    }
+    func testReadingStatusVisibleAndCanStop() {
+        let app = sendAuditFixture("--import-loading-fixture")
+        XCTAssertTrue(app.buttons["cancelImport"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Reading receipt"].exists)
+        XCTAssertTrue(app.staticTexts["Waiting for Google’s response. Stopping cannot recall an upload already sent."].exists)
+        XCTAssertFalse(app.buttons["Details"].exists)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Reading status"; shot.lifetime = .keepAlways; add(shot)
+        app.buttons["cancelImport"].tap()
+        XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+    }
+}

@@ -31,7 +31,10 @@ struct ReceiptImportCanvas: UIViewRepresentable {
         return scroll
     }
     func updateUIView(_ scroll: UIScrollView, context: Context) {
-        let c = context.coordinator; c.parent = self
+        let c = context.coordinator
+        if c.parent.cropMode != cropMode { c.fitted = false }
+        c.parent = self
+        scroll.backgroundColor = cropMode ? UIColor(white: 0.12, alpha: 1) : .secondarySystemGroupedBackground
         c.drawGesture?.isEnabled = drawing
         scroll.panGestureRecognizer.minimumNumberOfTouches = drawing ? 2 : 1
         if c.canvas.image !== image {
@@ -43,7 +46,7 @@ struct ReceiptImportCanvas: UIViewRepresentable {
     }
     final class Coordinator: NSObject, UIScrollViewDelegate {
         var parent: ReceiptImportCanvas
-        let canvas = UIImageView()
+        let canvas: UIImageView = ReceiptCanvasImageView()
         weak var scroll: UIScrollView?
         var drawGesture: UIPanGestureRecognizer?
         var fitted = false
@@ -65,9 +68,10 @@ struct ReceiptImportCanvas: UIViewRepresentable {
                   !fitted || viewport != scroll.bounds.size else { return }
             viewport = scroll.bounds.size; fitted = true
             scroll.setZoomScale(1, animated: false)
-            let ratio = min(scroll.bounds.width / parent.image.size.width, scroll.bounds.height / parent.image.size.height)
+            let margin: CGFloat = parent.cropMode ? 64 : 0
+            let ratio = min(max(1, scroll.bounds.width - margin) / parent.image.size.width, max(1, scroll.bounds.height - margin) / parent.image.size.height)
             canvas.frame = CGRect(origin: .zero, size: CGSize(width: parent.image.size.width * ratio, height: parent.image.size.height * ratio))
-            scroll.contentSize = canvas.bounds.size; fitted = true; center()
+            scroll.contentSize = canvas.bounds.size; fitted = true; center(); positionOverlays()
         }
         func point(_ gesture: UIGestureRecognizer) -> CGPoint {
             let p = gesture.location(in: canvas)
@@ -121,8 +125,9 @@ struct ReceiptImportCanvas: UIViewRepresentable {
             overlays.forEach { $0.removeFromSuperview() }; overlays = []
             for (index, _) in parent.regions.enumerated() {
                 let box = UIView(); box.tag = index * 10
-                box.backgroundColor = parent.cropMode ? UIColor.black.withAlphaComponent(0.08) : .black
-                box.layer.borderWidth = 2; box.layer.borderColor = (parent.selected == index ? UIColor.systemBlue : UIColor.white).cgColor
+                box.backgroundColor = parent.cropMode ? .clear : .black
+                box.layer.borderWidth = parent.cropMode ? 1 : 2
+                box.layer.borderColor = (parent.cropMode ? UIColor.white : parent.selected == index ? UIColor.systemBlue : UIColor.white).cgColor
                 box.isUserInteractionEnabled = !parent.drawing
                 box.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(edit(_:))))
                 let tap = UITapGestureRecognizer(target: self, action: #selector(tapBox(_:)))
@@ -133,9 +138,24 @@ struct ReceiptImportCanvas: UIViewRepresentable {
                     for corner in 1...4 {
                         let handle = UIView(); handle.tag = index * 10 + corner
                         handle.backgroundColor = .clear
-                        let dot = UIView(frame: CGRect(x: 16, y: 16, width: 12, height: 12))
-                        dot.backgroundColor = .systemBlue; dot.layer.cornerRadius = 6; dot.isUserInteractionEnabled = false
-                        handle.addSubview(dot)
+                        if parent.cropMode {
+                            let left = corner == 1 || corner == 3, top = corner == 1 || corner == 2
+                            let path = UIBezierPath()
+                            path.move(to: CGPoint(x: left ? 40 : 4, y: 22))
+                            path.addLine(to: CGPoint(x: 22, y: 22))
+                            path.addLine(to: CGPoint(x: 22, y: top ? 40 : 4))
+                            let angle = CAShapeLayer(); angle.path = path.cgPath
+                            angle.strokeColor = UIColor.white.cgColor; angle.fillColor = UIColor.clear.cgColor
+                            angle.lineWidth = 4; angle.lineCap = .square
+                            angle.shadowColor = UIColor.black.cgColor; angle.shadowOpacity = 0.5; angle.shadowRadius = 2
+                            handle.layer.addSublayer(angle)
+                        } else {
+                            let dot = UIView(frame: CGRect(x: 16, y: 16, width: 12, height: 12))
+                            dot.backgroundColor = .systemBlue; dot.layer.cornerRadius = 6; dot.isUserInteractionEnabled = false
+                            handle.addSubview(dot)
+                        }
+                        handle.isAccessibilityElement = true
+                        handle.accessibilityLabel = "\(["Top left", "Top right", "Bottom left", "Bottom right"][corner - 1]) corner"
                         handle.accessibilityIdentifier = "importHandle-\(index)-\(corner)"
                         handle.isUserInteractionEnabled = !parent.drawing
                         handle.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(edit(_:))))
@@ -169,5 +189,11 @@ private final class ReceiptCanvasScrollView: UIScrollView {
     override func layoutSubviews() {
         super.layoutSubviews()
         layoutHandler?()
+    }
+}
+
+private final class ReceiptCanvasImageView: UIImageView {
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        bounds.insetBy(dx: -24, dy: -24).contains(point)
     }
 }

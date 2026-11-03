@@ -3,10 +3,15 @@ import SwiftUI
 /// One import session; only an explicit confirmed action can send the flattened payload.
 struct ReceiptUploadPreview: View {
     @Bindable var workspace: ReceiptWorkspace
+    var retake: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var useAI = false
     @State private var drawing = false
+    private var cropEditing: Bool {
+        get { workspace.importCropping }
+        nonmutating set { workspace.importCropping = newValue }
+    }
     @State private var crop: [CGRect] = [CGRect(x: 0, y: 0, width: 1, height: 1)]
     @State private var cropSelection: Int? = 0
     @State private var redactions: [CGRect] = []
@@ -27,7 +32,7 @@ struct ReceiptUploadPreview: View {
     @State private var generation = UUID()
     @State private var initialized = false
     private var step: Int { workspace.importStep }
-    private var titles: [String] { ["Adjust photo", "Choose reading method", "Hide sensitive details", "Confirm upload"] }
+    private var titles: [String] { [cropEditing ? "Crop photo" : "Check photo", "Choose reading method", "Hide sensitive details", "Confirm upload"] }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,9 +41,9 @@ struct ReceiptUploadPreview: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         switch step {
-                        case 0: photoStep(height: max(160, geometry.size.height - 145))
+                        case 0: photoStep(height: max(160, geometry.size.height - 200))
                         case 1: methodStep
-                        case 2: privacyStep(height: max(140, geometry.size.height - 190))
+                        case 2: privacyStep(height: max(140, geometry.size.height - 235))
                         default: confirmationStep
                         }
                         if let failure { Label(failure, systemImage: "exclamationmark.circle").font(.callout) }
@@ -65,6 +70,9 @@ struct ReceiptUploadPreview: View {
         .onChange(of: step) { old, new in
             acknowledged = false; drawing = false; failure = nil
             if new < old { cancelPreparation() }
+        }
+        .onChange(of: cropEditing) { _, editing in
+            if !editing { crop = [workspace.importAdjustment.crop] }
         }
         .onChange(of: redactions) { _, _ in acknowledged = false; upload = nil; preview = nil }
         .onChange(of: workspace.aiConnection.preferences.credentialID) { _, _ in acknowledged = false }
@@ -104,33 +112,57 @@ struct ReceiptUploadPreview: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 ForEach(0..<(useAI ? 4 : 2), id: \.self) { index in
-                    Capsule().fill(index <= step ? Color.primary : Color.primary.opacity(0.12)).frame(height: 4)
+                    VStack(spacing: 7) {
+                        Capsule().fill(index <= step ? Color.primary : Color.primary.opacity(0.12)).frame(height: 4)
+                        Text(["Photo", "Method", "Privacy", "Upload"][index])
+                            .font(.caption.weight(index == step ? .semibold : .regular))
+                            .foregroundStyle(index <= step ? .primary : .secondary)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
             }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1): \(titles[step])")
             Text(titles[step]).font(.title2.bold()).accessibilityAddTraits(.isHeader)
         }.padding(20)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: useAI)
     }
     @ViewBuilder private func photoStep(height: CGFloat) -> some View {
         if let photo {
-            ReceiptImportCanvas(image: photo, cropMode: true, regions: $crop, selected: $cropSelection)
-                .frame(height: height).accessibilityIdentifier("photoAdjustmentCanvas")
+            if cropEditing {
+                ReceiptImportCanvas(image: photo, cropMode: true, regions: $crop, selected: $cropSelection)
+                    .frame(height: height).accessibilityIdentifier("photoAdjustmentCanvas")
+            } else {
+                ReceiptImportCanvas(image: preparedPhoto ?? photo, regions: .constant([]), selected: .constant(nil))
+                    .frame(height: height).accessibilityIdentifier("photoCheckCanvas")
+            }
         }
-        HStack {
+        Group {
+            if typeSize.isAccessibilitySize { HStack { photoTools }.labelStyle(.iconOnly) }
+            else { HStack { photoTools } }
+        }.buttonStyle(ReceiptSecondaryStyle()).disabled(preparing)
+        guidance("Photo tips", text: cropEditing
+            ? "Drag the white corners to frame the receipt. Keep the merchant, items and totals inside. Pinch to zoom."
+            : "Check that the whole receipt is sharp and upright. Crop or rotate if needed. Your original stays unchanged.")
+        if workspace.importFromCamera && !cropEditing {
+            Button("Retake photo", systemImage: "camera", action: retake)
+                .frame(maxWidth: .infinity).accessibilityIdentifier("cameraRetake")
+        }
+    }
+    @ViewBuilder private var photoTools: some View {
+            Button(cropEditing ? "Cancel" : "Crop", systemImage: cropEditing ? "xmark" : "crop") {
+                if cropEditing { crop = [workspace.importAdjustment.crop] }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { cropEditing.toggle() }
+            }.accessibilityIdentifier("cropImportPhoto").accessibilityLabel(cropEditing ? "Cancel crop" : "Crop")
+            Spacer(minLength: 8)
             Button("Rotate", systemImage: "rotate.right") {
                 workspace.importAdjustment.turns = (workspace.importAdjustment.turns + 1) % 4
                 crop = [CGRect(x: 0, y: 0, width: 1, height: 1)]; workspace.importAdjustment.crop = crop[0]
-                redactions = []; coverUndo = []; loadPhoto()
+                redactions = []; coverUndo = []; preparedPhoto = nil; loadPhoto()
             }.accessibilityIdentifier("rotateImportPhoto")
             Spacer()
             Button("Reset", systemImage: "arrow.counterclockwise") {
                 workspace.importAdjustment = ReceiptPhotoAdjustment(); crop = [workspace.importAdjustment.crop]
-                redactions = []; coverUndo = []; loadPhoto()
+                redactions = []; coverUndo = []; preparedPhoto = nil; loadPhoto()
             }.accessibilityIdentifier("resetImportPhoto")
-        }.buttonStyle(ReceiptSecondaryStyle()).disabled(preparing)
-        DisclosureGroup("Photo tips") {
-            Text("Drag the corners to crop around the receipt. Pinch to zoom. Keep the merchant, items and totals visible. Your original is kept unchanged.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
     }
     private var methodStep: some View {
         VStack(spacing: 14) {
@@ -145,12 +177,17 @@ struct ReceiptUploadPreview: View {
                 Spacer()
                 Button(workspace.aiConnection.canUseAI ? "Manage" : "Connect") { settings = true }
             }.padding(.horizontal, 4)
-            DisclosureGroup("About reading methods") {
-                Text("On-device reading uses Apple Vision without uploading. AI reading uses your connected provider and API allowance. You can hide details and check the upload before anything is sent.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }.padding(.top, 10)
+            guidance("About reading methods", text: "On-device uses Apple Vision offline. AI uses your connected provider and API allowance. You’ll hide sensitive details and check the image before uploading.")
+                .padding(.top, 10)
         }
     }
+    private func guidance(_ title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.subheadline.weight(.semibold))
+            Text(text).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func methodCard(_ title: String, subtitle: String, icon: String, ai: Bool) -> some View {
         Button { useAI = ai } label: {
             HStack(spacing: 14) {
@@ -182,10 +219,9 @@ struct ReceiptUploadPreview: View {
                 }
             }
         }.buttonStyle(ReceiptSecondaryStyle())
-        DisclosureGroup("Privacy tips") {
-            Text("Cover membership numbers, payment details or personal information. Keep names, quantities, weights and prices visible. Pinch to zoom; drag a cover or its corners to adjust it. Covers are optional and do not guarantee anonymity.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
+        guidance("Privacy tips", text: drawing
+            ? "Drag over anything to hide. Use two fingers to move the image while drawing. Keep items, quantities and prices visible."
+            : "Cover membership numbers and payment details if needed. Tap a cover to move or resize it. Pinch to zoom. Covers don’t guarantee anonymity.")
     }
     @ViewBuilder private var coverTools: some View {
         Button(drawing ? "Done drawing" : "Add cover", systemImage: drawing ? "checkmark" : "rectangle.dashed") {
@@ -204,7 +240,7 @@ struct ReceiptUploadPreview: View {
             if let preview {
                 Button { expandedPreview = true } label: {
                     HStack(spacing: 16) {
-                        Image(uiImage: preview).resizable().scaledToFit().frame(width: 64, height: 92)
+                        Image(uiImage: preview).resizable().scaledToFit().frame(width: 56, height: 72)
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Final image").font(.headline)
                             Text("Tap to inspect").font(.subheadline).foregroundStyle(.secondary)
@@ -213,15 +249,19 @@ struct ReceiptUploadPreview: View {
                     }.padding(16).background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
                 }.buttonStyle(.plain).accessibilityIdentifier("finalUploadPreview")
             }
-            Label("Google · Gemini", systemImage: "sparkles").font(.headline)
-            Text("Uses your API key and allowance. Free-tier uploads may be used to improve Google’s products and reviewed by people.")
-                .font(.callout)
-            DisclosureGroup("Privacy details") {
+            VStack(alignment: .leading, spacing: 5) {
+                Label("Google · Gemini", systemImage: "sparkles").font(.headline)
+                Text(workspace.aiConnection.preferences.model.title).font(.caption).foregroundStyle(.secondary)
+            }
+            Text("Uses your API allowance. Free-tier uploads may be reviewed by people and used to improve Google’s products.")
+                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Privacy").font(.headline)
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Only the prepared image and reading instructions are sent. Photo metadata and other receipts are not sent. Your original stays on this device. Hiding details does not guarantee anonymity; avoid sending sensitive information.")
-                    Text("Model: \(workspace.aiConnection.preferences.model.title)")
+                    Text("Only this prepared image and reading instructions are sent. Your original stays here; photo metadata and other receipts aren’t sent.")
+                    Text("Covers can’t guarantee anonymity. Avoid sensitive information.")
                     Link("Google API data-use terms", destination: URL(string: "https://ai.google.dev/gemini-api/terms")!)
-                }.font(.callout).foregroundStyle(.secondary)
+                }.font(.subheadline).foregroundStyle(.secondary)
             }
             Toggle(isOn: $acknowledged) { Text("Allow this image to be sent to Google").fixedSize(horizontal: false, vertical: true) }
                 .tint(.green).accessibilityIdentifier("uploadConsent")
@@ -234,7 +274,7 @@ struct ReceiptUploadPreview: View {
         }
     }
     private var actionTitle: String {
-        switch step { case 0: "Continue"; case 1: useAI ? "Continue" : "Read receipt"; case 2: "Review upload"; default: "Upload and read" }
+        switch step { case 0: cropEditing ? "Apply crop" : "Continue"; case 1: useAI ? "Continue" : "Read receipt"; case 2: "Review upload"; default: "Upload and read" }
     }
     private var actionID: String {
         switch step { case 0: "adjustPhotoContinue"; case 1: "readingMethodContinue"; case 2: "reviewUpload"; default: "sendReceiptAI" }
@@ -287,7 +327,8 @@ struct ReceiptUploadPreview: View {
         case 0:
             let value = crop.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
             if value != workspace.importAdjustment.crop { redactions = []; coverUndo = []; workspace.importAdjustment.crop = value }
-            prepareImage(next: 1)
+            if cropEditing { cropEditing = false; prepareImage(next: 0) }
+            else { prepareImage(next: 1) }
         case 1:
             if useAI { go(2) } else { workspace.readImage() }
         case 2:

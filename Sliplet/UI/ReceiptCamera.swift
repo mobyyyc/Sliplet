@@ -248,18 +248,8 @@ struct ReceiptCameraView: View {
                     }
                 }
                 if model.state == .starting { ProgressView("Opening camera").padding(20).background(.regularMaterial, in: .capsule) }
-            } else if model.state == .review, let preview = model.preview {
-                VStack(spacing: 20) {
-                    header("Check photo")
-                    Image(uiImage: preview).resizable().scaledToFit().padding(.horizontal, 20)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityLabel("Captured receipt photo")
-                    Text("Make sure the text is sharp and nothing is cut off.")
-                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).padding(.horizontal, 28)
-                    ViewThatFits(in: .horizontal) {
-                        HStack(spacing: 16) { photoActions }.fixedSize(horizontal: true, vertical: false)
-                        VStack(spacing: 12) { photoActions }
-                    }.modifier(ReceiptActionBarLayout())
-                }
+            } else if model.state == .review {
+                ProgressView("Opening photo").tint(.white)
             } else {
                 VStack {
                     header("Camera")
@@ -289,6 +279,9 @@ struct ReceiptCameraView: View {
         #endif
         .task { model.prepare() }
         .onDisappear { model.close() }
+        .onChange(of: model.state) { _, state in
+            if state == .review, let bytes = model.usePhoto() { completion(.photo(bytes)) }
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .background { finish(.cancelled) }
             else if phase == .inactive { model.pause() }
@@ -317,13 +310,6 @@ struct ReceiptCameraView: View {
         } else {
             caption.background(.regularMaterial, in: .rect(cornerRadius: 20))
         }
-    }
-    @ViewBuilder private var photoActions: some View {
-        Button("Retake", systemImage: "arrow.counterclockwise", action: model.retake)
-            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("cameraRetake")
-        Button("Use photo", systemImage: "checkmark") {
-            if let bytes = model.usePhoto() { completion(.photo(bytes)) }
-        }.buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("cameraUse")
     }
     private func header(_ title: String) -> some View {
         HStack(spacing: 12) {

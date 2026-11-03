@@ -40,6 +40,8 @@ final class ReceiptWorkspace {
         var bottom = false
     }
     private(set) var retryCovers: UploadCovers?
+    var importCropping = false
+    var importFromCamera = false
     var importForward = true
     var importStep = 0
     var importAdjustment = ReceiptPhotoAdjustment()
@@ -161,9 +163,10 @@ final class ReceiptWorkspace {
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
-    func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false, _ load: @escaping @Sendable () async throws -> Data) {
+    func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false, fromCamera: Bool = false, _ load: @escaping @Sendable () async throws -> Data) {
         guard active, availability == .ready, !saving else { return }
         cancelImport(showNotice: false)
+        importFromCamera = fromCamera
         flow = .loading; errorMessage = nil; notice = nil
         let session = sessionID
         task = Task { [weak self] in
@@ -177,6 +180,7 @@ final class ReceiptWorkspace {
                 guard self.isCurrent(session), self.flow == .loading else { return }
                 self.image = image
                 self.importStep = 0
+                self.importCropping = false
                 self.importAdjustment = ReceiptPhotoAdjustment()
                 if let modelReader { self.readModelImage(using: modelReader) }
                 else if chooseRecognition { self.flow = .preparingUpload }
