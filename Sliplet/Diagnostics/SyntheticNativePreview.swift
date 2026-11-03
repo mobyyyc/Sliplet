@@ -35,7 +35,8 @@ import CryptoKit
         let date = String(format: "2026-10-%02d", 7 - index % 3)
         let names = (index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet") ? ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"] : ["TEST ITEM"]
         let amount = ExactInput.format(Int64(names.count) * 1234)
-        let content = [merchant, date + " CAD"] + names.map { $0 + " 12.34" } + ["SUBTOTAL " + amount, "TOTAL " + amount]
+        let priceFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--p1004-price-fixture")
+        let content = [merchant, date + " CAD"] + names.map { $0 + (priceFixture ? " 2 each @6.17 12.34" : " 12.34") } + ["SUBTOTAL " + amount, "TOTAL " + amount]
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let image = UIGraphicsImageRenderer(size: CGSize(width: 720, height: CGFloat(content.count * 76 + 100)), format: format).pngData { _ in
             UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 720, height: 480))
@@ -44,7 +45,12 @@ import CryptoKit
             }
         }
         var d = ReceiptReviewDraft(); d.merchant = merchant; d.date = date; d.currency = "CAD"
-        d.lines = names.map { .init(id: UUID(), kind: "purchase", name: $0, quantity: "", amount: "12.34", sourceLineIDs: []) }
+        d.lines = names.map { name in
+            var line = EditableReceiptLine(id: UUID(), kind: "purchase", name: name,
+                quantity: priceFixture ? "2" : "", amount: "12.34", sourceLineIDs: [])
+            if priceFixture { line.unitPriceText = "6.17"; line.unit = "each" }
+            return line
+        }
         d.subtotal = amount; d.total = amount; d.sourceOpened = true; d.sourceChecked = true
         return (image, d)
     }

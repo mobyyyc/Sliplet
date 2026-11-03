@@ -1,6 +1,6 @@
 # Phase 10 · Purchase history
 
-November 3, 2026. P10-01 through P10-03 approved and completed. P10-04 and P10-05 require individual approval.
+November 3, 2026. P10-01 through P10-04 approved and completed. P10-05 requires individual approval.
 
 ## P10-01 evidence
 
@@ -78,3 +78,16 @@ History groups direct confirmed pairs, candidates, decisions invalidated by a re
 Writes use the P10-02 transactional API and publish both endpoints together to the workspace. Original loading checks the session and operation lease before and after decoding. The history and photo views cover private data when locked. A comparison whose receipt or row has been removed shows unavailable. Candidates still require explicit user confirmation, and this milestone adds no price-change calculation.
 
 Validation on fictional data passed nine purchase-link domain/workspace/persistence tests and two native UI walkthroughs. The UI checks exercised row entry, original viewing, confirmation, undo, rejection, return within three points, search entry, full receipt viewing and query preservation. The dark large-text/Reduce Motion history list passed hit-region and sufficient-description audits. Unit tests cover archive/draft/changed/rejected states, missing dates, deletion, encrypted restart and restore, stale and interrupted writes, invalid endpoints and locked workspace access. No new provider call or physical-phone installation occurred. Device acceptance remains P10-05.
+
+
+## P10-04 comparable row prices
+
+Purchase comparison now offers Compare unit prices. The user selects printed unit price or line amount divided by explicit quantity independently for each purchase, verifies units and a common tax basis against the originals, then saves or clears that verification. Comparisons require reviewed receipts, a confirmed same-product/same-pack relationship, matching currency and compatible units. Missing quantity is never assumed to be one. Metric weight, imperial weight and volume normalize within their own unit groups; metric and imperial weights are not mixed.
+
+The comparison covers item-row prices, not an allocated final basket cost. Separately listed coupons, fees and taxes are excluded and disclosed. Embedded discounts remain in a calculated row rate. Exact rational arithmetic determines equality and ordering; rounded display values are marked approximately. Unsupported or overflowing values stop comparison. Evidence is mirrored in the existing encrypted pair decision, handles reversed viewing order, and becomes inactive after receipt revision. Clearing price verification preserves the product link.
+
+The owner completed the focused pair review. Its source hashes and both answers validated, and the accepted export remains ignored locally. The owner's note establishes that one single-quantity row requires calculation while the other has a printed unit price. The native comparison engine confirmed equal unit prices despite differing line amounts. CAD uses the previously approved default; this review does not establish a printed currency. Historical references and originals were not rewritten, and no receipt fields were imported into the phone store.
+
+Reproduce the private check with `python3 evaluation/purchase-history/price_review.py --validate`, which validates the local export and creates a temporary native test manifest. `PurchasePriceTests.testCheckedPrivatePair` consumes that manifest without logging private amounts; it skips when the manifest is absent. Remove the temporary manifest after testing.
+
+Validation passed 15 native tests, including the checked real pair, fractional quantities, compatible unit normalization, missing evidence, currency mismatch, arithmetic bounds, persistence and clearing. One simulator UI walkthrough passed verification, result display, save and clear; its fictional screenshot was inspected. These results cover one exposed real pair plus fictional fixtures, not general matching accuracy. No provider calls or phone installation occurred. P10-05 remains physical-device acceptance.

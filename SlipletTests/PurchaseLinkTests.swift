@@ -258,6 +258,35 @@ import XCTest
         } catch { XCTAssertTrue(error is CancellationError) }
     }
 
+    func testPriceVerificationPersistsReversesAndClears() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try ReceiptStore(directory: directory, keyProvider: Key())
+        let a = try await create(store, marker: 1)
+        let b = try await create(store, marker: 2, amount: 1000)
+        let evidence = PurchasePriceEvidence(firstBasis: .calculated, secondBasis: .printed,
+                                             firstUnit: .each, secondUnit: .each, tax: .beforeTax)
+        let pair = try await store.savePurchaseLink(
+            first: PurchaseEvidence(record: a, lineID: a.current.fields.items[0].id),
+            second: PurchaseEvidence(record: b, lineID: b.current.fields.items[0].id),
+            expectedFirstLinks: nil, expectedSecondLinks: nil, verdict: .sameProduct, pack: .same,
+            priceEvidence: evidence)
+        XCTAssertEqual(decision(pair)?.priceEvidence, evidence)
+        try await store.close()
+        let reopened = try ReceiptStore(directory: directory, keyProvider: Key())
+        let left = try await load(reopened, id: a.id), right = try await load(reopened, id: b.id)
+        let saved = try XCTUnwrap(decision([left, right])?.priceEvidence)
+        XCTAssertEqual(saved, evidence)
+        let result = try PurchasePriceComparison.compare(right, line: b.current.fields.items[0].id,
+                                                         left, line: a.current.fields.items[0].id,
+                                                         evidence: saved.reversed)
+        XCTAssertEqual(result.order, .orderedSame)
+        let cleared = try await save(reopened, left, right)
+        XCTAssertNil(decision(cleared)?.priceEvidence)
+        XCTAssertEqual(decision(cleared)?.verdict, .sameProduct)
+        try await reopened.close()
+    }
+
     func testBackupRestoresPairButCannotOverwriteUndoFromOldPeer() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

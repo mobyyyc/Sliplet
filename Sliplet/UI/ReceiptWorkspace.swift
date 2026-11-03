@@ -504,7 +504,8 @@ final class ReceiptWorkspace {
     }
     func savePurchaseDecision(first: ReceiptRecord, line firstLine: UUID,
                               second: ReceiptRecord, line secondLine: UUID,
-                              verdict: PurchaseLinkDecision.Verdict?, pack: PurchaseLinkDecision.Pack) async throws {
+                              verdict: PurchaseLinkDecision.Verdict?, pack: PurchaseLinkDecision.Pack,
+                              priceEvidence: PurchasePriceEvidence? = nil) async throws {
         guard let store, active, !privacyCovered, !saving else { throw CancellationError() }
         let session = sessionID, lease = permit
         saving = true
@@ -513,7 +514,7 @@ final class ReceiptWorkspace {
             first: PurchaseEvidence(record: first, lineID: firstLine),
             second: PurchaseEvidence(record: second, lineID: secondLine),
             expectedFirstLinks: first.purchaseLinks?.id, expectedSecondLinks: second.purchaseLinks?.id,
-            verdict: verdict, pack: pack, permit: lease)
+            verdict: verdict, pack: pack, priceEvidence: priceEvidence, permit: lease)
         try lease.check()
         guard isCurrent(session) else { throw CancellationError() }
         // Publish both endpoints together so the UI never observes a half-updated link.

@@ -31,6 +31,7 @@ struct PurchaseLinkDecision: Codable, Equatable, Sendable, Identifiable {
     let second: PurchaseEvidence
     let verdict: Verdict
     let pack: Pack
+    var priceEvidence: PurchasePriceEvidence? = nil
 
     func connects(_ a: PurchaseEndpoint, _ b: PurchaseEndpoint) -> Bool {
         Set([first.endpoint, second.endpoint]) == Set([a, b])
@@ -52,6 +53,13 @@ struct PurchaseLinks: Codable, Equatable, Sendable {
         var pairs = Set<Set<PurchaseEndpoint>>()
         for decision in decisions {
             let a = decision.first, b = decision.second
+            if let price = decision.priceEvidence {
+                guard decision.verdict == .sameProduct, decision.pack == .same,
+                      price.firstUnit != .unknown, price.secondUnit != .unknown,
+                      price.firstUnit.standard == price.secondUnit.standard, price.tax != .unknown else {
+                    throw ReceiptValidationError.invalidEvidence
+                }
+            }
             guard a.endpoint.receiptID != b.endpoint.receiptID,
                   a.assetHash.count == 32, b.assetHash.count == 32,
                   a.assetHash != b.assetHash,

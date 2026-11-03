@@ -360,6 +360,7 @@ actor ReceiptStore {
     func savePurchaseLink(first: PurchaseEvidence, second: PurchaseEvidence,
                           expectedFirstLinks: UUID?, expectedSecondLinks: UUID?,
                           verdict: PurchaseLinkDecision.Verdict?, pack: PurchaseLinkDecision.Pack = .unknown,
+                          priceEvidence: PurchasePriceEvidence? = nil,
                           permit: ReceiptOperationPermit? = nil) throws -> [ReceiptRecord] {
         try permit?.check()
         return try database.transaction(permit: permit) {
@@ -382,12 +383,16 @@ actor ReceiptStore {
             right.decisions.removeAll { $0.connects(first.endpoint, second.endpoint) }
             if let verdict {
                 let decision = PurchaseLinkDecision(id: UUID(), first: first, second: second,
-                                                    verdict: verdict, pack: pack)
+                                                    verdict: verdict, pack: pack, priceEvidence: priceEvidence)
                 left.decisions.append(decision)
                 right.decisions.append(decision)
             }
             left.id = UUID(); right.id = UUID()
             a.purchaseLinks = left; b.purchaseLinks = right
+            if let priceEvidence {
+                _ = try PurchasePriceComparison.compare(a, line: first.endpoint.lineID,
+                                                       b, line: second.endpoint.lineID, evidence: priceEvidence)
+            }
             for record in [a, b] {
                 try database.run("UPDATE receipts SET payload = ? WHERE id = ?",
                                  [.blob(try encode(record)), .text(record.id.uuidString)])

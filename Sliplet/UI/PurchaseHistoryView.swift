@@ -109,6 +109,11 @@ private struct PurchaseComparisonView: View {
                         if let error { Text(error).foregroundStyle(.red).accessibilityIdentifier("purchaseLinkError") }
                     } header: { Text("Product match") }
                     footer: { Text("Confirming links these two purchases. It does not establish a price change.") }
+                    Section {
+                        NavigationLink("Compare unit prices") {
+                            PurchasePriceView(workspace: workspace, first: first, second: second)
+                        }.accessibilityIdentifier("compareUnitPrices")
+                    }
                 }
                 .disabled(workspace.saving)
                 .onAppear { if !loadedPack { pack = decision?.pack ?? .unknown; loadedPack = true } }
@@ -184,7 +189,7 @@ private struct PurchaseReceiptView: View {
     }
 }
 
-private struct PurchaseOriginalView: View {
+struct PurchaseOriginalView: View {
     @Bindable var workspace: ReceiptWorkspace
     let receiptID: UUID
     @State private var image: ReceiptImage?

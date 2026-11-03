@@ -58,6 +58,39 @@ import XCTest
         app.terminate()
     }
 
+    func testVerifiedUnitPriceCanBeSavedAndCleared() {
+        let app = launch(["--t05-light", "--p1004-price-fixture"])
+        app.buttons["receipt-0"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+        let row = app.scrollViews["detailScreen"].buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10)); row.tap()
+        app.buttons["openPurchaseHistory"].tap()
+        firstMatch(app).tap()
+        let pack = app.buttons["purchasePack"]
+        reveal(pack, app: app); pack.tap(); app.buttons["Same"].tap()
+        let confirm = app.buttons["confirmPurchaseLink"]
+        reveal(confirm, app: app); confirm.tap()
+        let prices = app.buttons["compareUnitPrices"]
+        reveal(prices, app: app); prices.tap()
+        let tax = app.buttons["priceTaxBasis"]
+        reveal(tax, app: app); tax.tap(); app.buttons["Before tax"].tap()
+        let checked = app.switches["priceEvidenceChecked"]
+        reveal(checked, app: app)
+        checked.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        let result = app.staticTexts["unitPriceResult"]
+        reveal(result, app: app)
+        XCTAssertEqual(result.label, "Same unit price")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Unit price comparison"; screenshot.lifetime = .keepAlways; add(screenshot)
+        let save = app.buttons["savePriceEvidence"]
+        reveal(save, app: app); save.tap()
+        XCTAssertTrue(app.staticTexts["Price verification saved."].waitForExistence(timeout: 10))
+        let clear = app.buttons["clearPriceEvidence"]
+        reveal(clear, app: app); clear.tap()
+        XCTAssertTrue(clear.waitForNonExistence(timeout: 10))
+        XCTAssertFalse(result.exists)
+        app.terminate()
+    }
+
     func testSearchHistoryRetainsQueryAndSupportsLargeText() throws {
         let app = launch(["--t05-large-text", "--t05-reduce-motion"])
         app.buttons["allReceipts"].tap()

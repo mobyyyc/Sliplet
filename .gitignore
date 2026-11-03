@@ -53,3 +53,5 @@ __pycache__/
 
 # Private repeat-purchase review exports
 sliplet-p1002-checked*.json
+
+sliplet-p1004-checked*.json
