@@ -1,6 +1,6 @@
 # Phase 10 · Purchase history
 
-November 3, 2026. P10-01 and P10-02 approved and completed. P10-03 through P10-05 require individual approval.
+November 3, 2026. P10-01 through P10-03 approved and completed. P10-04 and P10-05 require individual approval.
 
 ## P10-01 evidence
 
@@ -67,3 +67,14 @@ Receipt corrections preserve decision evidence, while removed rows can still be 
 This task delivers the matching and encrypted persistence foundation. P10-03 remains the user-facing history and confirmation/undo integration. The existing phone store has not been populated from the audit references, and this milestone makes no new phone interface available.
 
 Verification used fictional receipts. The five initial link tests and 19 existing split/backup tests passed. Two additional checks passed for explicit-row scope, absence of transitive linking, legacy decoding and invalid endpoint rejection. No recognition, model or physical-phone performance claim follows from these checks.
+
+
+## P10-03 item history
+
+Saved purchase-row sheets now offer Purchase history. Current purchase matches in search offer the same destination. Unsaved row edits must be saved or cancelled before entering history. Original-only search evidence and adjustment rows do not expose product history.
+
+History groups direct confirmed pairs, candidates, decisions invalidated by a revision, and rejected pairs. Entries are ordered by printed date with unknown dates last. Archived receipts participate with an explicit label, and drafts show Needs review. The comparison shows each printed row, merchant, date, line amount, available quantity/unit/code/unit price, plus independent access to the full digital receipt and original image. Product confirmation and pack selection remain separate. Undo restores candidate eligibility. Read-only receipt and photo navigation stays inside history so the original row editor and search query retain their place.
+
+Writes use the P10-02 transactional API and publish both endpoints together to the workspace. Original loading checks the session and operation lease before and after decoding. The history and photo views cover private data when locked. A comparison whose receipt or row has been removed shows unavailable. Candidates still require explicit user confirmation, and this milestone adds no price-change calculation.
+
+Validation on fictional data passed nine purchase-link domain/workspace/persistence tests and two native UI walkthroughs. The UI checks exercised row entry, original viewing, confirmation, undo, rejection, return within three points, search entry, full receipt viewing and query preservation. The dark large-text/Reduce Motion history list passed hit-region and sufficient-description audits. Unit tests cover archive/draft/changed/rejected states, missing dates, deletion, encrypted restart and restore, stale and interrupted writes, invalid endpoints and locked workspace access. No new provider call or physical-phone installation occurred. Device acceptance remains P10-05.

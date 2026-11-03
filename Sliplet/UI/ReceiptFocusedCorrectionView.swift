@@ -59,6 +59,19 @@ struct ReceiptFocusedCorrectionView: View {
         NavigationStack {
             Form {
                 Section { Text(check.message).font(.footnote) }
+                if let detailLine, let selected = workspace.selected,
+                   selected.current.fields.items.contains(where: { $0.id == detailLine.id }) {
+                    Section {
+                        NavigationLink {
+                            PurchaseHistoryView(workspace: workspace,
+                                endpoint: PurchaseEndpoint(receiptID: selected.id, lineID: detailLine.id))
+                        } label: { Label("Purchase history", systemImage: "clock.arrow.circlepath") }
+                        .disabled(input != baseline)
+                        .accessibilityIdentifier("openPurchaseHistory")
+                        if input != baseline { Text("Save or cancel your edits before opening history.").font(.footnote) }
+                    }
+                }
+
                 if case .source = check.target {
                     Section {
                         Picker("Existing line", selection: $lineID) {

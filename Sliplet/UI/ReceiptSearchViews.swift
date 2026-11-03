@@ -155,6 +155,7 @@ struct ReceiptSearchContext: View {
     @Bindable var workspace: ReceiptWorkspace
     let match: ReceiptSearchIndex.Match
     @State private var details = false
+    @State private var history = false
     @Environment(\.dynamicTypeSize) private var typeSize
     private var dismissButton: some View {
         Button { workspace.searchMatch = nil } label: { Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
@@ -190,7 +191,23 @@ struct ReceiptSearchContext: View {
                         originalButton(iconOnly: false)
                     }
                 }
+                if !match.originalOnly, let itemID = match.itemID,
+                   record.current.fields.items.contains(where: { $0.id == itemID }) {
+                    Button("Purchase history", systemImage: "clock.arrow.circlepath") { history = true }
+                        .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("searchPurchaseHistory")
+                }
             }.padding(.horizontal, 20).padding(.bottom, 10)
+                .sheet(isPresented: $history) {
+                    if let itemID = match.itemID {
+                        NavigationStack {
+                            PurchaseHistoryView(workspace: workspace,
+                                endpoint: PurchaseEndpoint(receiptID: record.id, lineID: itemID))
+                            .toolbar { ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { history = false }.accessibilityIdentifier("closePurchaseHistory")
+                            } }
+                        }
+                    }
+                }
                 .accessibilityElement(children: .contain)
                 .sheet(isPresented: $details) {
                     NavigationStack {

@@ -114,3 +114,36 @@ enum PurchaseLinkEngine {
         return folded.isEmpty ? nil : folded
     }
 }
+
+struct PurchaseHistoryEntry: Identifiable {
+    enum Status: String, CaseIterable {
+        case confirmed = "Confirmed purchases"
+        case candidate = "Possible matches"
+        case changed = "Needs confirmation"
+        case different = "Marked different"
+    }
+    let record: ReceiptRecord
+    let line: ReceiptLine
+    let status: Status
+    let reason: PurchaseLinkEngine.Reason?
+    var id: PurchaseEndpoint { PurchaseEndpoint(receiptID: record.id, lineID: line.id) }
+
+    static func entries(for endpoint: PurchaseEndpoint, in records: [ReceiptRecord]) -> [Self] {
+        guard let source = records.first(where: { $0.id == endpoint.receiptID }),
+              source.current.fields.items.contains(where: { $0.id == endpoint.lineID }) else { return [] }
+        return records.sorted(by: ReceiptHistory.newestFirst).filter { $0.id != source.id }.flatMap { record in
+            record.current.fields.items.compactMap { line -> Self? in
+                let peer = PurchaseEndpoint(receiptID: record.id, lineID: line.id)
+                let decision = PurchaseLinkEngine.decision(source, line: endpoint.lineID, record, line: line.id)
+                let reason = PurchaseLinkEngine.candidate(source, line: endpoint.lineID, record, line: line.id)
+                let prior = (source.purchaseLinks?.decisions ?? []) + (record.purchaseLinks?.decisions ?? [])
+                let status: Status
+                if let decision { status = decision.verdict == .sameProduct ? .confirmed : .different }
+                else if prior.contains(where: { $0.connects(endpoint, peer) }) { status = .changed }
+                else if reason != nil { status = .candidate }
+                else { return nil }
+                return Self(record: record, line: line, status: status, reason: reason)
+            }
+        }
+    }
+}

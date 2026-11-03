@@ -199,6 +199,65 @@ import XCTest
         try await store.close()
     }
 
+    func testHistoryLabelsArchiveDraftChangedAndRejectedPurchases() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try ReceiptStore(directory: directory, keyProvider: Key())
+        let a = try await create(store, marker: 1)
+        let b = try await create(store, marker: 2)
+        let c = try await create(store, marker: 3)
+        let endpoint = PurchaseEndpoint(receiptID: a.id, lineID: a.current.fields.items[0].id)
+        let ab = try await save(store, a, b)
+        let ac = try await save(store, ab[0], c, verdict: .differentProduct)
+        let archived = try await store.organize(id: b.id, expectedRevision: b.current.id, action: .archive)
+        let initial = PurchaseHistoryEntry.entries(for: endpoint, in: [ac[0], archived, ac[1]])
+        XCTAssertTrue(initial.contains { $0.record.isArchived && $0.status == .confirmed })
+        XCTAssertTrue(initial.contains { $0.record.id == c.id && $0.status == .different })
+        var fields = b.current.fields
+        fields.purchaseDate = nil
+        let edited = try await store.revise(id: b.id, expectedRevision: b.current.id, fields: fields)
+        let changed = PurchaseHistoryEntry.entries(for: endpoint, in: [ac[0], edited, ac[1]])
+        XCTAssertEqual(changed.last?.record.id, b.id)
+        XCTAssertEqual(changed.last?.status, .changed)
+        XCTAssertEqual(changed.last?.record.current.review, .draft)
+        try await store.delete(id: b.id)
+        let surviving = try await store.receipts()
+        XCTAssertFalse(PurchaseHistoryEntry.entries(for: endpoint, in: surviving).contains { $0.record.id == b.id })
+        try await store.close()
+    }
+
+    func testWorkspacePublishesPairTogetherAndRejectsLockedAccess() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try ReceiptStore(directory: directory, keyProvider: Key())
+        let a = try await create(store, marker: 1), b = try await create(store, marker: 2)
+        try await store.close()
+        let workspace = ReceiptWorkspace(directory: directory, keyProvider: Key())
+        workspace.activate(protectedDataAvailable: true)
+        for _ in 0..<200 {
+            if workspace.availability == .ready { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(workspace.availability, .ready)
+        try await workspace.savePurchaseDecision(first: a, line: a.current.fields.items[0].id,
+                                                  second: b, line: b.current.fields.items[0].id,
+                                                  verdict: .sameProduct, pack: .same)
+        let left = try XCTUnwrap(workspace.receipts.first { $0.id == a.id })
+        let right = try XCTUnwrap(workspace.receipts.first { $0.id == b.id })
+        XCTAssertEqual(decision([left, right])?.verdict, .sameProduct)
+        XCTAssertFalse(workspace.saving)
+        workspace.suspend()
+        XCTAssertTrue(workspace.receipts.isEmpty)
+        do { _ = try await workspace.purchaseOriginal(id: a.id); XCTFail("Locked original exposed") }
+        catch { XCTAssertTrue(error is CancellationError) }
+        do {
+            try await workspace.savePurchaseDecision(first: left, line: a.current.fields.items[0].id,
+                                                      second: right, line: b.current.fields.items[0].id,
+                                                      verdict: nil, pack: .unknown)
+            XCTFail("Locked change committed")
+        } catch { XCTAssertTrue(error is CancellationError) }
+    }
+
     func testBackupRestoresPairButCannotOverwriteUndoFromOldPeer() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }

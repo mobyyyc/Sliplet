@@ -31,9 +31,9 @@ import CryptoKit
             }
             return (bytes, d)
         }
-        let merchant = ["SYNTHETIC CORNER", "SYNTHETIC MARKET", "SYNTHETIC STORE"][index % 3]
+        let merchant = mode == "purchase-history" ? "FICTIONAL HISTORY STORE" : ["SYNTHETIC CORNER", "SYNTHETIC MARKET", "SYNTHETIC STORE"][index % 3]
         let date = String(format: "2026-10-%02d", 7 - index % 3)
-        let names = (index % 3 == 1 || mode == "long-wallet") ? ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"] : ["TEST ITEM"]
+        let names = (index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet") ? ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"] : ["TEST ITEM"]
         let amount = ExactInput.format(Int64(names.count) * 1234)
         let content = [merchant, date + " CAD"] + names.map { $0 + " 12.34" } + ["SUBTOTAL " + amount, "TOTAL " + amount]
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true

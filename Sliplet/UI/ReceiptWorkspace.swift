@@ -502,6 +502,38 @@ final class ReceiptWorkspace {
             }
         }
     }
+    func savePurchaseDecision(first: ReceiptRecord, line firstLine: UUID,
+                              second: ReceiptRecord, line secondLine: UUID,
+                              verdict: PurchaseLinkDecision.Verdict?, pack: PurchaseLinkDecision.Pack) async throws {
+        guard let store, active, !privacyCovered, !saving else { throw CancellationError() }
+        let session = sessionID, lease = permit
+        saving = true
+        defer { if sessionID == session { saving = false } }
+        let updated = try await store.savePurchaseLink(
+            first: PurchaseEvidence(record: first, lineID: firstLine),
+            second: PurchaseEvidence(record: second, lineID: secondLine),
+            expectedFirstLinks: first.purchaseLinks?.id, expectedSecondLinks: second.purchaseLinks?.id,
+            verdict: verdict, pack: pack, permit: lease)
+        try lease.check()
+        guard isCurrent(session) else { throw CancellationError() }
+        // Publish both endpoints together so the UI never observes a half-updated link.
+        receipts = receipts.map { old in updated.first { $0.id == old.id } ?? old }
+        if let current = selected, let replacement = updated.first(where: { $0.id == current.id }) {
+            selected = replacement
+        }
+    }
+
+    func purchaseOriginal(id: UUID) async throws -> ReceiptImage {
+        guard let store, active, !privacyCovered else { throw CancellationError() }
+        let session = sessionID, lease = permit
+        let bytes = try await store.originalImage(receiptID: id)
+        try lease.check()
+        let image = try await Task.detached(priority: .userInitiated) { try ReceiptImage.decode(bytes) }.value
+        try lease.check()
+        guard isCurrent(session) else { throw CancellationError() }
+        return image
+    }
+
     func setWalletSettings(_ settings: ReceiptWalletSettings) {
         guard active, !saving, let store else { return }
         let session = sessionID, lease = permit
