@@ -260,3 +260,65 @@ private struct UploadTester: ReceiptAIConnectionTesting {
     }
 
 }
+
+extension ReceiptUploadTests {
+    func testPhotoPreparationKeepsOriginalAndMapsAllRotations() throws {
+        let source = try image(width: 400, height: 800, orientation: 6)
+        let original = source.bytes
+        XCTAssertEqual(try ReceiptPhotoAdjustment().prepare(source).bytes, original)
+        for turn in 0...3 {
+            let adjustment = ReceiptPhotoAdjustment(turns: turn, crop: CGRect(x: 0.25, y: 0.25, width: 0.5, height: 0.5))
+            let result = try adjustment.prepare(source)
+            XCTAssertEqual(result.pixelWidth, turn % 2 == 0 ? 400 : 200)
+            XCTAssertEqual(result.pixelHeight, turn % 2 == 0 ? 200 : 400)
+            XCTAssertEqual(result.orientation, .up)
+            let box = try adjustment.originalBox(ReceiptOCRBox(x: 0, y: 0, width: 1, height: 1))
+            XCTAssertEqual(box.x, 0.25, accuracy: 0.0001)
+            XCTAssertEqual(box.y, 0.25, accuracy: 0.0001)
+            XCTAssertEqual(box.width, 0.5, accuracy: 0.0001)
+            XCTAssertEqual(box.height, 0.5, accuracy: 0.0001)
+        }
+        XCTAssertEqual(source.bytes, original)
+        XCTAssertThrowsError(try ReceiptPhotoAdjustment(crop: .zero).prepare(source))
+    }
+    func testRotationMapsAsymmetricOCRBackToSource() throws {
+        let box = try ReceiptOCRBox(x: 0.1, y: 0.2, width: 0.3, height: 0.1)
+        let mapped = try ReceiptPhotoAdjustment(turns: 1).originalBox(box)
+        XCTAssertEqual(mapped.x, 0.7, accuracy: 0.0001)
+        XCTAssertEqual(mapped.y, 0.1, accuracy: 0.0001)
+        XCTAssertEqual(mapped.width, 0.1, accuracy: 0.0001)
+        XCTAssertEqual(mapped.height, 0.3, accuracy: 0.0001)
+    }
+    func testCroppedUploadRemovesMetadataAndFlattensCovers() throws {
+        let source = try image()
+        let adjusted = try ReceiptPhotoAdjustment(turns: 1, crop: CGRect(x: 0.1, y: 0.1, width: 0.8, height: 0.8)).prepare(source)
+        let upload = try ReceiptUploadImage.prepare(adjusted, redactions: [CGRect(x: 0, y: 0, width: 1, height: 1)])
+        let decoded = CGImageSourceCreateWithData(upload.bytes as CFData, nil)!
+        let properties = CGImageSourceCopyPropertiesAtIndex(decoded, 0, nil)! as NSDictionary
+        XCTAssertNil(properties[kCGImagePropertyGPSDictionary])
+        XCTAssertFalse(String(decoding: upload.bytes, as: UTF8.self).contains("PRIVATE_TEST_METADATA"))
+        let cg = CGImageSourceCreateImageAtIndex(decoded, 0, nil)!
+        let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let pixel = context.data!.assumingMemoryBound(to: UInt8.self)
+        XCTAssertLessThan(pixel[0], 10); XCTAssertLessThan(pixel[1], 10); XCTAssertLessThan(pixel[2], 10)
+    }
+}
+
+extension ReceiptUploadTests {
+    func testAdjustedEvidenceRetainsSourceIDsAndParserBytes() throws {
+        let line = ReceiptOCRLine(id: UUID(), text: "FICTIONAL ITEM 1.00", engineConfidence: 0.9,
+            boundingBox: try ReceiptOCRBox(x: 0.1, y: 0.2, width: 0.3, height: 0.1))
+        let pass = ReceiptReadingPass(lines: [line], revision: 3, usesLanguageCorrection: false)
+        let raw = try ReceiptParser.extraction(OCRResult(lines: [line], revision: 3,
+            readingEvidence: ReceiptReadingEvidence(baseline: pass, corrected: nil, outcome: .notNeeded)))
+        let mapped = try ReceiptPhotoAdjustment(turns: 1).sourceEvidence(raw)
+        try mapped.validate()
+        XCTAssertEqual(mapped.rawOCR.map(\.id), raw.rawOCR.map(\.id))
+        XCTAssertEqual(mapped.rawParserOutput, raw.rawParserOutput)
+        XCTAssertEqual(mapped.fields, raw.fields)
+        XCTAssertEqual(mapped.readingEvidence?.selected.lines, mapped.rawOCR)
+        XCTAssertNotEqual(mapped.rawOCR.first?.boundingBox, raw.rawOCR.first?.boundingBox)
+    }
+}

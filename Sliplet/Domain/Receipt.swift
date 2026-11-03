@@ -175,8 +175,8 @@ struct ReceiptExtractionIssue: Codable, Equatable, Sendable {
     let detail: String?
 }
 
-/// Full-image reads use the original oriented coordinate space. No crop transform or
-/// cross-pass row merging is permitted; the unselected read remains evidence only.
+/// Stored reads use the original oriented coordinate space. Import crop/rotation
+/// geometry is mapped back before storage. The unselected read remains evidence only.
 struct ReceiptReadingPass: Codable, Equatable, Sendable {
     let lines: [ReceiptOCRLine]
     let revision: Int

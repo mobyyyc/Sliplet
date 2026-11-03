@@ -57,8 +57,9 @@ struct ReceiptHome: View {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button(workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
-                                if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
+                            Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
+                                if workspace.flow == .preparingUpload && workspace.importStep > 0 { workspace.importForward = false; workspace.importStep -= 1 }
+                                else if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
                                 else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload { editing = nil; discard = true }
                                 else { workspace.backToWallet() }
                             }.disabled(workspace.saving).accessibilityIdentifier("back")
@@ -286,17 +287,25 @@ struct ReceiptHome: View {
         case .preparingUpload: ReceiptUploadPreview(workspace: workspace)
         case .loading, .reading:
             VStack(spacing: 24) {
-                ProgressView(workspace.flow == .loading ? "Loading image" : (workspace.aiUploadStarted ? "Reading with Gemini" : "Reading on device"))
-                Text(workspace.aiUploadStarted
-                     ? "Waiting for Google’s response. Stopping keeps your photo here but cannot recall the upload."
-                     : workspace.flow == .loading ? "Opening your photo on this device." : "Looking for items and totals in your photo. No upload is needed.")
-                    .font(.subheadline).multilineTextAlignment(.center)
-                Text("Keep Sliplet open until you save your receipt.").font(.footnote).foregroundStyle(.secondary)
-                Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
-                    if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
+                ProgressView().controlSize(.large)
+                Text(workspace.flow == .loading ? "Opening photo" : "Reading receipt").font(.title2.bold())
+                Text(workspace.aiUploadStarted ? "Using Gemini" : "On your iPhone")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                DisclosureGroup("Details") {
+                    Text(workspace.aiUploadStarted
+                         ? "Waiting for Google’s response. Stopping cannot recall an upload already sent."
+                         : "Your photo stays on this device.")
+                    Text("Keep Sliplet open until you save your receipt.")
+                }.font(.callout)
+            }.padding(28).frame(maxHeight: .infinity)
+                .accessibilityElement(children: .contain).accessibilityIdentifier("processing")
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
+                        if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
+                    }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("cancelImport")
+                        .modifier(ReceiptActionBarLayout())
                 }
-                    .buttonStyle(ReceiptSecondaryStyle()).frame(minHeight: 44).accessibilityIdentifier("cancelImport")
-            }.padding(28).accessibilityElement(children: .contain).accessibilityIdentifier("processing")
+
         case .failed:
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {

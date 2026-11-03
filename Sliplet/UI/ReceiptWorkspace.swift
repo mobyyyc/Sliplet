@@ -40,6 +40,9 @@ final class ReceiptWorkspace {
         var bottom = false
     }
     private(set) var retryCovers: UploadCovers?
+    var importForward = true
+    var importStep = 0
+    var importAdjustment = ReceiptPhotoAdjustment()
     var aiUploadStarted = false
     var image: ReceiptImage?
     private(set) var readerInput: ReceiptReviewDraft?
@@ -173,6 +176,8 @@ final class ReceiptWorkspace {
                 let image = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard self.isCurrent(session), self.flow == .loading else { return }
                 self.image = image
+                self.importStep = 0
+                self.importAdjustment = ReceiptPhotoAdjustment()
                 if let modelReader { self.readModelImage(using: modelReader) }
                 else if chooseRecognition { self.flow = .preparingUpload }
                 else { self.readImage() }
@@ -195,6 +200,7 @@ final class ReceiptWorkspace {
     func chooseRecognition() {
         guard active, image != nil, selected == nil, !saving else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel()
+        importStep = retryCovers == nil ? 0 : 2
         aiUploadStarted = false; errorMessage = nil; flow = .preparingUpload
     }
     /// Called only by the exact-payload preview's explicit send button.
@@ -270,11 +276,13 @@ final class ReceiptWorkspace {
         let job = ReceiptRecognitionJob(); recognition = job
         let session = sessionID
         let adaptive = adaptiveReading
+        let adjustment = importAdjustment
         let work = Task.detached(priority: .userInitiated) {
             try Task.checkCancellation()
-            let result = try job.run(image, adaptive: adaptive)
+            let prepared = try adjustment.prepare(image)
+            let result = try job.run(prepared, adaptive: adaptive)
             try Task.checkCancellation()
-            return try ReceiptParser.extraction(result)
+            return try adjustment.sourceEvidence(ReceiptParser.extraction(result))
         }
         worker = work
         task = Task { [weak self] in
