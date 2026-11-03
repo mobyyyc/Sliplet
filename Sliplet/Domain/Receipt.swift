@@ -268,6 +268,7 @@ struct ReceiptRecord: Codable, Equatable, Sendable, Identifiable {
     var organization: ReceiptOrganization? = nil
     /// Versioned optional data inside the authenticated encrypted document; legacy records decode nil.
     var splitPlan: ReceiptSplitPlan? = nil
+    var purchaseLinks: PurchaseLinks? = nil
     var isArchived: Bool { organization?.archived ?? false }
     var isStarred: Bool { organization?.starred ?? false }
     var current: ReceiptRevision { revisions.last! }
@@ -275,6 +276,7 @@ struct ReceiptRecord: Codable, Equatable, Sendable, Identifiable {
     func validate() throws {
         try original.validate()
         try splitPlan?.validateStructure()
+        try purchaseLinks?.validate(owner: self)
         guard !revisions.isEmpty, Set(revisions.map(\.id)).count == revisions.count else {
             throw ReceiptValidationError.duplicateIdentifier
         }

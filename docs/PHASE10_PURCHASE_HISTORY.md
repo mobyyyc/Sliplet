@@ -1,6 +1,6 @@
 # Phase 10 · Purchase history
 
-November 3, 2026. P10-01 approved and completed. Remaining tasks require individual approval.
+November 3, 2026. P10-01 and P10-02 approved and completed. P10-03 through P10-05 require individual approval.
 
 ## P10-01 evidence
 
@@ -52,4 +52,18 @@ The owner approved P10-02. The offline review page contains three candidate pair
 
 Generate with `python3 evaluation/purchase-history/review.py`. Save the exported `sliplet-p1002-checked.json` in the project root, then validate with `python3 evaluation/purchase-history/review.py --validate`. The page, proposal and exports are excluded from Git. A local validation exercise accepted a completed uncertain review and rejected incomplete, wrong-review, missing-case and mismatched-input exports.
 
-Implementation awaits the owner's pair decisions. The storage review identified existing receipt revisions, line IDs, original asset hashes, transaction guards and encrypted receipt payloads as the foundations for links. Confirmed identity must retain the evidence used at confirmation and stop resolving when that evidence changes or an endpoint is removed. Candidate suggestions and explicit rejections must remain distinct from confirmed links. Backup merge must respect existing records and must not resurrect an undone link through a divergent peer record. These cases require persistence checks during implementation.
+At review preparation, implementation awaited the owner's pair decisions. The verified export and implementation are recorded below. The storage review identified existing receipt revisions, line IDs, original asset hashes, transaction guards and encrypted receipt payloads as the foundations for links. Confirmed identity must retain the evidence used at confirmation and stop resolving when that evidence changes or an endpoint is removed. Candidate suggestions and explicit rejections must remain distinct from confirmed links. Backup merge must respect existing records and must not resurrect an undone link through a divergent peer record. These cases require persistence checks during implementation.
+
+## P10-02 accepted evidence and implementation
+
+The exported review passed all three case checks and matched the source hashes. The owner confirmed the same product, same pack and printed code for all three pairs. One note explicitly distinguishes differing quantities from equal unit prices. The original export and note are preserved locally in the ignored review folder. Historical receipt references were not relabeled. The product-link rules use no hardcoded merchant, description, code or purchase from these examples.
+
+The implementation introduces row endpoints, revision-and-original evidence snapshots, explicit same/different decisions, and a separate same/different/unknown pack decision. Candidate discovery uses a matching code within a normalized merchant, or an exact normalized description where a code is missing. Conflicting codes never fall back to a name match. Different merchants, exact-image duplicate imports, rows from the same receipt, adjustments and nonpositive amounts do not become candidates. Rephotographed duplicates cannot be reliably identified by this rule and require human review.
+
+A confirmed or rejected pair is stored in both encrypted receipt payloads in one transaction. Both copies must agree and both current revisions must match before resolving it. Any content revision conservatively makes the previous decision inactive, even if the edit concerns another row. Organization changes preserve links. Explicit undo removes both copies with fresh concurrency tokens. Missing endpoints and one-sided old backups cannot resolve a link. Restoring a complete historical wallet to an empty store restores its historical decisions.
+
+Receipt corrections preserve decision evidence, while removed rows can still be explicitly unlinked. Partial writes roll back, stale edits and revoked operations fail, old records decode without links, and malformed decision structure is rejected. No identity is inferred transitively from other pairs. A same-product decision with unknown or different pack size never establishes a comparable price.
+
+This task delivers the matching and encrypted persistence foundation. P10-03 remains the user-facing history and confirmation/undo integration. The existing phone store has not been populated from the audit references, and this milestone makes no new phone interface available.
+
+Verification used fictional receipts. The five initial link tests and 19 existing split/backup tests passed. Two additional checks passed for explicit-row scope, absence of transitive linking, legacy decoding and invalid endpoint rejection. No recognition, model or physical-phone performance claim follows from these checks.

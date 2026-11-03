@@ -295,7 +295,7 @@ actor ReceiptStore {
             let next = ReceiptRecord(id: old.id, createdAt: old.createdAt, updatedAt: now,
                 original: old.original, asset: old.asset,
                 revisions: old.revisions + [ReceiptRevision(id: UUID(), createdAt: now, fields: fields, review: review, reviewInput: reviewInput)],
-                organization: old.organization, splitPlan: old.splitPlan?.rebased(to: fields))
+                organization: old.organization, splitPlan: old.splitPlan?.rebased(to: fields), purchaseLinks: old.purchaseLinks)
             try database.run("UPDATE receipts SET payload = ?, updated_at = ? WHERE id = ?",
                              [.blob(try encode(next)), .integer(try Self.milliseconds(now)), .text(id.uuidString)])
             #if DEBUG
@@ -351,6 +351,55 @@ actor ReceiptStore {
             #endif
             try permit?.check()
             return record
+        }
+    }
+
+    /// Pair decisions commit together. nil removes the decision; empty states retain fresh
+    /// concurrency tokens and prevent an old peer backup from reactivating an undone link.
+    @discardableResult
+    func savePurchaseLink(first: PurchaseEvidence, second: PurchaseEvidence,
+                          expectedFirstLinks: UUID?, expectedSecondLinks: UUID?,
+                          verdict: PurchaseLinkDecision.Verdict?, pack: PurchaseLinkDecision.Pack = .unknown,
+                          permit: ReceiptOperationPermit? = nil) throws -> [ReceiptRecord] {
+        try permit?.check()
+        return try database.transaction(permit: permit) {
+            guard var a = try load(first.endpoint.receiptID),
+                  var b = try load(second.endpoint.receiptID) else { throw ReceiptStoreError.notFound }
+            guard first.revisionID == a.current.id, second.revisionID == b.current.id,
+                  first.assetHash == a.asset.sha256, second.assetHash == b.asset.sha256,
+                  a.purchaseLinks?.id == expectedFirstLinks,
+                  b.purchaseLinks?.id == expectedSecondLinks else { throw ReceiptStoreError.editConflict }
+            guard a.id != b.id else { throw ReceiptValidationError.invalidEvidence }
+            if verdict != nil && PurchaseLinkEngine.purchases(a, line: first.endpoint.lineID,
+                                                             b, line: second.endpoint.lineID) == nil {
+                throw ReceiptValidationError.invalidEvidence
+            }
+            try Self.verifyAsset(a, db: database, cipher: cipher)
+            try Self.verifyAsset(b, db: database, cipher: cipher)
+            var left = a.purchaseLinks ?? PurchaseLinks()
+            var right = b.purchaseLinks ?? PurchaseLinks()
+            left.decisions.removeAll { $0.connects(first.endpoint, second.endpoint) }
+            right.decisions.removeAll { $0.connects(first.endpoint, second.endpoint) }
+            if let verdict {
+                let decision = PurchaseLinkDecision(id: UUID(), first: first, second: second,
+                                                    verdict: verdict, pack: pack)
+                left.decisions.append(decision)
+                right.decisions.append(decision)
+            }
+            left.id = UUID(); right.id = UUID()
+            a.purchaseLinks = left; b.purchaseLinks = right
+            for record in [a, b] {
+                try database.run("UPDATE receipts SET payload = ? WHERE id = ?",
+                                 [.blob(try encode(record)), .text(record.id.uuidString)])
+                #if DEBUG
+                try fault?(.afterReceiptWrite)
+                #endif
+            }
+            #if DEBUG
+            try fault?(.beforeCommit)
+            #endif
+            try permit?.check()
+            return [a, b]
         }
     }
 
