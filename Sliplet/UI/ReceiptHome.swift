@@ -287,24 +287,32 @@ struct ReceiptHome: View {
             }
         case .preparingUpload: ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
         case .loading, .reading:
-            VStack(spacing: 24) {
-                ProgressView().controlSize(.large)
-                Text(workspace.flow == .loading ? "Opening photo" : "Reading receipt").font(.title2.bold())
-                Text(workspace.aiUploadStarted ? "Using Gemini" : "On your iPhone")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                VStack(spacing: 12) {
-                    Text(workspace.aiUploadStarted
-                         ? "Waiting for Google’s response. Stopping cannot recall an upload already sent."
-                         : "Your photo stays on this device.")
-                    Text("Keep Sliplet open until you save your receipt.")
-                }.font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            }.padding(28).frame(maxHeight: .infinity)
+            VStack(spacing: 28) {
+                Spacer(minLength: 12)
+                VStack(spacing: 18) {
+                    ProgressView().controlSize(.large)
+                    VStack(spacing: 6) {
+                        Text(workspace.flow == .loading ? "Opening photo" : "Reading receipt").font(.title2.bold())
+                        Text(workspace.aiUploadStarted ? "Gemini is reading your photo" : "On your iPhone")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                Text("Keep Sliplet open. Your receipt will appear here when it’s ready.")
+                    .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    .frame(maxWidth: 290)
+                Spacer(minLength: 12)
+            }.padding(.horizontal, 28).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityElement(children: .contain).accessibilityIdentifier("processing")
                 .safeAreaBar(edge: .bottom, spacing: 0) {
-                    Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
-                        if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
-                    }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("cancelImport")
-                        .modifier(ReceiptActionBarLayout())
+                    VStack(spacing: 10) {
+                        if workspace.aiUploadStarted {
+                            Text("Stopping won’t recall an image already sent.")
+                                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        }
+                        Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
+                            if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
+                        }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("cancelImport")
+                    }.modifier(ReceiptActionBarLayout())
                 }
 
         case .failed:

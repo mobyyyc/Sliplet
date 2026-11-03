@@ -309,10 +309,52 @@ extension ReceiptUploadUITests {
         let app = sendAuditFixture("--import-loading-fixture")
         XCTAssertTrue(app.buttons["cancelImport"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Reading receipt"].exists)
-        XCTAssertTrue(app.staticTexts["Waiting for Google’s response. Stopping cannot recall an upload already sent."].exists)
+        XCTAssertTrue(app.staticTexts["Gemini is reading your photo"].exists)
         XCTAssertFalse(app.buttons["Details"].exists)
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Reading status"; shot.lifetime = .keepAlways; add(shot)
         app.buttons["cancelImport"].tap()
         XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+    }
+}
+
+extension ReceiptUploadUITests {
+    func testStepsFitAndToolsKeepTheirAlignment() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.buttons["uploadFixture"].waitForExistence(timeout: 20)); app.buttons["uploadFixture"].tap()
+        let photoNext = app.buttons["adjustPhotoContinue"]
+        XCTAssertTrue(photoNext.waitForExistence(timeout: 10))
+        let photoTip = app.staticTexts["Check that the receipt is sharp, upright and complete. Your original stays unchanged."]
+        XCTAssertTrue(photoTip.isHittable)
+        XCTAssertLessThan(photoTip.frame.maxY, photoNext.frame.minY)
+        photoNext.tap()
+        let explanation = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "On-device uses Apple Vision offline.")).firstMatch
+        XCTAssertTrue(explanation.waitForExistence(timeout: 5))
+        XCTAssertLessThan(explanation.frame.maxY, app.buttons["readingMethodContinue"].frame.minY)
+        app.buttons["previewAI"].tap(); app.buttons["readingMethodContinue"].tap()
+        let draw = app.buttons["drawCovers"], undo = app.buttons["Undo"], delete = app.buttons["Delete selected cover"]
+        XCTAssertTrue(draw.waitForExistence(timeout: 5))
+        let initial = draw.frame
+        for tool in [undo, delete] {
+            XCTAssertEqual(tool.frame.width, initial.width, accuracy: 1)
+            XCTAssertEqual(tool.frame.height, initial.height, accuracy: 1)
+            XCTAssertEqual(tool.frame.midY, initial.midY, accuracy: 1)
+        }
+        draw.tap()
+        XCTAssertEqual(draw.frame.width, initial.width, accuracy: 1)
+        XCTAssertEqual(draw.frame.midY, initial.midY, accuracy: 1)
+        let tip = app.staticTexts["Drag over sensitive details. Use two fingers to move the photo. Keep items and prices visible."]
+        XCTAssertTrue(tip.isHittable)
+        XCTAssertLessThan(tip.frame.maxY, app.buttons["reviewUpload"].frame.minY)
+        let tools = XCTAttachment(screenshot: app.screenshot()); tools.name = "Aligned drawing tools"; tools.lifetime = .keepAlways; add(tools)
+        app.buttons["reviewUpload"].tap()
+        let consent = app.switches["uploadConsent"]
+        XCTAssertTrue(consent.waitForExistence(timeout: 5)); XCTAssertTrue(consent.isHittable)
+        let edit = app.buttons["Edit hidden areas"]
+        XCTAssertTrue(edit.isHittable)
+        XCTAssertLessThan(edit.frame.maxY, app.buttons["sendReceiptAI"].frame.minY)
+        let confirmation = XCTAttachment(screenshot: app.screenshot()); confirmation.name = "Single page upload confirmation"; confirmation.lifetime = .keepAlways; add(confirmation)
     }
 }

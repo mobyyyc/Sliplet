@@ -38,3 +38,14 @@ The owner installed the initial redesign and requested a combined photo check/ed
 The camera-specific confirmation UI was removed. Capture still does not trigger recognition or upload: the user continues from Check photo and explicitly chooses a reading method. Existing source-image and consent protections remain in place. The loading screen exposes status and explanation directly and removes unrelated navigation controls.
 
 Refinement verification: seven focused Simulator UI tests passed across light, dark and accessibility text configurations. Coverage includes explicit crop entry, inset handle dragging, Apply and Back, local reading, AI consent and cover Undo, camera retake/save/reopen, discard/background cancellation, and visible reading status with Stop. Final copy and Crop-mode Back changes were rechecked. Crop and loading screenshots were inspected. Physical camera quality and device gesture feel still require the next phone check.
+
+
+## Floating controls and compact pages
+
+The next phone-feedback pass removes the inner clipped frame. Import content uses the same native soft vertical scroll-edge treatment as receipt detail, extending beneath transparent top and bottom safe-area bars. The labeled progress header floats above content. Photo and cover tools live in three equal slots in the floating bottom action area, above the main action. Cover/Done changes state without moving or resizing the neighboring Undo and Delete controls.
+
+A measured page layout gives photo previews the space remaining after visible guidance and optional Retake. It no longer guesses image height by subtracting fixed text estimates. Normal-size import pages are designed to fit the available screen; the outer scroll view only bounces when content actually overflows. Accessibility text retains scrolling and uses a readable wrapped progress summary rather than narrow label columns. Crop and image zoom retain their independent inspection gestures.
+
+Upload confirmation combines concise provider, privacy and consent information with the compact exact-payload preview. The loading screen has a clear title and spinner, a short status, one keep-open instruction and a separate cancellation note beside Stop. No fabricated percentage or processing stages were added.
+
+Verification: five focused Simulator UI scenarios passed across scoped runs: crop entry/apply/back, the full fictional AI cover/Undo/preview/consent flow, loading status/cancellation, accessibility control reachability, and single-page fit with stable tool geometry. The final fit check used iPhone 15 Pro at standard text size and required no scrolling through the steps. Final drawing and confirmation screenshots were inspected. No real provider upload or physical-phone installation was performed.
