@@ -50,3 +50,6 @@ private-receipts/
 
 # Generated Python bytecode
 __pycache__/
+
+# Private repeat-purchase review exports
+sliplet-p1002-checked*.json

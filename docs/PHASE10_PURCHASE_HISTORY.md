@@ -45,3 +45,11 @@ For P10-04, a future receipt showing a repeat of a previously purchased weighted
 ## Reproduction
 
 Run `python3 evaluation/purchase-history/audit.py` from the project root. It reads only the existing private evidence and emits aggregate counts and input hashes. Product details, prices, dates and photos remain local. It measures field coverage and candidate pairs, not matching accuracy or recognition accuracy. The input hashes enable a subsequent run to detect evidence drift.
+
+## P10-02 review prepared
+
+The owner approved P10-02. The offline review page contains three candidate pairs, each with both full source photos and separately labeled model-read codes. It asks for product identity, pack-size evidence and code verification independently. Uncertain and unreadable answers are valid completed reviews. Answers bind to hashes of the existing reference, responses and photos. No decisions are preselected.
+
+Generate with `python3 evaluation/purchase-history/review.py`. Save the exported `sliplet-p1002-checked.json` in the project root, then validate with `python3 evaluation/purchase-history/review.py --validate`. The page, proposal and exports are excluded from Git. A local validation exercise accepted a completed uncertain review and rejected incomplete, wrong-review, missing-case and mismatched-input exports.
+
+Implementation awaits the owner's pair decisions. The storage review identified existing receipt revisions, line IDs, original asset hashes, transaction guards and encrypted receipt payloads as the foundations for links. Confirmed identity must retain the evidence used at confirmation and stop resolving when that evidence changes or an endpoint is removed. Candidate suggestions and explicit rejections must remain distinct from confirmed links. Backup merge must respect existing records and must not resurrect an undone link through a divergent peer record. These cases require persistence checks during implementation.
