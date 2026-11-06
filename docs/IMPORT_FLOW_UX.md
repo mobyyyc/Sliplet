@@ -49,3 +49,7 @@ A measured page layout gives photo previews the space remaining after visible gu
 Upload confirmation combines concise provider, privacy and consent information with the compact exact-payload preview. The loading screen has a clear title and spinner, a short status, one keep-open instruction and a separate cancellation note beside Stop. No fabricated percentage or processing stages were added.
 
 Verification: five focused Simulator UI scenarios passed across scoped runs: crop entry/apply/back, the full fictional AI cover/Undo/preview/consent flow, loading status/cancellation, accessibility control reachability, and single-page fit with stable tool geometry. The final fit check used iPhone 15 Pro at standard text size and required no scrolling through the steps. Final drawing and confirmation screenshots were inspected. No real provider upload or physical-phone installation was performed.
+
+## Owner acceptance · November 5, 2026
+
+The owner reports testing on their iPhone and that everything looks good. The import UX refinement is accepted. This is qualitative device feedback, not measured latency or a specific confirmation of every purchase-history and unit-price acceptance case.
