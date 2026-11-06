@@ -1,6 +1,6 @@
 # Phase 11 · Consistent UI and everyday purchase journeys
 
-Revised November 5, 2026 at the owner's request. Supersedes the narrower five-task purchase-history proposal. This revision is planning and a preliminary source audit; no app implementation or new visual walkthrough has occurred.
+Revised November 5, 2026 at the owner's request. Supersedes the narrower five-task purchase-history proposal. P11-01 is complete as of November 6, 2026, and its 16-finding audit is recorded in [the findings](PHASE11_UI_AUDIT.md). No production changes are included; subsequent implementation tasks still require approval.
 
 ## Starting point and intent
 
@@ -48,3 +48,7 @@ Planning changes do not authorize all implementation. Begin P11-01 with the owne
 ## Added owner requirement · Color-first bulk splitting
 
 The owner explicitly requests person-first multiselection instead of opening each item to assign owners. Names are optional; adding a person must not open a keyboard. P11-05 is dedicated to this interaction redesign, with audit/design in P11-01 and device acceptance in P11-08. This is planned, not implemented.
+
+## P11-01 handoff · November 6, 2026
+
+Audit complete; no production behavior changed. Sixteen distinct UI methods have passing outcomes across scoped runs, including compact-screen checks; one corrected harness failure and missing hitch metrics are explicitly retained in the report. P11-02 is next and awaits approval: unify verified shared layout/action issues, fix the accessible model-label truncation, and reproduce the paper-review bottom strip before altering it. All later tasks retain individual approval.
