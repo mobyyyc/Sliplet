@@ -1,31 +1,45 @@
-# Phase 11 · Find and use saved purchases
+# Phase 11 · Consistent UI and everyday purchase journeys
 
-Proposed November 5, 2026. Planning only; each implementation task requires Main approval.
+Revised November 5, 2026 at the owner's request. Supersedes the narrower five-task purchase-history proposal. This revision is planning and a preliminary source audit; no app implementation or new visual walkthrough has occurred.
 
-## Starting point
+## Starting point and intent
 
-The owner accepted the import redesign after iPhone testing. Phase 10 product links, row/search history and verified unit-price comparison are implemented. Its narrowly specified history/undo/comparison device walkthrough has not been explicitly reported; carry that check into P11-01 rather than repeat the accepted import walkthrough. Preserve the existing wallet, receipt appearance, optional AI, local storage and privacy rules.
+The owner accepted the import redesign on iPhone, but reports remaining UI problems elsewhere. Preserve the accepted direction while auditing the entire app. Phase 10 product links, history and verified unit-price comparisons are implemented; their specific phone confirmation/undo/comparison checks remain part of final acceptance. Main remains the only coordination chat.
 
-## Outcome
+## Preliminary source audit
 
-A user can find an old purchase, understand its history, inspect the original and compare eligible prices without navigating confusing nested screens. Improve the existing features before adding a dashboard or more recognition work.
+These are verified implementation observations and investigation targets, not claims of reproduced visual bugs:
+
+- ReceiptReviewView uses a bottom safeAreaInset with regularMaterial for source confirmation, unlike the floating safeAreaBar pattern used by import and focused correction. Check whether it creates an abrupt edge or competes with parent save actions.
+- ReceiptRereadView fixes its image height at 300 points; focused correction uses 150/180-point source previews. Check usable image area, keyboard reachability and small/large-text layouts before deciding whether these should change.
+- PurchasePriceView starts with explanations and two purchase configuration sections. Audit whether returning users can see their saved comparison result without repeatedly navigating setup content.
+- AI settings combines connection status, key verification, privacy acknowledgment, enablement and account links. Audit hierarchy, repeated copy and disabled-action explanations while preserving meaningful consent.
+- Shared primary/secondary/action-bar components already exist. Audit call sites for inconsistent sizing, placement and destructive-action treatment rather than introduce a second design system.
+
+## Revised sequence
 
 | Task | Scope and acceptance |
 | --- | --- |
-| P11-01 · Journey audit and design | Walk wallet → search → receipt → row → history → comparison and back, including no matches, draft, archive and missing-data states. Inventory actual friction, count taps and capture fictional screenshots. Produce the navigation/layout proposal for approval before broad implementation. Include the outstanding Phase 10 phone history/undo/comparison checks in the acceptance checklist. |
-| P11-02 · Find receipts and purchases | Refine existing search and collection browsing with clear Receipts/Items result grouping and compact merchant/date/status filters where the audit demonstrates need. Preserve query, filters, scroll and selection on return. Make archive/star discoverable without replacing the wallet home. Verify empty states, combined filters and long result sets. |
-| P11-03 · Product history that reads clearly | Make history discoverable from saved item rows and item search. Present a compact purchase timeline with store, date, quantity and amount; keep source inspection and editing easy. Clearly separate confirmed matches from suggestions; simplify confirm/undo without automatic product merges. Verify original/receipt round trips and stale or deleted purchases. |
-| P11-04 · Understand price changes | Refine the existing comparison screen so its primary result explains comparable unit prices and the basis used. Distinguish row total from unit price. Show a concise reason when comparison is unavailable and disclose quantity, pack, currency, discount and tax differences. No inferred quantity, invented savings or unsupported trend chart. Verify equal prices with different quantities and incompatible-price cases. |
-| P11-05 · Everyday acceptance | Run focused regressions and measured long-wallet navigation checks; check light/dark, large text, Reduce Motion and lock/return. Update the phone in place when authorized, then perform find/history/undo/price walkthroughs. Fix observed issues and record acceptance separately from Simulator results. |
+| P11-01 · Whole-app UI/UX audit | Inspect wallet/empty wallet, receipt detail, search/filter/archive/star, camera/import/loading/error, review/full and row editing, original zoom/reread, split, product history/comparison, settings/AI connection, lock, backup/restore. Exercise full forward/back paths, keyboard and cancellation. Record screenshots or reproduction steps, severity, user impact, proposed fix and owning task. Present the prioritized fix list before implementation. |
+| P11-02 · Shared layout and action consistency | Address confirmed header/footer occlusion, safe-area spacing, button alignment/roles, text hierarchy, dark/light contrast and sheet sizing. Reuse current components. Keep short steps compact; preserve scrolling for long content and accessibility text. Verify final rows and actions are reachable without excessive blank space. |
+| P11-03 · Navigation, gestures and responsiveness | Fix reproduced wallet/detail jumps, reverse-swipe behavior, inconsistent dismissal, lost search/scroll state and keyboard conflicts. Measure transition/layout stalls using repeatable fictional large-wallet fixtures. Respect Reduce Motion. Preserve unsaved-edit confirmation and do not claim zero lag from code inspection. |
+| P11-04 · Review, split and utility screens | Apply audit findings to review, focused edits, originals/rereading, split assignments, settings/AI setup and backup/restore. Show the main action and status first; shorten or progressively disclose secondary explanations. Keep essential privacy, money and destructive-action information visible at the decision point. Protect Apply/Cancel, draft/finalization and restore semantics. |
+| P11-05 · Search and product history | Improve existing receipt/item result grouping, filters and history discoverability as justified by the audit. Preserve query/filter/position on return. Present clear purchase timelines and distinguish confirmed matches from suggestions. Make source inspection, confirmation and undo straightforward without automatic merges. |
+| P11-06 · Price comparison clarity | Refine existing comparison so eligible saved results are easy to understand and verification remains separate from viewing. Clearly distinguish row total and unit price, and explain unavailable comparisons. Retain pack/quantity/currency/tax/discount evidence rules; no guessed quantities or invented savings. |
+| P11-07 · Regression and phone acceptance | Check the repaired full journeys in Simulator, then on the owner's iPhone when authorized. Include light/dark, large text, Reduce Motion, VoiceOver, long receipts/wallets, interruptions and lock/return. Carry forward the Phase 10 history/undo/comparison phone checks. Resolve critical/high findings; document remaining lower-priority issues and actual device feedback before closure. |
 
-## Design rules
+## Audit method and priority
 
-Use established Liquid Glass controls, consistent action placement, native back behavior and retained navigation state. Show the key answer first; expand supporting evidence on demand. Keep essential actions visible and allow scrolling for long histories or accessibility text rather than shrinking text. Use brief transitions that respect Reduce Motion. Keep atmospheric backgrounds scoped to home and receipt detail.
+Use fictional fixtures for screenshots and automated tests. Exercise normal, empty, loading, failure and disabled states where applicable. Primary baseline is iPhone 15 Pro at standard text size; also check a smaller supported viewport and accessibility text. Inspect first and last content, overlays, keyboard, action reachability and return position. Use actual reproduction before labeling a suspicion a defect.
 
-## Scope boundary
+Priority: blocked actions, hidden content or lost work first; confusing navigation and visible jumps next; spacing, hierarchy and decorative polish after. Every finding must map to a task, acceptance check and status. Reorder or shrink later tasks based on findings rather than redesign screens that already work. Phone import acceptance remains valid; regression-check it only for interactions affected by shared changes.
 
-No cloud sync, accounts, subscriptions, model replacement, automatic product merges, shopping recommendations or spending dashboard in this proposal. Existing saved receipts and manual references suffice to begin. Any additional human verification should be a focused question tied to an observed ambiguity, not a full receipt relabeling exercise.
+## Design rules and boundaries
+
+Preserve paper/wallet layering, shadows, accepted atmospheric backgrounds on home/detail only, and native Liquid Glass controls. Avoid opaque bars where soft system scroll edges are appropriate, but retain readable opaque accessibility alternatives. Compact single-page steps are a preference, not a reason to shrink text or disable necessary scrolling. Use restrained, interruptible transitions with consistent forward/back behavior.
+
+No model replacement, cloud sync, accounts, subscriptions, new analytics dashboard or automatic product identity inference. This phase improves current features. Consent, exact calculations, source provenance, encryption and backup safety remain intact.
 
 ## Workflow
 
-Main remains the only coordination chat. Each approved task ends with implemented behavior, verification, commit/push and a proposed next task. P11-01 approval authorizes audit and design, not all later implementation tasks.
+Planning changes do not authorize all implementation. Begin P11-01 with the owner's approval; deliver the audit and proposed fixes for review, then proceed one approved task at a time. Each implementation task ends with validation, commit/push and next-task approval. No new chats or agents are required.
