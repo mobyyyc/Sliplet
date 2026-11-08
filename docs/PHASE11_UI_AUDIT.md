@@ -67,3 +67,7 @@ Sixteen findings: 12 source-confirmed design/workflow issues, two additional scr
 ## P11-02 follow-up · November 8, 2026
 
 U04 was visually reproduced on long paper and fixed with soft scroll edges and a native bottom safe-area bar. U16 is fixed with wrapping adaptive model/provider values. U13 was promoted from hypothesis after a large-text screenshot showed clipped original controls; the toolbar now separates Expand original at accessibility sizes. See [implementation and scoped verification](PHASE11_LAYOUT_FIXES.md). Historical audit statements above describe the pre-fix state.
+
+## P11-03 follow-up · November 8, 2026
+
+Eight navigation/gesture/resource scenarios now have passing results, including Reduce Motion and search return. No new production navigation defect was reproduced. U14 is partially addressed: native CPU/clock data now exports, but Instruments explicitly reports Animation Hitches unsupported on Simulator. Hardware frame/hitch validation remains open for P11-08. See [navigation findings and limits](PHASE11_NAVIGATION.md).

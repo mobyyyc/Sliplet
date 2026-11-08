@@ -330,18 +330,41 @@ import Vision
         let end = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.18))
         start.press(forDuration: 0.05, thenDragTo: end)
     }
-    func testCrowdedWalletRoundTripHitches() {
+    func testCrowdedWalletRoundTripResourceBaseline() {
         let app = launch("many")
         let paper = app.buttons["receipt-1"]
         XCTAssertTrue(paper.waitForExistence(timeout: 10))
         let position = paper.frame.minY
         let options = XCTMeasureOptions()
         options.iterationCount = 3
-        measure(metrics: [XCTHitchMetric(application: app)], options: options) {
+        // Simulator does not support the Hitches instrument. These measure CPU work
+        // and the automated round trip (including XCTest waits), not frame rate.
+        measure(metrics: [XCTClockMetric(), XCTCPUMetric(application: app)], options: options) {
             paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.07)).tap()
             app.buttons["back"].tap()
             XCTAssertEqual(paper.frame.minY, position, accuracy: 2)
         }
+        app.terminate()
+    }
+    func testReducedMotionPreservesScrolledWalletAndClosesReverseSwipe() {
+        let app = launch("many", extra: ["--t05-reduce-motion"])
+        app.buttons["latestReceipt"].tap()
+        let paper = app.buttons["receipt-29"]
+        XCTAssertTrue(paper.waitForExistence(timeout: 10))
+        let origin = paper.frame
+        paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.07)).tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+        app.buttons["back"].tap()
+        XCTAssertTrue(paper.waitForExistence(timeout: 5))
+        XCTAssertEqual(paper.frame.minY, origin.minY, accuracy: 2)
+        swipeHeader(paper, left: true)
+        let action = app.buttons["swipeAction-receipt-29"]
+        XCTAssertTrue(action.waitForExistence(timeout: 5))
+        paper.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.14))
+            .press(forDuration: 0.05, thenDragTo: paper.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
+        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(paper.frame.minX, origin.minX, accuracy: 2)
+        XCTAssertEqual(paper.frame.minY, origin.minY, accuracy: 2)
         app.terminate()
     }
     func testReversingSwipeRestoresPaperAcrossWalletSizes() {

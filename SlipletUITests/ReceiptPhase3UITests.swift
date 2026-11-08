@@ -70,7 +70,14 @@ import XCTest
     }
     func testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled() {
         let app = launch(); XCTAssertTrue(app.buttons["receipt-0"].waitForExistence(timeout: 30))
-        app.buttons["walletSettings"].tap(); app.buttons["rightSwipeSetting"].tap(); app.buttons["None"].tap(); app.buttons["Done"].tap()
+        app.buttons["walletSettings"].tap()
+        let setting = app.buttons["rightSwipeSetting"]
+        for _ in 0..<8 {
+            if setting.exists && setting.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(setting.isHittable)
+        setting.tap(); app.buttons["None"].tap(); app.buttons["Done"].tap()
         let card = app.buttons["receipt-0"], action = app.buttons["swipeAction-receipt-0"]
         let center = card.frame.midX
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
