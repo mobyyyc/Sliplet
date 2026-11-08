@@ -15,9 +15,10 @@ struct ReceiptAISettingsView: View {
             } else {
                 Section {
                     LabeledContent("Provider", value: "Google Gemini")
-                    Picker("Model", selection: Binding(get: { connection.preferences.model }, set: { connection.changeModel($0) })) {
-                        ForEach(ReceiptAIModel.allCases) { Text($0.title).tag($0) }
-                    }.disabled(connection.checking)
+                    // Only one verified model is supported; a picker implies a choice that does not exist.
+                    LabeledContent("Model") {
+                        Text(connection.preferences.model.title).accessibilityIdentifier("aiModelName")
+                    }
                     Label(connection.statusText, systemImage: connection.checking ? "hourglass" : (connection.status == .verified ? "checkmark.circle" : "network"))
                         .accessibilityIdentifier("aiConnectionStatus")
                     if let date = connection.preferences.checkedAt {
@@ -79,6 +80,7 @@ struct ReceiptAISettingsView: View {
                 }
             }
         }
+        .labeledContentStyle(ReceiptAdaptiveLabeledContentStyle())
         .navigationTitle("AI recognition").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Disconnect Gemini?", isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Remove key from this device", role: .destructive) { clearEntry(); connection.disconnect(); replacing = false }

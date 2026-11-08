@@ -62,3 +62,8 @@ This is broad source/layout review with scoped live journeys, not exhaustive tes
 ## Review deliverable
 
 Sixteen findings: 12 source-confirmed design/workflow issues, two additional screenshot-observed issues, one layout hypothesis and one performance-measurement gap. Selected fictional screenshots and run details are in [the evidence index](evidence/p11-01/README.md). No production app code changed. Next approval is P11-02: a focused shared-layout pass, starting with confirmed hierarchy/spacing problems and reproducing the paper-review bottom band before modifying it.
+
+
+## P11-02 follow-up · November 8, 2026
+
+U04 was visually reproduced on long paper and fixed with soft scroll edges and a native bottom safe-area bar. U16 is fixed with wrapping adaptive model/provider values. U13 was promoted from hypothesis after a large-text screenshot showed clipped original controls; the toolbar now separates Expand original at accessibility sizes. See [implementation and scoped verification](PHASE11_LAYOUT_FIXES.md). Historical audit statements above describe the pre-fix state.

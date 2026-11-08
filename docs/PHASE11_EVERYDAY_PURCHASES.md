@@ -51,4 +51,4 @@ The owner explicitly requests person-first multiselection instead of opening eac
 
 ## P11-01 handoff · November 6, 2026
 
-Audit complete; no production behavior changed. Sixteen distinct UI methods have passing outcomes across scoped runs, including compact-screen checks; one corrected harness failure and missing hitch metrics are explicitly retained in the report. P11-02 is next and awaits approval: unify verified shared layout/action issues, fix the accessible model-label truncation, and reproduce the paper-review bottom strip before altering it. All later tasks retain individual approval.
+P11-01 and P11-02 are complete. P11-02 fixes the reproduced paper-review edge, accessible AI model truncation and large-text original toolbar clipping; five focused UI scenarios passed, with additional maximum-system-text-size verification. See [layout fixes](PHASE11_LAYOUT_FIXES.md). P11-03 is next and awaits Main approval: reproduce navigation/gesture defects and gather responsiveness evidence before changing transitions. Later tasks, including color-first bulk splitting in P11-05, retain individual approval.

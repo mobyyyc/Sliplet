@@ -38,10 +38,11 @@ struct ReceiptReviewView: View {
                     }
                 }.padding(.horizontal, 20).padding(.vertical, 12)
             }
+            .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
             .onAppear { hasShownPaper = true }
             .sheet(item: $focusedCheck) { ReceiptFocusedCorrectionView(workspace: workspace, check: $0) }
             .accessibilityIdentifier("paperReview")
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            .safeAreaBar(edge: .bottom, spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     if let issue = workspace.draft.reconciliation.issues.first {
                         Label(issue, systemImage: "exclamationmark.circle")
@@ -52,7 +53,6 @@ struct ReceiptReviewView: View {
                     .accessibilityIdentifier("sourceCheck")
                 }
                     .padding(.horizontal, 20).padding(.vertical, 8)
-                    .background(.regularMaterial)
             }
         } else {
             editor.onAppear { openedEditor = true }

@@ -214,7 +214,15 @@ import XCTest
         reveal(app.textFields["focusedLineAmount"], app: app)
         try app.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription])
         capture(app, "long-accessibility-editor")
-        reveal(app.buttons["expandFocusedOriginal"], app: app); app.buttons["expandFocusedOriginal"].tap()
+        // Form virtualization can remove the earlier original controls from the hierarchy.
+        // Return toward the top explicitly instead of searching for that earlier row downward.
+        for _ in 0..<12 {
+            if app.buttons["expandFocusedOriginal"].exists { break }
+            app.collectionViews["focusedCorrectionForm"].swipeDown()
+        }
+        reveal(app.buttons["expandFocusedOriginal"], app: app)
+        capture(app, "long-accessibility-original-tools")
+        app.buttons["expandFocusedOriginal"].tap()
         XCTAssertTrue(app.buttons["closeExpandedOriginal"].waitForExistence(timeout: 5)); app.buttons["closeExpandedOriginal"].tap()
         app.buttons["cancelFocusedCorrection"].tap(); app.terminate()
     }

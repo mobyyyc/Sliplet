@@ -7,6 +7,9 @@ struct ReceiptFocusedCorrectionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.dynamicTypeSize) private var systemTypeSize
+    private var effectiveTypeSize: DynamicTypeSize {
+        SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize
+    }
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemReduceMotion) }
     @State private var input: ReceiptReviewDraft
     @State private var lineID: UUID?
@@ -96,10 +99,13 @@ struct ReceiptFocusedCorrectionView: View {
                 Section {
                     if workspace.active && !workspace.privacyCovered, let image = workspace.image {
                         ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
-                            .frame(height: systemTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
-                        HStack {
+                            .frame(height: effectiveTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
+                        let sourceToolsLayout = effectiveTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                            : AnyLayout(HStackLayout())
+                        sourceToolsLayout {
                             ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
-                            Spacer()
+                            if !effectiveTypeSize.isAccessibilitySize { Spacer() }
                             Button("Expand original", systemImage: "arrow.up.left.and.arrow.down.right") { editing = nil; expanded = true }
                                 .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
                                 .accessibilityIdentifier("expandFocusedOriginal")
@@ -250,7 +256,7 @@ struct ReceiptFocusedCorrectionView: View {
                 }
         }.interactiveDismissDisabled(workspace.saving).tint(.primary).accessibilityIdentifier("focusedCorrectionScreen")
             #if DEBUG
-            .dynamicTypeSize(SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize)
+            .dynamicTypeSize(effectiveTypeSize)
             #endif
     }
     private var rereadFields: [ReceiptAssistedField] {

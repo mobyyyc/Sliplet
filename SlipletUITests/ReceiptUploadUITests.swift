@@ -3,9 +3,11 @@ import XCTest
 @MainActor final class ReceiptUploadUITests: XCTestCase {
     func reveal(_ element: XCUIElement, in app: XCUIApplication) {
         for _ in 0..<10 {
-            if ["sendReceiptAI", "reviewUpload", "readingMethodContinue", "adjustPhotoContinue"].contains(element.identifier),
-               element.exists && element.isHittable { return }
-            if element.exists && element.isHittable && element.frame.midY < app.frame.maxY - 75 && element.frame.midY > app.frame.minY + 120 { return }
+            if element.exists {
+                if ["sendReceiptAI", "reviewUpload", "readingMethodContinue", "adjustPhotoContinue"].contains(element.identifier), element.isHittable { return }
+                if element.isHittable && element.frame.midY < app.frame.maxY - 75 && element.frame.midY > app.frame.minY + 120 { return }
+                if element.frame.midY < app.frame.minY + 120 { app.swipeDown(); continue }
+            }
             app.swipeUp()
         }
     }
@@ -124,6 +126,8 @@ extension ReceiptUploadUITests {
         let paper = app.scrollViews["paperReview"]
         XCTAssertTrue(paper.waitForExistence(timeout: 10))
         paper.swipeUp()
+        let edgeShot = XCTAttachment(screenshot: app.screenshot())
+        edgeShot.name = "Long paper review bottom edge"; edgeShot.lifetime = .keepAlways; add(edgeShot)
         let row = paper.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'"))
             .allElementsBoundByIndex.first { $0.isHittable && $0.frame.midY > app.frame.midY }
         guard let row else { return XCTFail("Expected a visible purchase after scrolling") }

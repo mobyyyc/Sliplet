@@ -87,3 +87,25 @@ struct ReceiptPairedActions<Secondary: View, Primary: View>: View {
         }.frame(maxWidth: .infinity)
     }
 }
+
+/// Settings values stack at accessibility sizes instead of truncating inside a row.
+struct ReceiptAdaptiveLabeledContentStyle: LabeledContentStyle {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    func makeBody(configuration: Configuration) -> some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 6) {
+                configuration.label.font(.subheadline).foregroundStyle(.secondary)
+                configuration.content.foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(alignment: .top, spacing: 16) {
+                configuration.label
+                Spacer(minLength: 0)
+                configuration.content.foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
