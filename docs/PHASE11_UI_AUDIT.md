@@ -71,3 +71,7 @@ U04 was visually reproduced on long paper and fixed with soft scroll edges and a
 ## P11-03 follow-up · November 8, 2026
 
 Eight navigation/gesture/resource scenarios now have passing results, including Reduce Motion and search return. No new production navigation defect was reproduced. U14 is partially addressed: native CPU/clock data now exports, but Instruments explicitly reports Animation Hitches unsupported on Simulator. Hardware frame/hitch validation remains open for P11-08. See [navigation findings and limits](PHASE11_NAVIGATION.md).
+
+## P11-04 follow-up · November 8, 2026
+
+U09/U10: AI settings prioritizes state and enablement, retesting is optional, and the summary distinguishes stored keys from readiness. U11: inline password feedback explains disabled export. U12: import recovery now has one primary safe-area action with soft edges. U15: rereading distinguishes exact printed tokens and source rows without merging provenance. The remaining U13 rereading toolbar separates zoom from selection; fixed preview heights remain unchanged because no additional height defect was established. Sixteen connection unit tests and six distinct scoped UI journeys passed; see [utility changes and limits](PHASE11_UTILITY_POLISH.md).

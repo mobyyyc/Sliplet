@@ -14,18 +14,18 @@ struct ReceiptAISettingsView: View {
                 ContentUnavailableView("Unlock to continue", systemImage: "lock")
             } else {
                 Section {
+                    Label(connection.statusText, systemImage: connection.checking ? "hourglass" : (connection.status == .verified ? "checkmark.circle" : "network"))
+                        .accessibilityIdentifier("aiConnectionStatus")
                     LabeledContent("Provider", value: "Google Gemini")
                     // Only one verified model is supported; a picker implies a choice that does not exist.
                     LabeledContent("Model") {
                         Text(connection.preferences.model.title).accessibilityIdentifier("aiModelName")
                     }
-                    Label(connection.statusText, systemImage: connection.checking ? "hourglass" : (connection.status == .verified ? "checkmark.circle" : "network"))
-                        .accessibilityIdentifier("aiConnectionStatus")
                     if let date = connection.preferences.checkedAt {
                         LabeledContent("Last successful check") { Text(date, format: .dateTime.month().day().hour().minute()) }
                     }
                 } header: { Text("Connection") } footer: {
-                    Text("A successful check confirms the key and fictional image reading at that time. Availability and allowance can change. Only the tested model is offered.")
+                    Text("Last checked status; availability and allowance can change.")
                 }
                 if !connection.hasKey || replacing {
                     Section {
@@ -37,25 +37,6 @@ struct ReceiptAISettingsView: View {
                         Text("Your key stays in this device’s Keychain and is excluded from Sliplet backups. A replacement is saved only after it passes the check.")
                     }
                 }
-                Section {
-                    Toggle("I understand this test uses my API allowance", isOn: $testAcknowledged)
-                        .tint(.green).accessibilityIdentifier("aiTestAcknowledgement")
-                    if connection.checking {
-                        HStack { ProgressView(); Text("Reading a fictional test image") }
-                        Button("Cancel check") { connection.cancel(); clearEntry() }
-                    } else {
-                        Button(connection.hasKey && !replacing ? "Test connection" : "Verify and save key") {
-                            let candidate = (!connection.hasKey || replacing) ? key : nil
-                            clearEntry(); connection.verify(replacement: candidate)
-                        }.buttonStyle(ReceiptProminentStyle())
-                            .disabled(!testAcknowledged || ((!connection.hasKey || replacing) && key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
-                            .accessibilityIdentifier("verifyAIConnection")
-                    }
-                    if let error = connection.replacementError { Text(error.message).foregroundStyle(.secondary) }
-                    if let message = connection.message { Text(message).foregroundStyle(.secondary) }
-                } header: { Text("Fictional test") } footer: {
-                    Text("Sends one generated test image to Google, never your receipts. No automatic retries. Check your project’s billing and limits first; Sliplet cannot verify your free-tier balance or guarantee a request is free.")
-                }
                 if connection.hasKey {
                     Section {
                         Toggle("I have reviewed Google’s data-use terms", isOn: Binding(get: { connection.privacyConfirmed }, set: { connection.setPrivacyConfirmed($0) }))
@@ -64,10 +45,21 @@ struct ReceiptAISettingsView: View {
                             .tint(.green)
                             .disabled(!connection.enabled && (!connection.privacyConfirmed || connection.status != .verified))
                             .accessibilityIdentifier("enableAIRecognition")
-                        if connection.privacyConfirmed { Text("Privacy acknowledgment recorded by you; not verified with Google.").font(.footnote).foregroundStyle(.secondary) }
-                    } header: { Text("Your choice") } footer: {
+                        if !connection.privacyConfirmed {
+                            Text("Review the data-use terms before enabling AI.").font(.footnote).foregroundStyle(.secondary)
+                        } else if connection.status != .verified {
+                            Text("Test the connection before enabling AI.").font(.footnote).foregroundStyle(.secondary)
+                        }
+                    } header: { Text("AI recognition") } footer: {
                         Text("Google’s free-tier terms may allow submitted content to improve its products. Connection verification does not establish private processing or zero retention. Each import offers on-device reading or an image preview. Nothing is uploaded until you explicitly approve that image.")
                     }
+                }
+                if connection.hasKey && !replacing && !connection.checking {
+                    Section {
+                        DisclosureGroup("Test connection") { connectionTest }
+                    }
+                } else { Section("Connection test") { connectionTest } }
+                if connection.hasKey {
                     Section {
                         Button("Replace key") { replacing = true; key = "" }.disabled(connection.checking || replacing)
                         Button("Disconnect", role: .destructive) { confirmDisconnect = true }.accessibilityIdentifier("disconnectAI")
@@ -89,6 +81,26 @@ struct ReceiptAISettingsView: View {
         .onDisappear { clearEntry(); connection.cancel() }
         .onChange(of: privacyCovered) { _, covered in if covered { clearEntry(); connection.cancel() } }
         .onChange(of: connection.status) { _, status in if status == .verified { replacing = false } }
+    }
+    private var connectionTest: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Toggle("I understand this test uses my API allowance", isOn: $testAcknowledged)
+                .tint(.green).accessibilityIdentifier("aiTestAcknowledgement")
+            if connection.checking {
+                HStack { ProgressView(); Text("Reading a fictional test image") }
+                Button("Cancel check") { connection.cancel(); clearEntry() }
+            } else {
+                Button(connection.hasKey && !replacing ? "Test connection" : "Verify and save key") {
+                    let candidate = (!connection.hasKey || replacing) ? key : nil
+                    clearEntry(); connection.verify(replacement: candidate)
+                }.buttonStyle(ReceiptProminentStyle())
+                    .disabled(!testAcknowledged || ((!connection.hasKey || replacing) && key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                    .accessibilityIdentifier("verifyAIConnection")
+            }
+            if let error = connection.replacementError { Text(error.message).foregroundStyle(.secondary) }
+            if let message = connection.message { Text(message).foregroundStyle(.secondary) }
+            Text("Sends one generated test image to Google, never your receipts. No automatic retries. Check your project’s billing and limits first; Sliplet cannot verify your free-tier balance or guarantee a request is free.").font(.footnote).foregroundStyle(.secondary)
+        }
     }
     private func clearEntry() { key = ""; keyFocused = false }
 }

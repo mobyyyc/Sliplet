@@ -896,7 +896,7 @@ struct ReceiptWalletSettingsView: View {
                     NavigationLink {
                         ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
                     } label: {
-                        LabeledContent("AI recognition", value: workspace.aiConnection.hasKey ? "Gemini" : "Not connected")
+                        LabeledContent("AI recognition", value: workspace.aiConnection.settingsSummary)
                     }.accessibilityIdentifier("aiRecognitionSettings")
                 }
                 ReceiptBackupSettingsSection(workspace: workspace, mode: $backupMode)

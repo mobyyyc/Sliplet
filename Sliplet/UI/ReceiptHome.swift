@@ -317,30 +317,46 @@ struct ReceiptHome: View {
 
         case .failed:
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Continue with this photo",
-                          systemImage: workspace.image == nil ? "photo" : "doc.viewfinder").font(.title2)
-                    if let message = workspace.errorMessage { Text(message) }
+                VStack(alignment: .leading, spacing: 18) {
+                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Your photo is still available",
+                          systemImage: workspace.image == nil ? "photo" : "doc.viewfinder")
+                        .font(.title2.weight(.semibold))
+                    if let message = workspace.errorMessage { Text(message).foregroundStyle(.secondary) }
+                    if workspace.aiUploadStarted {
+                        Text("Try on-device reading, or review the image again before another AI upload.")
+                            .font(.subheadline)
+                    }
                     if workspace.image != nil {
+                        Button(workspace.aiUploadStarted ? "Review upload again" : "Recognition options",
+                               action: workspace.chooseRecognition)
+                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("recoverPreview")
                         if workspace.aiUploadStarted {
-                            Button("Read on device", systemImage: "iphone", action: workspace.readImage)
-                                .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("recoverLocal")
-                            Text("Reads your prepared photo offline.").font(.footnote).foregroundStyle(.secondary)
-                            Button(workspace.aiConnection.canUseAI ? "Review upload again" : "Reading options",
-                                   action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("recoverPreview")
-                            Button("Enter manually", action: workspace.manualReview).buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("manual")
-                        } else {
-                            Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
-                                .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("manual")
-                            Button("Recognition options", action: workspace.chooseRecognition).buttonStyle(ReceiptSecondaryStyle())
+                            Button("Enter manually", action: workspace.manualReview)
+                                .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("manual")
+                        }
+                        anchoredImportChoices {
+                            Button("Choose another image", systemImage: "photo") { importChoices = true }
+                                .buttonStyle(ReceiptSecondaryStyle())
                         }
                     }
-                    anchoredImportChoices {
-                        Button("Choose another image", systemImage: "photo") { importChoices = true }
-                            .buttonStyle(ReceiptSecondaryStyle())
+                }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
+            .safeAreaBar(edge: .bottom, spacing: 0) {
+                Group {
+                    if workspace.image == nil {
+                        anchoredImportChoices {
+                            Button("Choose another image", systemImage: "photo") { importChoices = true }
+                                .buttonStyle(ReceiptProminentStyle())
+                        }
+                    } else if workspace.aiUploadStarted {
+                        Button("Read on device", systemImage: "iphone", action: workspace.readImage)
+                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("recoverLocal")
+                    } else {
+                        Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
+                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("manual")
                     }
-
-                }.padding(24)
+                }.modifier(ReceiptActionBarLayout())
             }
         }
     }

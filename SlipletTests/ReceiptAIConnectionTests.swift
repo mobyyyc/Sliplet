@@ -36,12 +36,15 @@ private struct AITester: ReceiptAIConnectionTesting {
         let keys = AIKeys(), defaults = defaults(), tester = AITester { _ in }
         let c = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
         XCTAssertEqual(c.status, .disconnected)
+        XCTAssertEqual(c.settingsSummary, "Not connected")
         try await connect(c, key: first)
         XCTAssertEqual(c.status, .verified); XCTAssertFalse(c.enabled); XCTAssertFalse(c.privacyConfirmed)
+        XCTAssertEqual(c.settingsSummary, "Off")
         c.setEnabled(true); XCTAssertFalse(c.enabled)
         c.setPrivacyConfirmed(true); c.setEnabled(true); XCTAssertTrue(c.enabled)
         let reopened = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
         XCTAssertTrue(reopened.enabled); XCTAssertNotNil(reopened.preferences.checkedAt)
+        XCTAssertEqual(reopened.settingsSummary, "Ready")
         let values = defaults.dictionaryRepresentation()
         XCTAssertFalse(String(describing: values).contains(first))
         c.setEnabled(false); XCTAssertNotNil(try keys.load()); XCTAssertFalse(c.enabled)
@@ -69,6 +72,7 @@ private struct AITester: ReceiptAIConnectionTesting {
         failing.verify(); try await wait { !failing.checking }
         let reopened = ReceiptAIConnection(keys: keys, tester: AITester { _ in }, defaults: d)
         XCTAssertEqual(reopened.status, .failed(.invalidKey)); XCTAssertFalse(reopened.enabled)
+        XCTAssertEqual(reopened.settingsSummary, "Needs attention")
         XCTAssertNotNil(reopened.preferences.checkedAt) // Historical success is not current validity.
     }
     func testDisconnectCancelsAndRejectsLateSuccess() async throws {

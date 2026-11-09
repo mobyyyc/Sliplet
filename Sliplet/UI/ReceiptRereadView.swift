@@ -46,9 +46,8 @@ struct ReceiptRereadView: View {
                     Section {
                         ZoomReceiptImage(bytes: image.bytes, boxes: [region], reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "rereadRaster", selection: drawing ? $region : nil)
                             .frame(height: 300).accessibilityIdentifier("rereadImage")
-                        HStack {
+                        VStack(alignment: .leading, spacing: 12) {
                             ReceiptSourceZoomControls(target: zoomTarget, prefix: "reread")
-                            Spacer()
                             Button(drawing ? "Done selecting" : "Select area") { drawing.toggle() }
                                 .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("rereadSelectArea")
                         }
@@ -75,9 +74,10 @@ struct ReceiptRereadView: View {
                                 HStack(alignment: .top) {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(choice.value).foregroundStyle(.primary)
-                                        Text("Read: “" + choice.literal + "”").font(.caption).foregroundStyle(.secondary)
+                                        Text("Printed token: “" + choice.literal + "”").font(.subheadline.monospaced()).foregroundStyle(.secondary)
                                         if let source = observations.first(where: { $0.id == choice.observationID }) {
-                                            Text(source.text).font(.caption).foregroundStyle(.secondary)
+                                            Text("Source row \((observations.firstIndex(where: { $0.id == source.id }) ?? 0) + 1): " + source.text)
+                                                .font(.caption).foregroundStyle(.secondary)
                                         }
                                     }
                                     Spacer()

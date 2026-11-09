@@ -55,6 +55,14 @@ protocol ReceiptAIConnectionTesting: Sendable {
     var privacyConfirmed: Bool { preferences.privacyVersion == Self.privacyVersion }
     var enabled: Bool { preferences.enabled && hasKey && privacyConfirmed }
     var canUseAI: Bool { enabled && status == .verified }
+    var settingsSummary: String {
+        switch status {
+        case .disconnected: "Not connected"
+        case .checking: "Checking…"
+        case .failed, .unverified: "Needs attention"
+        case .verified: canUseAI ? "Ready" : "Off"
+        }
+    }
     var statusText: String {
         switch status {
         case .disconnected: "Not connected"

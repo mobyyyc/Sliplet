@@ -28,6 +28,12 @@ struct ReceiptBackupView: View {
     @State private var selectionPassword = ""
     @State private var localMessage: String?
     private var passwordValid: Bool { password.count >= 12 && password.utf8.count <= 1_024 }
+    private var passwordFeedback: String? {
+        if !password.isEmpty && password.count < 12 { return "Use at least 12 characters." }
+        if password.utf8.count > 1_024 { return "This password is too long. Use a shorter password." }
+        if mode == .export && !confirmation.isEmpty && password != confirmation { return "Passwords don’t match." }
+        return nil
+    }
     var body: some View {
         let exportSession = workspace.sessionID
         let exportedURL = workspace.backupExportURL
@@ -55,6 +61,11 @@ struct ReceiptBackupView: View {
                             if mode == .export {
                                 SecureField("Confirm password", text: $confirmation).textContentType(.newPassword)
                                     .accessibilityIdentifier("backupPasswordConfirmation")
+                            }
+                            if let feedback = passwordFeedback {
+                                Label(feedback, systemImage: "exclamationmark.circle")
+                                    .font(.footnote).foregroundStyle(.secondary)
+                                    .accessibilityIdentifier("backupPasswordFeedback")
                             }
                         } header: { Text(mode == .export ? "Choose a backup password" : "Enter the backup password") } footer: {
                             Text("Use at least 12 characters. Keep the password separately: a forgotten backup password cannot be recovered. Sliplet does not save it.")
@@ -88,6 +99,7 @@ struct ReceiptBackupView: View {
                     }
                 }
             }
+            .labeledContentStyle(ReceiptAdaptiveLabeledContentStyle())
             .navigationTitle(mode == .export ? "Export backup" : "Restore backup").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) {
                 Button("Close") { clearPasswords(); workspace.cancelBackup(); dismiss() }.accessibilityIdentifier("closeBackup")

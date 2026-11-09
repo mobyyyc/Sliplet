@@ -32,6 +32,12 @@ import XCTest
         XCTAssertEqual(enable.value as? String, "1")
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Fictional AI Settings"; shot.lifetime = .keepAlways; add(shot)
         try app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/sliplet-p804-settings.png"))
+        let retest = app.buttons["Test connection"].firstMatch
+        reveal(retest, in: app); retest.tap()
+        reveal(verify, in: app); XCTAssertTrue(verify.isEnabled)
+        verify.tap()
+        XCTAssertTrue(privacy.waitForExistence(timeout: 10))
+        reveal(enable, in: app); XCTAssertEqual(enable.value as? String, "1")
         let disconnect = app.buttons["disconnectAI"]; reveal(disconnect, in: app); disconnect.tap()
         app.buttons["Remove key from this device"].tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5))
