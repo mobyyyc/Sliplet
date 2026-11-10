@@ -53,3 +53,7 @@ Colors and custom names are display metadata; assignment sets still contain part
 ## Scope
 
 No contacts permission, accounts, cloud synchronization, saved household directory, unequal percentage/quantity shares or payment collection added by this task. The goal is faster assignment using the existing split engine.
+
+## P11-05 handoff · November 10, 2026
+
+U01/U02/U03 are addressed in the scoped implementation: immediate numbered/color people, optional naming, person-first bulk assignment and a responsive selection hierarchy. Shared membership, transactional Apply/Cancel/Undo, exact money and legacy encrypted storage are preserved. 29 unit checks and eight distinct Simulator journeys pass across focused runs. See [implementation evidence and limits](PHASE11_BULK_SPLITTING_IMPLEMENTATION.md). Physical-phone and full VoiceOver acceptance remain P11-08; P11-06 requires Main approval.

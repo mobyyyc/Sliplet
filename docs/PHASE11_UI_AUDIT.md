@@ -75,3 +75,7 @@ Eight navigation/gesture/resource scenarios now have passing results, including 
 ## P11-04 follow-up · November 8, 2026
 
 U09/U10: AI settings prioritizes state and enablement, retesting is optional, and the summary distinguishes stored keys from readiness. U11: inline password feedback explains disabled export. U12: import recovery now has one primary safe-area action with soft edges. U15: rereading distinguishes exact printed tokens and source rows without merging provenance. The remaining U13 rereading toolbar separates zoom from selection; fixed preview heights remain unchanged because no additional height defect was established. Sixteen connection unit tests and six distinct scoped UI journeys passed; see [utility changes and limits](PHASE11_UTILITY_POLISH.md).
+
+## P11-05 handoff · November 10, 2026
+
+U01/U02/U03 are addressed in the scoped implementation: immediate numbered/color people, optional naming, person-first bulk assignment and a responsive selection hierarchy. Shared membership, transactional Apply/Cancel/Undo, exact money and legacy encrypted storage are preserved. 29 unit checks and eight distinct Simulator journeys pass across focused runs. See [implementation evidence and limits](PHASE11_BULK_SPLITTING_IMPLEMENTATION.md). Physical-phone and full VoiceOver acceptance remain P11-08; P11-06 requires Main approval.

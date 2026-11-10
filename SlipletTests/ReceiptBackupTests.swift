@@ -22,7 +22,9 @@ import CryptoKit
         let created = try await store.create(extraction: fixture.original, originalImage: SyntheticFixture.imageData(), mediaType: "image/png",
             correction: draft.fields, review: finalized ? .sourceReviewed : .draft, reviewInput: JSONEncoder().encode(draft))
         if !finalized { return created }
-        let plan = SplitFixture.plan(created, owners: [[SplitFixture.a], [SplitFixture.b, SplitFixture.c]])
+        var plan = SplitFixture.plan(created, owners: [[SplitFixture.a], [SplitFixture.b, SplitFixture.c]])
+        plan.materializeAppearance()
+        plan.participants[1].color = .violet
         return try await store.saveSplit(id: created.id, expectedRevision: created.current.id, expectedPlan: nil, plan: plan, finalize: true)
     }
     private func backup(_ source: ReceiptStore) async throws -> URL {

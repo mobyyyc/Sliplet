@@ -8,13 +8,22 @@ struct ReceiptSplitView: View {
     private enum Destination: Hashable { case item(UUID), policy(UUID), summary }
     @State private var path: [Destination] = []
     @State private var plan: ReceiptSplitPlan
-    @State private var name = ""
-    @FocusState private var enteringName: Bool
+    @State private var activePerson: UUID?
+    @State private var selectedItems: Set<UUID> = []
+    @State private var undoPlan: ReceiptSplitPlan?
+    @State private var editingPerson: SplitParticipant?
+    private enum Pending { case select(UUID), add, close }
+    @State private var pending: Pending?
+    @State private var confirmBatch = false
+    @State private var unassignedOnly = false
     @State private var source = false
     @State private var discard = false
     @State private var copied = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var systemTypeSize
+    private var effectiveTypeSize: DynamicTypeSize {
+        SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize
+    }
     init(workspace: ReceiptWorkspace) {
         self.workspace = workspace
         _plan = State(initialValue: workspace.selected?.splitPlan ?? ReceiptSplitPlan())
@@ -32,7 +41,7 @@ struct ReceiptSplitView: View {
         return try? ReceiptSplitEngine.summary(record, plan: plan)
     }
     private func change(_ edit: (inout ReceiptSplitPlan) -> Void) {
-        edit(&plan); plan.finalizedRevision = nil; copied = false
+        edit(&plan); plan.finalizedRevision = nil; copied = false; undoPlan = nil
     }
     private func money(_ value: Int64) -> String {
         let currency = record?.current.fields.currency ?? .cad
@@ -41,50 +50,66 @@ struct ReceiptSplitView: View {
     var body: some View {
         NavigationStack(path: $path) {
             Form {
-                Section {
-                    Text(record?.current.fields.merchant ?? "Receipt").font(.headline)
-                    if let total = record?.current.fields.total { LabeledContent("Receipt total") { Text(money(total.minorUnits)).foregroundStyle(Color(uiColor: .label)) } }
-                    Text("People stay on this device. Save choices to keep unfinished assignments. Finalize requires a reviewed receipt, every item assigned and every adjustment confirmed.").font(.footnote)
-                    if let record, !ReceiptCompletion.isComplete(record) {
-                        Label("Receipt needs review. Finish its corrections first.", systemImage: "exclamationmark.triangle")
+                if activePerson == nil {
+                    Section {
+                        Text(record?.current.fields.merchant ?? "Receipt").font(.headline)
+                        if let total = record?.current.fields.total { LabeledContent("Receipt total") { Text(money(total.minorUnits)).foregroundStyle(Color(uiColor: .label)) } }
+                        Text("\(assignedCount) of \(items.count) items assigned").font(.subheadline).foregroundStyle(.secondary)
+                        DisclosureGroup("How splitting works") {
+                            Text("Add a person, select their items, then Apply. Selecting an owned item shares it equally. Save choices keeps an unfinished split; Finalize requires every item and adjustment reviewed.").font(.footnote)
+                        }
+                        if let record, !ReceiptCompletion.isComplete(record) {
+                            Label("Receipt needs review. Finish its corrections first.", systemImage: "exclamationmark.triangle")
+                        }
                     }
                 }
+                if effectiveTypeSize.isAccessibilitySize, let person = plan.participants.first(where: { $0.id == activePerson }) {
+                    Section {
+                        Text("\(selectedItems.count) selected · \(sharedCount) shared").fixedSize(horizontal: false, vertical: true)
+                        Text(selectionSubtotal).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        Button("Edit person") { editingPerson = person }.accessibilityIdentifier("splitEditPerson")
+                    } header: { Text(person.name) }
+                }
                 Section {
-                    ForEach(plan.participants) { person in
-                        HStack {
-                            Text(person.name).frame(maxWidth: .infinity, alignment: .leading)
-                            Button(role: .destructive) {
-                                change { p in
-                                    p.participants.removeAll { $0.id == person.id }
-                                    p.assignments = p.assignments.mapValues { $0.filter { $0 != person.id } }
-                                    for i in p.policies.indices where p.policies[i].target == .selectedPeople {
-                                        p.policies[i].selectedIDs.removeAll { $0 == person.id }; p.policies[i].accepted = false; p.policies[i].sourceConfirmed = false
-                                    }
-                                }
-                            } label: { Image(systemName: "person.badge.minus").frame(minWidth: 44, minHeight: 44) }
-                            .buttonStyle(.borderless).accessibilityLabel("Remove \(person.name)")
+                    if plan.participants.isEmpty {
+                        Text("Add a person above to start. Names are optional.").foregroundStyle(.secondary)
+                    }
+                    Picker("Show items", selection: $unassignedOnly) {
+                        Text("All items").tag(false); Text("Unassigned").tag(true)
+                    }.pickerStyle(.segmented).accessibilityIdentifier("splitItemFilter")
+                    if activePerson != nil {
+                        let selectionLayout = effectiveTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12)) : AnyLayout(HStackLayout())
+                        selectionLayout {
+                            Button("Select unassigned") {
+                                selectedItems.formUnion(items.filter { plan.assignments[$0.id, default: []].isEmpty }.map(\.id))
+                            }.accessibilityIdentifier("splitSelectUnassigned")
+                            if !effectiveTypeSize.isAccessibilitySize { Spacer() }
+                            Button("Clear selection") { selectedItems = [] }
+                                .accessibilityLabel("Clear this person’s selection")
+                                .accessibilityIdentifier("splitClearSelection")
+                        }.buttonStyle(.borderless)
+                    }
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        if !unassignedOnly || plan.assignments[item.id, default: []].isEmpty {
+                            if activePerson != nil {
+                                Button {
+                                    if selectedItems.contains(item.id) { selectedItems.remove(item.id) }
+                                    else { selectedItems.insert(item.id) }
+                                } label: { purchaseRow(item) }.buttonStyle(.plain)
+                                    .accessibilityIdentifier("splitItem-\(index)")
+                                    .accessibilityValue(selectedItems.contains(item.id) ? "Selected" : "Not selected")
+                                    .accessibilityAddTraits(selectedItems.contains(item.id) ? .isSelected : [])
+                            } else {
+                                NavigationLink(value: Destination.item(item.id)) { purchaseRow(item) }
+                                    .accessibilityIdentifier("splitItem-\(index)")
+                            }
                         }
                     }
-                    TextField("Person's name", text: $name).textContentType(.nickname).focused($enteringName).submitLabel(.done).onSubmit(addPerson).accessibilityIdentifier("splitName")
-                    Button("Add person", systemImage: "person.badge.plus") {
-                        addPerson()
-                    }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 80 || plan.participants.count >= 100)
-                        .accessibilityIdentifier("splitAddPerson")
-                } header: { Text("People").foregroundStyle(Color(uiColor: .label)) }
-                Section {
-                    if let record {
-                        ForEach(Array(record.current.fields.items.enumerated()), id: \.element.id) { index, item in
-                            NavigationLink(value: Destination.item(item.id)) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(item.description ?? "Purchase")
-                                    if let amount = item.amount { Text(money(amount.minorUnits)).font(.subheadline) }
-                                    Text(owners(item.id)).font(.footnote)
-                                }.foregroundStyle(Color(uiColor: .label))
-                            }.accessibilityIdentifier("splitItem-\(index)")
-                        }
-                    }
-                } header: { Text("Purchases").foregroundStyle(Color(uiColor: .label)) } footer: { Text("Choose one owner, or several people to share an item equally. Extra cents stay balanced across items with the same owners.").foregroundStyle(Color(uiColor: .label)) }
-                if let record, !record.current.fields.adjustments.isEmpty {
+                } header: { Text("Purchases") } footer: {
+                    Text(activePerson == nil ? "Choose a person above to assign several items. Tap an item to inspect all owners." : "Other owners stay assigned. Shared items are divided equally; adjustments are reviewed separately.")
+                }
+                if activePerson == nil, let record, !record.current.fields.adjustments.isEmpty {
                     Section {
                         ForEach(Array(record.current.fields.adjustments.enumerated()), id: \.element.id) { index, adjustment in
                             NavigationLink(value: Destination.policy(adjustment.id)) {
@@ -98,10 +123,10 @@ struct ReceiptSplitView: View {
                             }.accessibilityIdentifier("splitAdjustment-\(index)")
                         }
                     } header: { Text("Adjustments").foregroundStyle(Color(uiColor: .label)) } footer: {
-                        Text("Proportional uses each person’s purchase share before discounts and other adjustments; returns count by their positive value. Equal includes every person for All purchases, the selected purchases' owners for Selected purchases, or the chosen people. Zero purchase value requires an explicit Equal choice for a nonzero adjustment.").foregroundStyle(Color(uiColor: .label))
+                        Text("Confirm how each tax, discount or fee is shared before finalizing.")
                     }
                 }
-                Section {
+                if activePerson == nil { Section {
                     if let result {
                         ForEach(plan.participants) { person in
                             LabeledContent(person.name) { Text(money(result.totals[person.id] ?? 0)).foregroundStyle(Color(uiColor: .label)) }.accessibilityIdentifier("splitTotal-\(person.name)")
@@ -121,7 +146,7 @@ struct ReceiptSplitView: View {
                         ShareLink(item: summary) { Label("Share summary", systemImage: "square.and.arrow.up") }.accessibilityIdentifier("splitShare")
                         if copied { Text("Copied on this device.").accessibilityIdentifier("splitCopied") }
                     }
-                } header: { Text("Amounts").foregroundStyle(Color(uiColor: .label)) }
+                } header: { Text("Amounts").foregroundStyle(Color(uiColor: .label)) } }
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
@@ -138,7 +163,7 @@ struct ReceiptSplitView: View {
             .toolbar {
                 if path.isEmpty {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { if pristine { dismiss() } else { discard = true } } label: { Text("Done") }.disabled(workspace.saving).accessibilityIdentifier("splitDone")
+                    Button { request(.close) } label: { Text("Done") }.disabled(workspace.saving).accessibilityIdentifier("splitDone")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { source = true } label: { Text("Original") }.disabled(workspace.image == nil || workspace.saving).accessibilityIdentifier("splitOriginal")
@@ -146,52 +171,190 @@ struct ReceiptSplitView: View {
 
                 }
             }
+            .safeAreaBar(edge: .top, spacing: 0) {
+                if path.isEmpty { peopleBar }
+            }
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if path.isEmpty {
-                    if enteringName {
-                        HStack {
-                            Button("Add person", action: addPerson).buttonStyle(ReceiptSecondaryStyle())
-                                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || name.count > 80 || plan.participants.count >= 100)
-                                .accessibilityIdentifier("splitKeyboardAdd")
-                            Spacer()
-                            Button("Done") { enteringName = false }.buttonStyle(ReceiptSecondaryStyle())
-                                .accessibilityLabel("Dismiss keyboard").accessibilityIdentifier("splitKeyboardDone")
+                    if activePerson != nil {
+                        ReceiptPairedActions {
+                            Button("Cancel") { cancelBatch() }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("splitBatchCancel")
+                        } primary: {
+                            Button("Apply") { applyBatch() }.buttonStyle(ReceiptProminentStyle())
+                                .accessibilityIdentifier("splitBatchApply")
                         }.modifier(ReceiptActionBarLayout())
-                    } else { ReceiptPairedActions {
-                        Button("Save choices") { workspace.saveSplit(plan, finalize: false) }
-                            .buttonStyle(ReceiptSecondaryStyle())
-                            .disabled(workspace.saving || (try? plan.validateStructure()) == nil).accessibilityIdentifier("splitSave")
-                    } primary: {
-                        Button("Finalize") { workspace.saveSplit(plan, finalize: true) }
-                            .buttonStyle(ReceiptProminentStyle())
-                            .disabled(workspace.saving || result == nil || summary != nil).accessibilityIdentifier("splitFinalize")
-                    }.modifier(ReceiptActionBarLayout()) }
+                    } else {
+                        VStack(spacing: 8) {
+                            if undoPlan != nil { Button("Undo last assignment") { undoBatch() }.accessibilityIdentifier("splitUndoBatch") }
+                            ReceiptPairedActions {
+                                Button("Save choices") { workspace.saveSplit(plan, finalize: false) }
+                                    .buttonStyle(ReceiptSecondaryStyle())
+                                    .disabled(workspace.saving || (try? plan.validateStructure()) == nil).accessibilityIdentifier("splitSave")
+                            } primary: {
+                                Button("Finalize") { workspace.saveSplit(plan, finalize: true) }
+                                    .buttonStyle(ReceiptProminentStyle())
+                                    .disabled(workspace.saving || result == nil || summary != nil).accessibilityIdentifier("splitFinalize")
+                            }
+                        }.modifier(ReceiptActionBarLayout())
+                    }
                 }
+            }
+            .sheet(item: $editingPerson) { person in
+                SplitPersonEditor(person: person, number: plan.number(for: person), color: plan.color(for: person)) { name, color in
+                    change { p in
+                        p.materializeAppearance()
+                        if let index = p.participants.firstIndex(where: { $0.id == person.id }) {
+                            p.participants[index].name = name; p.participants[index].color = color
+                        }
+                    }
+                } remove: { change { $0.removePerson(person.id) }; cancelBatch() }
+            }
+            .confirmationDialog("Apply this person’s item selection?", isPresented: $confirmBatch, titleVisibility: .visible) {
+                Button("Apply and continue") { applyBatch(); continuePending() }
+                Button("Discard selection", role: .destructive) { cancelBatch(); continuePending() }
+                Button("Keep editing", role: .cancel) { pending = nil }
             }
             .sheet(isPresented: $source) { ReceiptSourceView(workspace: workspace) }
             .confirmationDialog("Discard unsaved split choices?", isPresented: $discard, titleVisibility: .visible) {
                 Button("Discard choices", role: .destructive) { dismiss() }
             }
             .onChange(of: record?.splitPlan) { _, _ in
-                if let saved = record?.splitPlan { plan = saved; copied = false }
+                if let saved = record?.splitPlan { plan = saved; copied = false; undoPlan = nil; cancelBatch() }
             }
+            .onChange(of: workspace.active) { _, active in
+                if !active { cancelBatch(); pending = nil; confirmBatch = false; editingPerson = nil; undoPlan = nil }
+            }
+            .onChange(of: workspace.privacyCovered) { _, covered in
+                if covered { cancelBatch(); pending = nil; confirmBatch = false; editingPerson = nil; undoPlan = nil }
+            }
+            .onChange(of: record?.current.id) { _, _ in dismiss() }
             .disabled(workspace.saving)
-            .interactiveDismissDisabled(!pristine || workspace.saving)
+            .interactiveDismissDisabled(!pristine || batchDirty || workspace.saving)
         }.tint(.primary)
         #if DEBUG
-        .dynamicTypeSize(SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize)
+        .dynamicTypeSize(effectiveTypeSize)
         #endif
     }
-    private func addPerson() {
-        let entered = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !entered.isEmpty, name.count <= 80, plan.participants.count < 100 else { return }
-        change { $0.participants.append(.init(id: UUID(), name: entered)) }
-        name = ""; enteringName = false
+    private var items: [ReceiptLine] { record?.current.fields.items ?? [] }
+    private var assignedCount: Int { items.filter { !plan.assignments[$0.id, default: []].isEmpty }.count }
+    private var baselineSelection: Set<UUID> {
+        guard let activePerson else { return [] }
+        return Set(items.filter { plan.assignments[$0.id, default: []].contains(activePerson) }.map(\.id))
     }
-    private func owners(_ item: UUID) -> String {
-        let ids = Set(plan.assignments[item] ?? [])
-        let names = plan.participants.filter { ids.contains($0.id) }.map(\.name)
-        return names.isEmpty ? "Unassigned" : names.joined(separator: ", ") + (names.count > 1 ? " · Shared equally" : "")
+    private var batchDirty: Bool { activePerson != nil && selectedItems != baselineSelection }
+    private func cancelBatch() { activePerson = nil; selectedItems = [] }
+    private func request(_ action: Pending) {
+        if batchDirty { pending = action; confirmBatch = true }
+        else { cancelBatch(); perform(action) }
+    }
+    private func continuePending() { if let action = pending { pending = nil; perform(action) } }
+    private func perform(_ action: Pending) {
+        switch action {
+        case .close: if pristine { dismiss() } else { discard = true }
+        case .add:
+            var id: UUID?
+            change { id = $0.addPerson() }
+            if let id { activePerson = id; selectedItems = baselineSelection }
+        case .select(let id): activePerson = id; selectedItems = baselineSelection
+        }
+    }
+    private func applyBatch() {
+        guard let person = activePerson else { return }
+        if batchDirty {
+            let previous = plan
+            change { $0.assign(person, selected: selectedItems, items: Set(items.map(\.id))) }
+            undoPlan = previous
+        }
+        cancelBatch()
+    }
+    private func undoBatch() {
+        guard let previous = undoPlan else { return }
+        plan = previous; undoPlan = nil; copied = false
+    }
+    private var peopleBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+            if effectiveTypeSize.isAccessibilitySize {
+                Menu {
+                    ForEach(plan.participants) { person in
+                        Button("\(person.name) · Person \(plan.number(for: person))") { request(.select(person.id)) }
+                            .accessibilityIdentifier("splitPerson-\(plan.number(for: person))")
+                    }
+                } label: {
+                    Text(plan.participants.first(where: { $0.id == activePerson }).map { "Person \(plan.number(for: $0))" } ?? "People")
+                        .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
+                }.disabled(plan.participants.isEmpty).accessibilityIdentifier("splitPeopleMenu").padding(.leading, 20)
+            } else { ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(plan.participants) { person in
+                        Button { request(.select(person.id)) } label: {
+                            HStack { personBadge(person); Text(person.name).lineLimit(1).frame(maxWidth: 160) }
+                                .padding(8)
+                                .background(plan.color(for: person).tint.opacity(activePerson == person.id ? 0.22 : 0.08), in: Capsule())
+                                .overlay(Capsule().strokeBorder(activePerson == person.id ? plan.color(for: person).tint : .clear, lineWidth: 2))
+                        }.buttonStyle(.plain).accessibilityIdentifier("splitPerson-\(plan.number(for: person))")
+                            .accessibilityLabel("\(person.name), person \(plan.number(for: person)), \(plan.color(for: person).title)")
+                    }
+                }.padding(.leading, 20)
+            }.scrollIndicators(.hidden) }
+                Button { request(.add) } label: { Image(systemName: "plus").fontWeight(.bold) }
+                    .buttonStyle(ReceiptSecondaryStyle()).disabled(plan.participants.count >= 100)
+                    .accessibilityLabel("Add person").accessibilityIdentifier("splitAddPerson")
+                    .padding(.trailing, 20)
+            }
+            if !effectiveTypeSize.isAccessibilitySize, let person = plan.participants.first(where: { $0.id == activePerson }) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Assigning to \(person.name)").font(.subheadline.weight(.semibold))
+                        Text("\(selectedItems.count) selected · \(sharedCount) shared").font(.footnote)
+                        Text(selectionSubtotal).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    Button("Edit person") { editingPerson = person }.font(.subheadline).frame(minHeight: 44)
+                        .accessibilityIdentifier("splitEditPerson")
+                }.padding(.horizontal, 20)
+            }
+        }.padding(.vertical, 8)
+    }
+    private var sharedCount: Int {
+        selectedItems.filter { item in plan.assignments[item, default: []].contains { $0 != activePerson } }.count
+    }
+    private var selectionSubtotal: String {
+        do {
+            let total = try items.filter { selectedItems.contains($0.id) }.reduce(Int64(0)) { partial, item in
+                guard let amount = item.amount else { throw SplitError.invalidPlan }
+                return try ReceiptSplitEngine.add(partial, amount.minorUnits)
+            }
+            return "Selected item totals: \(money(total)) · before sharing and adjustments"
+        } catch { return "Selected total unavailable" }
+    }
+    private func personBadge(_ person: SplitParticipant) -> some View {
+        Text("\(plan.number(for: person))").font(.caption.weight(.bold)).monospacedDigit()
+            .frame(minWidth: 28, minHeight: 28)
+            .background(plan.color(for: person).tint.opacity(0.18), in: Circle())
+            .overlay(Circle().strokeBorder(plan.color(for: person).tint, lineWidth: 1.5))
+            .accessibilityHidden(true)
+    }
+    private func purchaseRow(_ item: ReceiptLine) -> some View {
+        let selected = activePerson != nil && selectedItems.contains(item.id)
+        let ids = Set(plan.assignments[item.id, default: []].filter { $0 != activePerson })
+            .union(selected ? [activePerson!] : activePerson == nil ? plan.assignments[item.id, default: []] : [])
+        return HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.description ?? "Purchase")
+                if let amount = item.amount { Text(money(amount.minorUnits)).font(.subheadline) }
+                HStack(spacing: 4) {
+                    ForEach(plan.participants.filter { ids.contains($0.id) }.prefix(5)) { person in personBadge(person) }
+                    Text(ids.isEmpty ? "Unassigned" : ids.count > 1 ? "Shared equally · \(ids.count) people" : plan.participants.first(where: { ids.contains($0.id) })?.name ?? "Assigned")
+                        .font(.caption)
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            if activePerson != nil { Image(systemName: selected ? "checkmark.circle.fill" : "circle") }
+        }.foregroundStyle(.primary).padding(.vertical, 6).frame(minHeight: 48)
+            .background(selected ? plan.participants.first(where: { $0.id == activePerson }).map { plan.color(for: $0).tint.opacity(0.10) } ?? .clear : .clear)
+            .contentShape(Rectangle())
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel((item.description ?? "Purchase") + ", " + (item.amount.map { money($0.minorUnits) } ?? "Amount missing") + ", " + (ids.isEmpty ? "Unassigned" : plan.participants.filter { ids.contains($0.id) }.map { "\($0.name), person \(plan.number(for: $0))" }.joined(separator: ", ")) + (ids.count > 1 ? ", Shared equally" : ""))
     }
     private func toggle(_ id: UUID, in ids: inout [UUID], selected: Bool) {
         ids.removeAll { $0 == id }; if selected { ids.append(id) }
@@ -208,8 +371,9 @@ struct ReceiptSplitView: View {
                 ForEach(plan.participants) { person in
                     SplitSelectionRow(title: person.name, selection: Binding(get: { plan.assignments[item.id, default: []].contains(person.id) }, set: { selected in
                         change { p in
-                            var ids = p.assignments[item.id, default: []]
-                            toggle(person.id, in: &ids, selected: selected); p.assignments[item.id] = ids
+                            var selection = Set(items.filter { p.assignments[$0.id, default: []].contains(person.id) }.map(\.id))
+                            if selected { selection.insert(item.id) } else { selection.remove(item.id) }
+                            p.assign(person.id, selected: selection, items: Set(items.map(\.id)))
                         }
                     })).accessibilityIdentifier("splitOwner-\(person.name)")
                 }
@@ -295,4 +459,75 @@ private struct SplitSelectionRow: View {
 /// Keep UIKit's native Back button and interactive edge gesture on split subpages.
 private struct SplitEditorBack: ViewModifier {
     func body(content: Content) -> some View { content }
+}
+
+private extension SplitPersonColor {
+    var tint: Color {
+        switch self {
+        case .blue: .blue
+        case .teal: .teal
+        case .amber: .orange
+        case .rose: .pink
+        case .violet: .purple
+        case .slate: .gray
+        }
+    }
+}
+
+private struct SplitPersonEditor: View {
+    let person: SplitParticipant
+    let number: Int
+    let save: (String, SplitPersonColor) -> Void
+    let remove: () -> Void
+    @State private var name: String
+    @State private var color: SplitPersonColor
+    @State private var confirmRemoval = false
+    @Environment(\.dismiss) private var dismiss
+    init(person: SplitParticipant, number: Int, color: SplitPersonColor,
+         save: @escaping (String, SplitPersonColor) -> Void, remove: @escaping () -> Void) {
+        self.person = person; self.number = number; self.save = save; self.remove = remove
+        _name = State(initialValue: person.name == "Person \(number)" ? "" : person.name)
+        _color = State(initialValue: color)
+    }
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name (optional)", text: $name).textContentType(.nickname)
+                        .accessibilityIdentifier("splitName")
+                    Text("Leave blank to use Person \(number).").font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Color") {
+                    ForEach(SplitPersonColor.allCases) { candidate in
+                        Button { color = candidate } label: {
+                            HStack {
+                                Circle().fill(candidate.tint).frame(width: 20, height: 20)
+                                Text(candidate.title)
+                                Spacer()
+                                if color == candidate { Image(systemName: "checkmark") }
+                            }.frame(minHeight: 44).contentShape(Rectangle())
+                        }.buttonStyle(.plain).accessibilityIdentifier("splitColor-\(candidate.rawValue)")
+                            .accessibilityValue(color == candidate ? "Selected" : "Not selected")
+                    }
+                }
+                Section {
+                    Button("Remove person", role: .destructive) { confirmRemoval = true }
+                        .accessibilityIdentifier("splitRemovePerson")
+                } footer: { Text("Removes only this person’s assignments. Any items left without owners must be assigned again.") }
+            }
+            .navigationTitle("Person \(number)").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.accessibilityIdentifier("splitPersonCancel") }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") {
+                        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        save(trimmed.isEmpty ? "Person \(number)" : trimmed, color); dismiss()
+                    }.disabled(name.count > 80).accessibilityIdentifier("splitPersonApply")
+                }
+            }
+            .confirmationDialog("Remove \(person.name)?", isPresented: $confirmRemoval, titleVisibility: .visible) {
+                Button("Remove person", role: .destructive) { remove(); dismiss() }.accessibilityIdentifier("splitConfirmRemoval")
+            } message: { Text("Their item memberships will be removed. Adjustment policies will need confirmation again.") }
+        }
+    }
 }

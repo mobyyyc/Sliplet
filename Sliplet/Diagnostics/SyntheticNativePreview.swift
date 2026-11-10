@@ -21,9 +21,16 @@ import CryptoKit
                 .init(id: UUID(), kind: "purchase", name: "FICTIONAL TEA", quantity: "", amount: "4.99", sourceLineIDs: []),
                 .init(id: UUID(), kind: "tax", name: "FICTIONAL TAX", quantity: "", amount: "0.63", sourceLineIDs: [])]
             d.subtotal = "15.00"; d.total = "15.63"; d.sourceOpened = true; d.sourceChecked = true
-            let content = [d.merchant, d.date + " CAD", "FICTIONAL APPLES H? 10.01", "FICTIONAL TEA 4.99", "FICTIONAL TAX 0.63", "SUBTOTAL 15.00", "TOTAL 15.63", "FICTIONAL TEST — NOT A PURCHASE"]
+            if ProcessInfo.processInfo.arguments.contains("--p1105-many-items") {
+                for index in 1...12 {
+                    d.lines.insert(.init(id: UUID(), kind: "purchase", name: "FICTIONAL EXTRA ITEM \(index)", quantity: "", amount: "1.01", sourceLineIDs: []), at: d.lines.count - 1)
+                }
+                d.subtotal = "27.12"; d.total = "27.75"
+            }
+            let content = [d.merchant, d.date + " CAD"] + d.lines.map { $0.name + " " + $0.amount }
+                + ["SUBTOTAL " + d.subtotal, "TOTAL " + d.total, "FICTIONAL TEST — NOT A PURCHASE"]
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
-            let bytes = UIGraphicsImageRenderer(size: CGSize(width: 800, height: 800), format: format).pngData { _ in
+            let bytes = UIGraphicsImageRenderer(size: CGSize(width: 800, height: CGFloat(max(800, content.count * 75 + 70))), format: format).pngData { _ in
                 UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 800, height: 800))
                 for (index, line) in content.enumerated() {
                     (line as NSString).draw(at: CGPoint(x: 35, y: 35 + index * 75), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 28, weight: .regular), .foregroundColor: UIColor.black])

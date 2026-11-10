@@ -3,6 +3,13 @@ import Foundation
 struct SplitParticipant: Codable, Equatable, Sendable, Identifiable {
     let id: UUID
     var name: String
+    var number: Int? = nil
+    var color: SplitPersonColor? = nil
+}
+enum SplitPersonColor: String, Codable, CaseIterable, Sendable, Identifiable {
+    case blue, teal, amber, rose, violet, slate
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
 }
 enum SplitMethod: String, Codable, CaseIterable, Sendable, Identifiable {
     case proportional, equal
@@ -32,9 +39,75 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
     var assignments: [UUID: [UUID]] = [:]
     var policies: [SplitAdjustmentPolicy] = []
     var finalizedRevision: UUID? = nil
+    // Optional metadata keeps version-1 plans/backups readable; never reuse removed numbers.
+    var nextPersonNumber: Int? = nil
+
+    func number(for person: SplitParticipant) -> Int {
+        if let number = person.number { return number }
+        var used = Set(participants.compactMap(\.number))
+        var candidate = 1
+        for legacy in participants where legacy.number == nil {
+            while used.contains(candidate) { candidate += 1 }
+            if legacy.id == person.id { return candidate }
+            used.insert(candidate)
+        }
+        return candidate
+    }
+    func color(for person: SplitParticipant) -> SplitPersonColor {
+        person.color ?? SplitPersonColor.allCases[(number(for: person) - 1) % SplitPersonColor.allCases.count]
+    }
+    mutating func materializeAppearance() {
+        for index in participants.indices {
+            if participants[index].number == nil { participants[index].number = number(for: participants[index]) }
+            if participants[index].color == nil { participants[index].color = color(for: participants[index]) }
+        }
+        nextPersonNumber = max(nextPersonNumber ?? 1, (participants.compactMap(\.number).max() ?? 0) + 1)
+    }
+    @discardableResult mutating func addPerson() -> UUID? {
+        guard participants.count < 100 else { return nil }
+        materializeAppearance()
+        let number = nextPersonNumber ?? 1
+        guard number < 1_000_000 else { return nil }
+        let person = SplitParticipant(id: UUID(), name: "Person \(number)", number: number,
+            color: SplitPersonColor.allCases[(number - 1) % SplitPersonColor.allCases.count])
+        participants.append(person); nextPersonNumber = number + 1; finalizedRevision = nil
+        for i in policies.indices { policies[i].accepted = false }
+        return person.id
+    }
+    mutating func removePerson(_ id: UUID) {
+        materializeAppearance()
+        participants.removeAll { $0.id == id }
+        assignments = assignments.mapValues { $0.filter { $0 != id } }
+        for i in policies.indices {
+            policies[i].accepted = false
+            if policies[i].target == .selectedPeople {
+                policies[i].selectedIDs.removeAll { $0 == id }; policies[i].sourceConfirmed = false
+            }
+        }
+        finalizedRevision = nil
+    }
+    mutating func assign(_ person: UUID, selected: Set<UUID>, items: Set<UUID>) {
+        guard participants.contains(where: { $0.id == person }), selected.isSubset(of: items) else { return }
+        var changed = false
+        for item in items {
+            var owners = assignments[item, default: []]
+            let wasSelected = owners.contains(person)
+            guard wasSelected != selected.contains(item) else { continue }
+            owners.removeAll { $0 == person }
+            if selected.contains(item) { owners.append(person) }
+            assignments[item] = owners; changed = true
+        }
+        if changed {
+            finalizedRevision = nil
+            for i in policies.indices { policies[i].accepted = false }
+        }
+    }
 
     func validateStructure() throws {
-        guard version == 1, participants.count <= 100, assignments.count <= 10_000, policies.count <= 10_000,
+        let numbers = participants.compactMap(\.number)
+        guard numbers.allSatisfy({ (1..<1_000_000).contains($0) }), Set(numbers).count == numbers.count,
+              nextPersonNumber.map({ $0 > (numbers.max() ?? 0) && $0 <= 1_000_000 }) ?? true,
+              version == 1, participants.count <= 100, assignments.count <= 10_000, policies.count <= 10_000,
               Set(participants.map(\.id)).count == participants.count,
               Set(policies.map(\.id)).count == policies.count,
               participants.allSatisfy({ !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.name.count <= 80 }),

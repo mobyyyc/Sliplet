@@ -18,7 +18,9 @@ import Foundation
         let record = try await create(store)
         XCTAssertNil(record.splitPlan)
         let legacy = try JSONDecoder().decode(ReceiptRecord.self, from: JSONEncoder().encode(record)); XCTAssertNil(legacy.splitPlan)
-        let plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b, SplitFixture.c]])
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b, SplitFixture.c]])
+        plan.materializeAppearance()
+        plan.participants[0].color = .rose
         let saved = try await store.saveSplit(id: record.id, expectedRevision: record.current.id, expectedPlan: nil, plan: plan, finalize: true)
         XCTAssertEqual(saved.revisions, record.revisions); XCTAssertEqual(saved.original, record.original); XCTAssertEqual(saved.updatedAt, record.updatedAt)
         XCTAssertEqual(saved.splitPlan?.finalizedRevision, record.current.id)

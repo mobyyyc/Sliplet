@@ -7,7 +7,7 @@ import XCTest
         app.launch(); XCTAssertTrue(app.buttons["splitOpen"].waitForExistence(timeout: 45))
         let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitOpen"])
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 15), .completed)
-        openSplit(app); reveal(app.textFields["splitName"], app: app); XCTAssertTrue(app.textFields["splitName"].exists); return app
+        openSplit(app); XCTAssertTrue(app.buttons["splitAddPerson"].exists); return app
     }
     private func reveal(_ element: XCUIElement, app: XCUIApplication) {
         for _ in 0..<10 {
@@ -30,13 +30,17 @@ import XCTest
     private func capture(_ app: XCUIApplication, _ name: String) {
         let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
+    private func addPerson(_ app: XCUIApplication, name: String) {
+        let add = app.buttons["splitAddPerson"]; XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        let edit = app.buttons["splitEditPerson"]; reveal(edit, app: app); edit.tap()
+        let field = app.textFields["splitName"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.tap(); field.typeText(name)
+        app.buttons["splitPersonApply"].tap()
+        app.buttons["splitBatchCancel"].tap()
+    }
     private func addPeople(_ app: XCUIApplication) {
-        for name in ["Alex", "Blair", "Casey"] {
-            let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText(name)
-            if app.buttons["splitKeyboardAdd"].isHittable { app.buttons["splitKeyboardAdd"].tap() }
-            else { reveal(app.buttons["splitAddPerson"], app: app); app.buttons["splitAddPerson"].tap() }
-        }
-        if app.buttons["Dismiss keyboard"].exists { app.buttons["Dismiss keyboard"].tap() }
+        for name in ["Alex", "Blair", "Casey"] { addPerson(app, name: name) }
     }
     private func assign(_ app: XCUIApplication, index: Int, names: [String]) {
         let item = app.buttons["splitItem-\(index)"]; reveal(item, app: app); item.tap()
@@ -100,8 +104,7 @@ import XCTest
         app.buttons["splitSave"].tap()
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitDone"])
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
-        let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText("Dana")
-        app.buttons["splitKeyboardAdd"].tap(); XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+        addPerson(app, name: "Dana")
         app.buttons["splitSave"].tap()
         let saved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitDone"])
         XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 10), .completed)
@@ -213,21 +216,121 @@ import XCTest
         let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "split"]
         app.launch(); XCTAssertTrue(app.buttons["splitOpen"].waitForExistence(timeout: 45))
         openSplit(app)
-        let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText("Alex")
-        reveal(app.buttons["splitAddPerson"], app: app); app.buttons["splitAddPerson"].tap()
-        if app.buttons["Dismiss keyboard"].exists { app.buttons["Dismiss keyboard"].tap() }
+        addPerson(app, name: "Alex")
         assign(app, index: 0, names: ["Alex"])
         capture(app, "T06-dark-split")
         XCTAssertFalse(app.buttons["splitFinalize"].isEnabled); app.terminate()
     }
     func testLargeTextReducedMotionOpaqueSplitControls() {
         let app = launch(extra: ["--t05-large-text", "--t05-reduce-motion", "--t05-opaque", "--t05-contrast"])
-        let field = app.textFields["splitName"]; reveal(field, app: app); field.tap(); field.typeText("Alex")
-        if app.buttons["Dismiss keyboard"].exists { app.buttons["Dismiss keyboard"].tap() }
-        reveal(app.buttons["splitAddPerson"], app: app); app.buttons["splitAddPerson"].tap()
+        addPerson(app, name: "Alex")
         assign(app, index: 0, names: ["Alex"])
         capture(app, "T06-large-text-reduced-motion")
         XCTAssertFalse(app.buttons["splitFinalize"].isEnabled); XCTAssertGreaterThanOrEqual(app.buttons["splitSave"].frame.height, 44)
+        app.terminate()
+    }
+}
+
+extension ReceiptSplitUITests {
+    func testBulkSelectionCancelUndoSharingAndSavedColors() {
+        let app = launch()
+        app.buttons["splitAddPerson"].tap()
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        let first = app.buttons["splitItem-0"], second = app.buttons["splitItem-1"]
+        reveal(first, app: app); first.tap(); reveal(second, app: app); second.tap()
+        capture(app, "P1105-active-multi-selection")
+        app.buttons["splitBatchCancel"].tap()
+        reveal(first, app: app); XCTAssertTrue(first.label.contains("Unassigned"))
+        app.buttons["splitPerson-1"].tap()
+        reveal(app.buttons["splitSelectUnassigned"], app: app); app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.buttons["splitUndoBatch"].waitForExistence(timeout: 5)); app.buttons["splitUndoBatch"].tap()
+        reveal(first, app: app); XCTAssertTrue(first.label.contains("Unassigned"))
+        app.buttons["splitPerson-1"].tap()
+        reveal(app.buttons["splitSelectUnassigned"], app: app); app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        app.buttons["splitAddPerson"].tap()
+        reveal(second, app: app); second.tap()
+        app.buttons["splitPerson-1"].tap()
+        XCTAssertTrue(app.buttons["Discard selection"].waitForExistence(timeout: 5)); app.buttons["Discard selection"].tap()
+        app.buttons["splitBatchCancel"].tap()
+        app.buttons["splitPerson-2"].tap()
+        app.buttons["splitEditPerson"].tap()
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        reveal(app.buttons["splitColor-rose"], app: app); app.buttons["splitColor-rose"].tap()
+        app.buttons["splitPersonApply"].tap()
+        reveal(second, app: app); XCTAssertEqual(second.value as? String, "Not selected"); second.tap()
+        app.buttons["splitBatchApply"].tap()
+        reveal(second, app: app)
+        XCTAssertTrue(second.label.contains("Person 1")); XCTAssertTrue(second.label.contains("Person 2"))
+        XCTAssertTrue(second.label.contains("Shared equally"))
+        capture(app, "P1105-shared-bulk-assignment")
+        app.buttons["splitSave"].tap()
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: app.buttons["splitDone"])
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed)
+        app.buttons["splitDone"].tap(); app.terminate()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]
+        app.launch()
+        let paper = app.buttons["receipt-0"]; XCTAssertTrue(paper.waitForExistence(timeout: 30))
+        paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)).tap()
+        openSplit(app)
+        XCTAssertTrue(app.buttons["splitPerson-2"].label.contains("Rose"))
+        reveal(second, app: app); XCTAssertTrue(second.label.contains("Shared equally"))
+        app.terminate()
+    }
+}
+
+
+extension ReceiptSplitUITests {
+    func testLongBulkAssignmentLargeTextAndRemoval() {
+        let app = launch(extra: ["--p1105-many-items", "--t05-large-text", "--t05-reduce-motion"])
+        app.buttons["splitAddPerson"].tap()
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        let all = app.buttons["splitSelectUnassigned"]
+        reveal(all, app: app); all.tap()
+        let count = app.staticTexts["14 selected · 0 shared"]
+        // The accessible summary precedes the selection controls in the scrolling form.
+        app.swipeDown()
+        XCTAssertTrue(count.waitForExistence(timeout: 5))
+        app.buttons["splitBatchApply"].tap()
+        app.buttons["splitPeopleMenu"].tap(); app.buttons["splitPerson-1"].tap()
+        capture(app, "P1105-large-text-assignment")
+        let edit = app.buttons["splitEditPerson"]; reveal(edit, app: app); edit.tap()
+        let remove = app.buttons["splitRemovePerson"]
+        reveal(remove, app: app); remove.tap()
+        app.buttons.matching(identifier: "splitConfirmRemoval").firstMatch.tap()
+        XCTAssertTrue(app.buttons["splitAddPerson"].waitForExistence(timeout: 5))
+        app.buttons["splitAddPerson"].tap()
+        XCTAssertTrue(app.buttons["splitPeopleMenu"].label.contains("Person 2"))
+        let empty = app.staticTexts["0 selected · 0 shared"]
+        for _ in 0..<8 {
+            if empty.exists && empty.isHittable { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(empty.isHittable)
+        app.buttons["splitBatchCancel"].tap()
+        XCTAssertFalse(app.buttons["splitFinalize"].isEnabled)
+        app.terminate()
+    }
+}
+
+extension ReceiptSplitUITests {
+    func testPendingSelectionRequiresDecisionBeforeSwitchAndClose() {
+        let app = launch()
+        app.buttons["splitAddPerson"].tap()
+        let item = app.buttons["splitItem-0"]; reveal(item, app: app); item.tap()
+        app.buttons["splitAddPerson"].tap()
+        XCTAssertTrue(app.buttons["Apply and continue"].waitForExistence(timeout: 5))
+        app.buttons["Apply and continue"].tap()
+        XCTAssertTrue(app.buttons["splitPerson-2"].waitForExistence(timeout: 5))
+        reveal(item, app: app); XCTAssertTrue(item.label.contains("Person 1")); item.tap()
+        app.buttons["splitDone"].tap()
+        XCTAssertTrue(app.buttons["Discard selection"].waitForExistence(timeout: 5))
+        app.buttons["Discard selection"].tap()
+        XCTAssertTrue(app.buttons["Discard choices"].waitForExistence(timeout: 5))
+        app.buttons["Discard choices"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 5))
+        openSplit(app); XCTAssertFalse(app.buttons["splitPerson-1"].exists)
         app.terminate()
     }
 }
