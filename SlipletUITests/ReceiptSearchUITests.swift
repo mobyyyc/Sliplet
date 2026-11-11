@@ -22,7 +22,14 @@ import Vision
     private func matches(_ app: XCUIApplication) -> XCUIElementQuery { app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchMatch-'")) }
     private func receipts(_ app: XCUIApplication) -> XCUIElementQuery { app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchReceipt-'")) }
     private func returnToResults(_ app: XCUIApplication) {
-        app.buttons["back"].tap(); XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10)); reveal(app.staticTexts["searchResultCount"], app: app)
+        app.buttons["back"].tap(); XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
+        // Returning restores the opened result, which can be below the summary at large text sizes.
+        let count = app.staticTexts["searchResultCount"]
+        for _ in 0..<14 {
+            if count.exists && count.isHittable && count.frame.minY > 130 { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(count.isHittable)
     }
     private func reveal(_ element: XCUIElement, app: XCUIApplication) {
         for _ in 0..<14 {
@@ -152,6 +159,7 @@ import Vision
         reveal(matches(app).firstMatch, app: app); matches(app).firstMatch.tap(); XCTAssertTrue(app.buttons["receiptOptions"].waitForExistence(timeout: 10))
         app.buttons["receiptOptions"].tap(); app.buttons["Archive receipt"].tap()
         XCTAssertTrue(app.staticTexts["searchResultCount"].waitForExistence(timeout: 10)); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts")
+        app.buttons["searchFilters"].tap()
         let include = app.switches["searchIncludeArchived"]; reveal(include, app: app); include.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "1 receipt"); capture(app, "included-archive")
         reveal(matches(app).firstMatch, app: app); matches(app).firstMatch.tap(); app.buttons["receiptOptions"].tap(); app.buttons["Unarchive receipt"].tap()
@@ -163,6 +171,38 @@ import Vision
         XCTAssertTrue(app.buttons["allReceipts"].waitForExistence(timeout: 30)); app.buttons["allReceipts"].tap()
         search("coffee", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts"); app.terminate()
     }
+    func testCompactFiltersResetAndReturnToResult() {
+        let app = launch("search-large")
+        XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
+        XCTAssertTrue(app.staticTexts["searchFilterSummary"].label.contains("Active only"))
+        search("苹果", app: app)
+        app.buttons["searchFilters"].tap()
+        app.buttons["searchMerchantFilter"].tap(); app.buttons["FICTIONAL GROVE"].tap()
+        app.buttons["searchFilters"].tap()
+        XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
+        XCTAssertTrue(app.staticTexts["searchFilterSummary"].label.contains("FICTIONAL GROVE"))
+        capture(app, "P1106-compact-filters")
+        let target = receipts(app).element(boundBy: 1)
+        reveal(target, app: app)
+        let identifier = target.identifier
+        target.tap()
+        XCTAssertTrue(app.buttons["back"].waitForExistence(timeout: 10)); app.buttons["back"].tap()
+        XCTAssertTrue(app.buttons[identifier].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons[identifier].isHittable)
+        XCTAssertEqual(app.searchFields.firstMatch.value as? String, "苹果")
+        XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
+        for _ in 0..<8 {
+            let reset = app.buttons["searchClearFilters"]
+            if reset.exists && reset.isHittable && reset.frame.minY > 160 { break }
+            app.swipeDown()
+        }
+        app.buttons["searchClearFilters"].tap()
+        let reset = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == '500 receipts'"), object: app.staticTexts["searchResultCount"])
+        XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 5), .completed)
+        XCTAssertTrue(app.staticTexts["searchFilterSummary"].label.contains("Active only"))
+        app.terminate()
+    }
+
     func testNativeFiveHundredBrowseFiltersUnicodeAndSource() throws {
         let app = launch("search-large"); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "500 receipts")
         capture(app, "500-history")
@@ -170,6 +210,7 @@ import Vision
         XCTAssertTrue(receipts(app).firstMatch.exists); capture(app, "500-scrolled-history")
         for _ in 0..<4 { app.swipeDown(velocity: .fast) }
         search("苹果", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "500 receipts"); capture(app, "500-unicode-results")
+        app.buttons["searchFilters"].tap()
         let store = app.buttons["searchMerchantFilter"]; reveal(store, app: app); store.tap(); app.buttons["FICTIONAL GROVE"].tap()
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "167 receipts")
         let month = app.buttons["searchMonthFilter"]; reveal(month, app: app); month.tap(); app.buttons["September 2026"].tap()

@@ -30,9 +30,13 @@ import XCTest
         XCTAssertTrue(row.waitForExistence(timeout: 10))
         let y = row.frame.minY
         row.tap()
+        XCTAssertTrue(app.buttons["editSavedLine"].exists)
+        XCTAssertFalse(app.textFields["focusedQuantity"].exists)
+        let overview = XCTAttachment(screenshot: app.screenshot()); overview.name = "P1106-line-overview"; overview.lifetime = .keepAlways; add(overview)
         app.buttons["openPurchaseHistory"].tap()
         let entry = firstMatch(app)
         XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        let timeline = XCTAttachment(screenshot: app.screenshot()); timeline.name = "P1106-history"; timeline.lifetime = .keepAlways; add(timeline)
         entry.tap()
         let original = app.buttons["historySecondOriginal"]
         reveal(original, app: app); original.tap()
@@ -46,6 +50,7 @@ import XCTest
         reveal(undo, app: app); undo.tap()
         XCTAssertTrue(undo.waitForNonExistence(timeout: 10))
         let reject = app.buttons["rejectPurchaseLink"]
+        app.swipeDown()
         reveal(reject, app: app); reject.tap()
         XCTAssertTrue(app.staticTexts["Marked as different products"].waitForExistence(timeout: 10))
         reveal(app.buttons["undoPurchaseLink"], app: app); app.buttons["undoPurchaseLink"].tap()

@@ -79,3 +79,7 @@ U09/U10: AI settings prioritizes state and enablement, retesting is optional, an
 ## P11-05 handoff · November 10, 2026
 
 U01/U02/U03 are addressed in the scoped implementation: immediate numbered/color people, optional naming, person-first bulk assignment and a responsive selection hierarchy. Shared membership, transactional Apply/Cancel/Undo, exact money and legacy encrypted storage are preserved. 29 unit checks and eight distinct Simulator journeys pass across focused runs. See [implementation evidence and limits](PHASE11_BULK_SPLITTING_IMPLEMENTATION.md). Physical-phone and full VoiceOver acceptance remain P11-08; P11-06 requires Main approval.
+
+## P11-06 handoff · November 10, 2026
+
+U05 and U06 are addressed: compact expandable filters with scope/reset, return to the opened result, and saved-line summary/history before explicit editing. U08 decision buttons now have primary/secondary hierarchy with separate Undo; price eligibility remains P11-07. Ten unit checks and eight distinct scoped UI journeys pass. See [search/history evidence and limits](PHASE11_SEARCH_HISTORY.md). Phone and full manual VoiceOver acceptance remain P11-08.

@@ -15,6 +15,7 @@ struct ReceiptFocusedCorrectionView: View {
     @State private var lineID: UUID?
     @State private var sourceIndex = 0
     @State private var showReadText = false
+    @State private var editingSavedLine = false
     @State private var expanded = false
     @State private var rereading = false
     @State private var zoomTarget = UUID()
@@ -25,6 +26,10 @@ struct ReceiptFocusedCorrectionView: View {
     @FocusState private var editing: String?
     private let baseline: ReceiptReviewDraft
     private let detailLine: ReceiptWorkspace.DetailLine?
+    private var browsingSavedPurchase: Bool {
+        guard let detailLine else { return false }
+        return !editingSavedLine && workspace.selected?.current.fields.items.contains(where: { $0.id == detailLine.id }) == true
+    }
     private var baselineIsCurrent: Bool {
         if let detailLine { return workspace.selected?.current.id == detailLine.revision && workspace.flow == .detail }
         return workspace.draft == baseline
@@ -61,9 +66,17 @@ struct ReceiptFocusedCorrectionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { Text(check.message).font(.footnote) }
+                if detailLine == nil { Section { Text(check.message).font(.footnote) } }
                 if let detailLine, let selected = workspace.selected,
-                   selected.current.fields.items.contains(where: { $0.id == detailLine.id }) {
+                   let line = selected.current.fields.items.first(where: { $0.id == detailLine.id }) {
+                    Section("This purchase") {
+                        Text(line.description ?? "Description missing").font(.headline)
+                        if let amount = line.amount {
+                            LabeledContent("Line amount", value: "\(amount.currency.code) \(ExactInput.format(amount.minorUnits, scale: amount.currency.minorUnitScale))")
+                        }
+                        Text(selected.current.fields.merchant ?? "Merchant missing").font(.subheadline)
+                        Text(ExactInput.dateText(selected.current.fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.subheadline)
+                    }
                     Section {
                         NavigationLink {
                             PurchaseHistoryView(workspace: workspace,
@@ -72,146 +85,154 @@ struct ReceiptFocusedCorrectionView: View {
                         .disabled(input != baseline)
                         .accessibilityIdentifier("openPurchaseHistory")
                         if input != baseline { Text("Save or cancel your edits before opening history.").font(.footnote) }
+                        if !editingSavedLine {
+                            Button("Edit line", systemImage: "pencil") { editingSavedLine = true }
+                                .accessibilityIdentifier("editSavedLine")
+                            Button("View original", systemImage: "doc.viewfinder") { expanded = true }
+                                .disabled(workspace.image == nil).accessibilityIdentifier("viewSavedLineOriginal")
+                        }
                     }
                 }
 
-                if case .source = check.target {
-                    Section {
-                        Picker("Existing line", selection: $lineID) {
-                            Text("Choose a line").tag(UUID?.none)
-                            ForEach(input.lines) { line in Text(line.name.nilIfEmpty ?? "Unnamed line").tag(Optional(line.id)) }
-                        }.accessibilityIdentifier("focusedExistingLine")
-                        Button("Add purchase from this row", systemImage: "plus") {
-                            var line = EditableReceiptLine.blank()
-                            line.sourceLineIDs = currentSource.map { [$0.id] } ?? []
-                            input.lines.append(line); lineID = line.id
-                        }.accessibilityIdentifier("focusedAddPurchase")
-                        if lineID != nil, let source = currentSource {
-                            Button("Link this row to selected line") {
-                                if let i = input.lines.firstIndex(where: { $0.id == lineID }), !input.lines[i].sourceLineIDs.contains(source.id) {
-                                    input.lines[i].sourceLineIDs.append(source.id)
-                                }
-                            }.accessibilityIdentifier("focusedLinkRow")
-                        }
-                    } header: { Text("Missing or wrapped line") }
-                }
-
-                Section {
-                    if workspace.active && !workspace.privacyCovered, let image = workspace.image {
-                        ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
-                            .frame(height: effectiveTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
-                        let sourceToolsLayout = effectiveTypeSize.isAccessibilitySize
-                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                            : AnyLayout(HStackLayout())
-                        sourceToolsLayout {
-                            ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
-                            if !effectiveTypeSize.isAccessibilitySize { Spacer() }
-                            Button("Expand original", systemImage: "arrow.up.left.and.arrow.down.right") { editing = nil; expanded = true }
-                                .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
-                                .accessibilityIdentifier("expandFocusedOriginal")
-                        }
-                        Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
-                            .buttonStyle(ReceiptSecondaryStyle()).disabled(rereadFields.isEmpty).accessibilityIdentifier("focusedReread")
-                        if rereadFields.isEmpty {
-                            Text("Choose an existing line or add a purchase above, then reread its amount or description.")
-                                .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("focusedChooseLineHint")
-                        }
-                        if sources.count > 1, case .source = check.target {
-                            HStack {
-                                Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
-                                Spacer()
-                                Text("\(sourceIndex + 1) of \(sources.count)").monospacedDigit()
-                                Spacer()
-                                Button("Next row") { sourceIndex += 1 }.disabled(sourceIndex == sources.count - 1)
-                            }.frame(minHeight: 44).buttonStyle(.borderless)
-                        }
-                    } else { Text("Original unavailable. Close this check and reopen the receipt.") }
-                } header: { Text("Original comparison") }
-                footer: {
-                    Text(boxes.isEmpty ? "No position is available for this check. Compare the full original." : "Compare the photo; read text may contain errors.").font(.footnote)
-                }
-                switch check.target {
-                case .receipt:
-                    Section {
-                        TextField("Merchant", text: field(\.merchant)).focused($editing, equals: "merchant").accessibilityIdentifier("focusedMerchant")
-                        Picker("Currency", selection: field(\.currency)) {
-                            Text("Choose currency").tag("")
-                            ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
-                        }
-                        if let context = input.currencyContextMessage { Text(context).font(.footnote).foregroundStyle(.secondary) }
-                    } header: { Text("Receipt details") }
-                case .date:
-                    Section {
-                        Text(input.date.isEmpty ? "Date not confirmed" : "Current: " + input.date)
-                        DatePicker("Printed purchase date", selection: $purchaseDate, displayedComponents: .date)
-                            .environment(\.calendar, ReceiptDateSelection.calendar())
-                        Button("Use selected date") { input.date = ReceiptDateSelection.text(purchaseDate) }.accessibilityIdentifier("focusedUseDate")
-                        Button("Leave date unknown") { input.date = "" }
-                    }
-                case .subtotal, .total:
-                    Section {
-                        LabeledContent("Printed subtotal") { TextField("Missing", text: field(\.subtotal)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "subtotal").accessibilityIdentifier("focusedSubtotal") }
-                        if input.subtotal.isEmpty { Toggle("Subtotal is not printed", isOn: $input.subtotalNotPrinted).tint(.green) }
-                        LabeledContent("Printed total") { TextField("Missing", text: field(\.total)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "total").accessibilityIdentifier("focusedTotal") }
-                        if let difference = input.reconciliation.difference {
-                            Text("Difference: " + ExactInput.format(difference, scale: ExactInput.currency(input.currency)?.minorUnitScale ?? 2))
-                        }
-                        Text("For a difference, check purchases and adjustments in the full review. Do not change a correct total just to make it match.").font(.footnote)
-                    } header: { Text("Printed totals") }
-                case .line, .source:
-                    if lineID != nil {
+                if !browsingSavedPurchase {
+                    if case .source = check.target {
                         Section {
-                            LabeledContent("Line amount") { TextField("Missing", text: lineField(\.amount)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "lineAmount").accessibilityIdentifier("focusedLineAmount") }
-                            TextField("Printed description", text: lineField(\.name), axis: .vertical).focused($editing, equals: "lineName").accessibilityIdentifier("focusedLineName")
-                            Picker("Type", selection: lineField(\.kind)) {
-                                ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
+                            Picker("Existing line", selection: $lineID) {
+                                Text("Choose a line").tag(UUID?.none)
+                                ForEach(input.lines) { line in Text(line.name.nilIfEmpty ?? "Unnamed line").tag(Optional(line.id)) }
+                            }.accessibilityIdentifier("focusedExistingLine")
+                            Button("Add purchase from this row", systemImage: "plus") {
+                                var line = EditableReceiptLine.blank()
+                                line.sourceLineIDs = currentSource.map { [$0.id] } ?? []
+                                input.lines.append(line); lineID = line.id
+                            }.accessibilityIdentifier("focusedAddPurchase")
+                            if lineID != nil, let source = currentSource {
+                                Button("Link this row to selected line") {
+                                    if let i = input.lines.firstIndex(where: { $0.id == lineID }), !input.lines[i].sourceLineIDs.contains(source.id) {
+                                        input.lines[i].sourceLineIDs.append(source.id)
+                                    }
+                                }.accessibilityIdentifier("focusedLinkRow")
                             }
-                            if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
-                                LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
-                                if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }
-                                if let marker = input.lines[index].taxMarker { LabeledContent("Printed tax marker", value: marker) }
-                                LabeledContent("Unit") {
-                                    TextField("", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }), prompt: Text("Unknown"))
-                                        .focused($editing, equals: "unit").accessibilityIdentifier("focusedUnit")
-                                }
-                                LabeledContent("Unit price") {
-                                    TextField("", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }), prompt: Text("Unknown"))
-                                        .keyboardType(.numbersAndPunctuation).focused($editing, equals: "unitPrice")
-                                        .accessibilityIdentifier("focusedUnitPrice")
-                                }
-                                Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
-                            } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {
-                                LabeledContent("Printed rate", value: ExactInput.quantity(rate))
-                            }
-                        } header: { Text("Focused line") }
+                        } header: { Text("Missing or wrapped line") }
                     }
-                }
-                if let assistance = currentAssistance {
-                    Section("Reread used for this value") {
-                        LabeledContent(assistance.field.title, value: assistance.value)
-                        Text("The highlight shows the area you reread. Initial OCR remains unchanged.").font(.footnote)
-                    }.accessibilityIdentifier("focusedRereadEvidence")
-                }
-                if let currentSource {
+
                     Section {
-                        DisclosureGroup("Initial read text", isExpanded: $showReadText) {
-                            if case .source = check.target {
-                                Text(currentSource.text).font(.callout).textSelection(.enabled)
-                            } else {
-                                ForEach(sources) { source in Text(source.text).font(.callout).textSelection(.enabled) }
+                        if workspace.active && !workspace.privacyCovered, let image = workspace.image {
+                            ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
+                                .frame(height: effectiveTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
+                            let sourceToolsLayout = effectiveTypeSize.isAccessibilitySize
+                                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                                : AnyLayout(HStackLayout())
+                            sourceToolsLayout {
+                                ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
+                                if !effectiveTypeSize.isAccessibilitySize { Spacer() }
+                                Button("Expand original", systemImage: "arrow.up.left.and.arrow.down.right") { editing = nil; expanded = true }
+                                    .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
+                                    .accessibilityIdentifier("expandFocusedOriginal")
                             }
-                        }.accessibilityIdentifier("focusedReadText")
+                            Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
+                                .buttonStyle(ReceiptSecondaryStyle()).disabled(rereadFields.isEmpty).accessibilityIdentifier("focusedReread")
+                            if rereadFields.isEmpty {
+                                Text("Choose an existing line or add a purchase above, then reread its amount or description.")
+                                    .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("focusedChooseLineHint")
+                            }
+                            if sources.count > 1, case .source = check.target {
+                                HStack {
+                                    Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
+                                    Spacer()
+                                    Text("\(sourceIndex + 1) of \(sources.count)").monospacedDigit()
+                                    Spacer()
+                                    Button("Next row") { sourceIndex += 1 }.disabled(sourceIndex == sources.count - 1)
+                                }.frame(minHeight: 44).buttonStyle(.borderless)
+                            }
+                        } else { Text("Original unavailable. Close this check and reopen the receipt.") }
+                    } header: { Text("Original comparison") }
+                    footer: {
+                        Text(boxes.isEmpty ? "No position is available for this check. Compare the full original." : "Compare the photo; read text may contain errors.").font(.footnote)
                     }
-                }
-                Section {
-                    if isSourceGroup {
-                        Toggle("I checked all \(sources.count) source rows", isOn: $groupChecked).tint(.green).accessibilityIdentifier("focusedGroupChecked")
+                    switch check.target {
+                    case .receipt:
+                        Section {
+                            TextField("Merchant", text: field(\.merchant)).focused($editing, equals: "merchant").accessibilityIdentifier("focusedMerchant")
+                            Picker("Currency", selection: field(\.currency)) {
+                                Text("Choose currency").tag("")
+                                ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
+                            }
+                            if let context = input.currencyContextMessage { Text(context).font(.footnote).foregroundStyle(.secondary) }
+                        } header: { Text("Receipt details") }
+                    case .date:
+                        Section {
+                            Text(input.date.isEmpty ? "Date not confirmed" : "Current: " + input.date)
+                            DatePicker("Printed purchase date", selection: $purchaseDate, displayedComponents: .date)
+                                .environment(\.calendar, ReceiptDateSelection.calendar())
+                            Button("Use selected date") { input.date = ReceiptDateSelection.text(purchaseDate) }.accessibilityIdentifier("focusedUseDate")
+                            Button("Leave date unknown") { input.date = "" }
+                        }
+                    case .subtotal, .total:
+                        Section {
+                            LabeledContent("Printed subtotal") { TextField("Missing", text: field(\.subtotal)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "subtotal").accessibilityIdentifier("focusedSubtotal") }
+                            if input.subtotal.isEmpty { Toggle("Subtotal is not printed", isOn: $input.subtotalNotPrinted).tint(.green) }
+                            LabeledContent("Printed total") { TextField("Missing", text: field(\.total)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "total").accessibilityIdentifier("focusedTotal") }
+                            if let difference = input.reconciliation.difference {
+                                Text("Difference: " + ExactInput.format(difference, scale: ExactInput.currency(input.currency)?.minorUnitScale ?? 2))
+                            }
+                            Text("For a difference, check purchases and adjustments in the full review. Do not change a correct total just to make it match.").font(.footnote)
+                        } header: { Text("Printed totals") }
+                    case .line, .source:
+                        if lineID != nil {
+                            Section {
+                                LabeledContent("Line amount") { TextField("Missing", text: lineField(\.amount)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "lineAmount").accessibilityIdentifier("focusedLineAmount") }
+                                TextField("Printed description", text: lineField(\.name), axis: .vertical).focused($editing, equals: "lineName").accessibilityIdentifier("focusedLineName")
+                                Picker("Type", selection: lineField(\.kind)) {
+                                    ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
+                                }
+                                if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
+                                    LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
+                                    if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }
+                                    if let marker = input.lines[index].taxMarker { LabeledContent("Printed tax marker", value: marker) }
+                                    LabeledContent("Unit") {
+                                        TextField("", text: Binding(get: { input.lines[index].unit ?? "" }, set: { input.lines[index].unit = $0.nilIfEmpty }), prompt: Text("Unknown"))
+                                            .focused($editing, equals: "unit").accessibilityIdentifier("focusedUnit")
+                                    }
+                                    LabeledContent("Unit price") {
+                                        TextField("", text: Binding(get: { input.lines[index].editableUnitPrice }, set: { input.lines[index].unitPriceText = $0 }), prompt: Text("Unknown"))
+                                            .keyboardType(.numbersAndPunctuation).focused($editing, equals: "unitPrice")
+                                            .accessibilityIdentifier("focusedUnitPrice")
+                                    }
+                                    Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
+                                } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {
+                                    LabeledContent("Printed rate", value: ExactInput.quantity(rate))
+                                }
+                            } header: { Text("Focused line") }
+                        }
                     }
-                    if let error { Label(error, systemImage: "exclamationmark.circle").accessibilityIdentifier("focusedError") }
-                    if detailLine != nil {
-                        Text("Saving a changed line marks this receipt as a draft for review.").font(.footnote)
-                        if let message = workspace.errorMessage { Text(message).font(.footnote) }
-                    } else { Text("Applying keeps only your explicit edits. This check does not confirm the entire receipt; Finish still requires full original review and matching totals.").font(.footnote) }
+                    if let assistance = currentAssistance {
+                        Section("Reread used for this value") {
+                            LabeledContent(assistance.field.title, value: assistance.value)
+                            Text("The highlight shows the area you reread. Initial OCR remains unchanged.").font(.footnote)
+                        }.accessibilityIdentifier("focusedRereadEvidence")
+                    }
+                    if let currentSource {
+                        Section {
+                            DisclosureGroup("Initial read text", isExpanded: $showReadText) {
+                                if case .source = check.target {
+                                    Text(currentSource.text).font(.callout).textSelection(.enabled)
+                                } else {
+                                    ForEach(sources) { source in Text(source.text).font(.callout).textSelection(.enabled) }
+                                }
+                            }.accessibilityIdentifier("focusedReadText")
+                        }
+                    }
+                    Section {
+                        if isSourceGroup {
+                            Toggle("I checked all \(sources.count) source rows", isOn: $groupChecked).tint(.green).accessibilityIdentifier("focusedGroupChecked")
+                        }
+                        if let error { Label(error, systemImage: "exclamationmark.circle").accessibilityIdentifier("focusedError") }
+                        if detailLine != nil {
+                            Text("Saving a changed line marks this receipt as a draft for review.").font(.footnote)
+                            if let message = workspace.errorMessage { Text(message).font(.footnote) }
+                        } else { Text("Applying keeps only your explicit edits. This check does not confirm the entire receipt; Finish still requires full original review and matching totals.").font(.footnote) }
+                    }
                 }
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
                 .contentMargins(.bottom, 28, for: .scrollContent)

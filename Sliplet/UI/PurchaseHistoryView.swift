@@ -12,10 +12,13 @@ struct PurchaseHistoryView: View {
                 let entries = PurchaseHistoryEntry.entries(for: endpoint, in: workspace.receipts)
                 List {
                     Section {
-                        Text("Find other purchases of this item. Confirm product and pack details against the originals.")
-                            .font(.subheadline)
-                        Text("Amounts are for the printed line. Quantity, discounts and tax can change what you paid.")
-                            .font(.footnote).foregroundStyle(.secondary)
+                        Text("\(entries.count) other \(entries.count == 1 ? "purchase" : "purchases")")
+                            .font(.headline).accessibilityIdentifier("purchaseHistoryCount")
+                        Text("Newest first within each match group.").font(.caption).foregroundStyle(.secondary)
+                        DisclosureGroup("About matches and amounts") {
+                            Text("Possible matches are suggestions, not confirmed products. Compare the originals before linking purchases.")
+                            Text("Amounts are printed line totals, not unit prices. Quantity, discounts and tax can change what you paid.")
+                        }.font(.subheadline)
                     }
                     if entries.isEmpty {
                         ContentUnavailableView("No other purchases found", systemImage: "clock",
@@ -51,7 +54,7 @@ private struct PurchaseHistoryRow: View {
             Text(record.current.fields.merchant ?? "Merchant missing")
             Text(ExactInput.dateText(record.current.fields.purchaseDate).nilIfEmpty ?? "Date missing")
                 .font(.subheadline)
-            Text(line.amount.map { "\($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" }
+            Text(line.amount.map { "Line total · \($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" }
                  ?? "Amount missing").monospacedDigit()
             if record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
             if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle").font(.caption) }
@@ -98,17 +101,21 @@ private struct PurchaseComparisonView: View {
                             Text("Different").tag(PurchaseLinkDecision.Pack.different)
                         }.accessibilityIdentifier("purchasePack")
                         Button("Confirm same product") { save(a, b, verdict: .sameProduct) }
+                            .buttonStyle(ReceiptProminentStyle())
                             .accessibilityIdentifier("confirmPurchaseLink")
                         Button("Different products") { save(a, b, verdict: .differentProduct) }
+                            .buttonStyle(ReceiptSecondaryStyle())
                             .accessibilityIdentifier("rejectPurchaseLink")
-                        if previous.contains(where: { $0.connects(first, second) }) {
-                            Button("Undo match decision", role: .destructive) { save(a, b, verdict: nil) }
-                                .accessibilityIdentifier("undoPurchaseLink")
-                        }
                         if workspace.saving { ProgressView("Saving decision") }
                         if let error { Text(error).foregroundStyle(.red).accessibilityIdentifier("purchaseLinkError") }
                     } header: { Text("Product match") }
                     footer: { Text("Confirming links these two purchases. It does not establish a price change.") }
+                    if previous.contains(where: { $0.connects(first, second) }) {
+                        Section("Saved decision") {
+                            Button("Undo match decision", role: .destructive) { save(a, b, verdict: nil) }
+                                .accessibilityIdentifier("undoPurchaseLink")
+                        }
+                    }
                     Section {
                         NavigationLink("Compare unit prices") {
                             PurchasePriceView(workspace: workspace, first: first, second: second)

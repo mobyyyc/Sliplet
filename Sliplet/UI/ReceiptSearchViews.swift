@@ -46,6 +46,24 @@ struct ReceiptSearchDetailView: View {
 
 struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
+    private var hasFilters: Bool {
+        workspace.collection != "All receipts" || workspace.includeArchived || workspace.merchantFilter != .all || workspace.monthFilter != .all
+    }
+    private var filterSummary: String {
+        var parts = [workspace.collection]
+        if workspace.collection != "Archive" { parts.append(workspace.includeArchived ? "Including archived" : "Active only") }
+        switch workspace.merchantFilter {
+        case .all: break
+        case .missing: parts.append("Merchant missing")
+        case .value(let value): parts.append(value)
+        }
+        switch workspace.monthFilter {
+        case .all: break
+        case .missing: parts.append("Date missing")
+        case .value(let value): parts.append(ReceiptHistory.monthTitle(value))
+        }
+        return parts.joined(separator: " · ")
+    }
     private var results: [ReceiptSearchIndex.Result] {
         workspace.searchIndex.results(query: workspace.searchQuery, collection: workspace.collection,
             includeArchived: workspace.includeArchived, merchant: workspace.merchantFilter, month: workspace.monthFilter)
@@ -55,70 +73,96 @@ struct ReceiptPurchaseHistoryView: View {
     var body: some View {
         let found = results
         let groups = Dictionary(grouping: found) { ReceiptHistory.monthKey($0.record) ?? "" }
-        List {
-            Section {
-                Picker("Collection", selection: $workspace.collection) {
-                    Text("All receipts").tag("All receipts"); Text("Starred").tag("Starred"); Text("Archive").tag("Archive")
-                }.accessibilityIdentifier("collectionPicker")
-                Picker("Store", selection: $workspace.merchantFilter) {
-                    Text("All stores").tag(ReceiptHistoryChoice.all)
-                    ForEach(merchants, id: \.self) { Text($0).tag(ReceiptHistoryChoice.value($0)) }
-                    if workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { Text("Merchant missing").tag(ReceiptHistoryChoice.missing) }
-                }.accessibilityIdentifier("searchMerchantFilter")
-                Picker("Month", selection: $workspace.monthFilter) {
-                    Text("All months").tag(ReceiptHistoryChoice.all)
-                    ForEach(months, id: \.self) { Text(ReceiptHistory.monthTitle($0)).tag(ReceiptHistoryChoice.value($0)) }
-                    if workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { Text("Date missing").tag(ReceiptHistoryChoice.missing) }
-                }.accessibilityIdentifier("searchMonthFilter")
-                if workspace.collection != "Archive" {
-                    Toggle("Include archived", isOn: $workspace.includeArchived).tint(.green).accessibilityIdentifier("searchIncludeArchived")
-                }
-                if workspace.merchantFilter != .all || workspace.monthFilter != .all {
-                    Button("Clear filters") { workspace.merchantFilter = .all; workspace.monthFilter = .all }
-                        .accessibilityIdentifier("searchClearFilters")
-                }
-            }
-            Section {
-                Text("\(found.count) \(found.count == 1 ? "receipt" : "receipts")")
-                    .font(.subheadline).accessibilityIdentifier("searchResultCount")
-                if found.isEmpty {
-                    ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matching purchases",
-                        systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
-                        description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : "Try another word, SKU or filter. Archive is searchable separately."))
-                }
-            }
-            ForEach(groups.keys.sorted(by: >), id: \.self) { key in
+        ScrollViewReader { proxy in
+            List {
                 Section {
-                    ForEach(groups[key] ?? []) { result in
-                        Button { workspace.open(result.record) } label: {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ReceiptSummary(record: result.record)
-                                if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
-                            }.padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                        }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchReceipt-" + result.id.uuidString)
-                        ForEach(result.matches) { match in
-                            Button { workspace.open(result.record, match: match) } label: {
-                                ReceiptSearchMatchLabel(match: match, record: result.record, compact: true)
-                                    .padding(.vertical, 6).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                            }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchMatch-" + match.id)
+                    Button {
+                        workspace.searchFiltersExpanded.toggle()
+                    } label: {
+                        HStack {
+                            Label("Filters", systemImage: "line.3.horizontal.decrease")
+                            Spacer()
+                            Image(systemName: workspace.searchFiltersExpanded ? "chevron.up" : "chevron.down")
+                        }.contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("searchFilters")
+                        .accessibilityValue(workspace.searchFiltersExpanded ? "Expanded" : "Collapsed")
+                    if workspace.searchFiltersExpanded {
+                        Picker("Collection", selection: $workspace.collection) {
+                            Text("All receipts").tag("All receipts"); Text("Starred").tag("Starred"); Text("Archive").tag("Archive")
+                        }.accessibilityIdentifier("collectionPicker")
+                        Picker("Store", selection: $workspace.merchantFilter) {
+                            Text("All stores").tag(ReceiptHistoryChoice.all)
+                            ForEach(merchants, id: \.self) { Text($0).tag(ReceiptHistoryChoice.value($0)) }
+                            if workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { Text("Merchant missing").tag(ReceiptHistoryChoice.missing) }
+                        }.accessibilityIdentifier("searchMerchantFilter")
+                        Picker("Month", selection: $workspace.monthFilter) {
+                            Text("All months").tag(ReceiptHistoryChoice.all)
+                            ForEach(months, id: \.self) { Text(ReceiptHistory.monthTitle($0)).tag(ReceiptHistoryChoice.value($0)) }
+                            if workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { Text("Date missing").tag(ReceiptHistoryChoice.missing) }
+                        }.accessibilityIdentifier("searchMonthFilter")
+                        if workspace.collection != "Archive" {
+                            Toggle("Include archived", isOn: $workspace.includeArchived).tint(.green).accessibilityIdentifier("searchIncludeArchived")
                         }
                     }
-                } header: { Text(ReceiptHistory.monthTitle(key.isEmpty ? nil : key)).foregroundStyle(Color(uiColor: .label)) }
+                    Text(filterSummary).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("searchFilterSummary")
+                    if hasFilters {
+                        Button("Reset filters") {
+                            workspace.collection = "All receipts"; workspace.includeArchived = false
+                            workspace.merchantFilter = .all; workspace.monthFilter = .all
+                        }.accessibilityIdentifier("searchClearFilters")
+                    }
+                }
+                Section {
+                    Text("\(found.count) \(found.count == 1 ? "receipt" : "receipts")")
+                        .font(.subheadline).accessibilityIdentifier("searchResultCount")
+                    if found.isEmpty {
+                        ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matching purchases",
+                            systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
+                            description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : "Try another word, SKU or filter. Archive is searchable separately."))
+                    }
+                }
+                ForEach(groups.keys.sorted(by: >), id: \.self) { key in
+                    Section {
+                        ForEach(groups[key] ?? []) { result in
+                            Button { workspace.searchReturnID = "receipt-" + result.id.uuidString; workspace.open(result.record) } label: {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ReceiptSummary(record: result.record)
+                                    if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
+                                }.padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                            }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchReceipt-" + result.id.uuidString).id("receipt-" + result.id.uuidString)
+                            ForEach(result.matches) { match in
+                                Button { workspace.searchReturnID = "match-" + match.id; workspace.open(result.record, match: match) } label: {
+                                    ReceiptSearchMatchLabel(match: match, record: result.record, compact: true)
+                                        .padding(.vertical, 6).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                                }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchMatch-" + match.id).id("match-" + match.id)
+                            }
+                        }
+                    } header: { Text(ReceiptHistory.monthTitle(key.isEmpty ? nil : key)).foregroundStyle(Color(uiColor: .label)) }
+                }
             }
-        }
-        .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or SKU")
-        .autocorrectionDisabled()
-        .scrollDismissesKeyboard(.interactively)
-        .scrollEdgeEffectStyle(.soft, for: .vertical)
-        .accessibilityIdentifier("receiptLibrary")
-        // Reset only stale filters after a committed edit/deletion. Never replace a missing civil date.
-        .onChange(of: merchants) { _, values in
-            if case .value(let selected) = workspace.merchantFilter, !values.contains(selected) { workspace.merchantFilter = .all }
-            if workspace.merchantFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { workspace.merchantFilter = .all }
-        }
-        .onChange(of: months) { _, values in
-            if case .value(let selected) = workspace.monthFilter, !values.contains(selected) { workspace.monthFilter = .all }
-            if workspace.monthFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { workspace.monthFilter = .all }
+            .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or SKU")
+            .autocorrectionDisabled()
+            .scrollDismissesKeyboard(.interactively)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
+            .accessibilityIdentifier("receiptLibrary")
+            .onAppear {
+                if let id = workspace.searchReturnID { proxy.scrollTo(id, anchor: .center) }
+            }
+            .onChange(of: workspace.searchQuery) { _, _ in workspace.searchReturnID = nil }
+            .onChange(of: workspace.collection) { _, _ in workspace.searchReturnID = nil }
+            .onChange(of: workspace.includeArchived) { _, _ in workspace.searchReturnID = nil }
+            .onChange(of: workspace.merchantFilter) { _, _ in workspace.searchReturnID = nil }
+            .onChange(of: workspace.monthFilter) { _, _ in workspace.searchReturnID = nil }
+            // Reset only stale filters after a committed edit/deletion. Never replace a missing civil date.
+            .onChange(of: merchants) { _, values in
+                if case .value(let selected) = workspace.merchantFilter, !values.contains(selected) { workspace.merchantFilter = .all }
+                if workspace.merchantFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { workspace.merchantFilter = .all }
+            }
+            .onChange(of: months) { _, values in
+                if case .value(let selected) = workspace.monthFilter, !values.contains(selected) { workspace.monthFilter = .all }
+                if workspace.monthFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { workspace.monthFilter = .all }
+            }
         }
     }
 }

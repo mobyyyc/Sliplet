@@ -188,12 +188,14 @@ extension ReceiptUploadUITests {
         let id = row.identifier
         let original = row.label
         row.tap()
+        app.buttons["editSavedLine"].tap()
         let quantity = app.textFields["focusedQuantity"]
         reveal(quantity, in: app)
         quantity.tap(); quantity.typeText("7")
         app.buttons["cancelFocusedCorrection"].tap()
         XCTAssertEqual(reader.buttons[id].label, original)
         reader.buttons[id].tap()
+        app.buttons["editSavedLine"].tap()
         reveal(quantity, in: app)
         quantity.tap(); quantity.typeText("7")
         let save = app.buttons["applyFocusedCorrection"]

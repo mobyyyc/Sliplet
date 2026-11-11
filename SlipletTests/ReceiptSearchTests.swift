@@ -152,9 +152,11 @@ enum SearchFixture {
         let workspace = ReceiptWorkspace(directory: dir, keyProvider: SearchFixture.Key())
         workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
         workspace.searchQuery = "milk"; workspace.includeArchived = true; workspace.library = true
+        workspace.searchFiltersExpanded = true; workspace.searchReturnID = "fictional-return"
         let result = try XCTUnwrap(workspace.searchIndex.results(query: workspace.searchQuery).first)
         workspace.open(result.record, match: result.matches[0]); try await wait { workspace.image != nil }
         workspace.suspend()
+        XCTAssertFalse(workspace.searchFiltersExpanded); XCTAssertNil(workspace.searchReturnID)
         XCTAssertEqual(workspace.searchQuery, ""); XCTAssertNil(workspace.searchMatch); XCTAssertEqual(workspace.searchIndex.count, 0)
         XCTAssertTrue(workspace.receipts.isEmpty); XCTAssertNil(workspace.selected); XCTAssertFalse(workspace.includeArchived)
         XCTAssertTrue(workspace.searchIndex.results(query: "milk").isEmpty)

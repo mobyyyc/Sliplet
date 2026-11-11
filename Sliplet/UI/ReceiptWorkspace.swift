@@ -23,6 +23,8 @@ final class ReceiptWorkspace {
     private(set) var orderedReceipts: [ReceiptRecord] = []
     private(set) var walletReceipts: [ReceiptRecord] = []
     var searchQuery = ""
+    var searchFiltersExpanded = false
+    var searchReturnID: String?
     var includeArchived = false
     var searchMatch: ReceiptSearchIndex.Match?
     var selected: ReceiptRecord?
@@ -159,6 +161,7 @@ final class ReceiptWorkspace {
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         searchQuery = ""; searchMatch = nil; includeArchived = false
+        searchFiltersExpanded = false; searchReturnID = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
