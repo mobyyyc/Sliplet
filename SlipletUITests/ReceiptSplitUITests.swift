@@ -56,7 +56,7 @@ import XCTest
         for name in names { XCTAssertTrue(app.buttons["splitItem-\(index)"].label.contains(name)) }
     }
     func testNativeAssignFinalizeCopyShareRestartEditAndWalletReturn() throws {
-        let app = launch(); XCTAssertFalse(app.buttons["splitFinalize"].isEnabled)
+        let app = launch(); XCTAssertFalse(app.buttons["splitFinalize"].exists)
         addPeople(app)
         assign(app, index: 0, names: ["Alex"]); assign(app, index: 1, names: ["Blair", "Casey"])
         let policy = app.buttons["splitAdjustment-0"]; reveal(policy, app: app); policy.tap()
@@ -95,7 +95,7 @@ import XCTest
         XCTAssertTrue(app.buttons["splitDone"].waitForExistence(timeout: 10))
         app.buttons["splitDone"].tap(); XCTAssertTrue(app.buttons["Discard choices"].waitForExistence(timeout: 5)); app.buttons["Discard choices"].tap()
         openSplit(app); XCTAssertFalse(app.staticTexts["Alex"].exists)
-        app.buttons["splitSave"].tap()
+        XCTAssertFalse(app.buttons["splitSave"].exists)
         app.terminate()
     }
 
@@ -234,6 +234,10 @@ import XCTest
 extension ReceiptSplitUITests {
     func testBulkSelectionCancelUndoSharingAndSavedColors() {
         let app = launch()
+        XCTAssertTrue(app.buttons["splitAddPerson"].isHittable)
+        XCTAssertEqual(app.buttons["splitAddPerson"].label, "Add person")
+        XCTAssertFalse(app.buttons["splitItem-0"].exists)
+        capture(app, "Split-first-person")
         app.buttons["splitAddPerson"].tap()
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         let first = app.buttons["splitItem-0"], second = app.buttons["splitItem-1"]
@@ -251,8 +255,7 @@ extension ReceiptSplitUITests {
         app.buttons["splitBatchApply"].tap()
         app.buttons["splitAddPerson"].tap()
         reveal(second, app: app); second.tap()
-        app.buttons["splitPerson-1"].tap()
-        XCTAssertTrue(app.buttons["Discard selection"].waitForExistence(timeout: 5)); app.buttons["Discard selection"].tap()
+        XCTAssertFalse(app.buttons["splitPerson-1"].exists)
         app.buttons["splitBatchCancel"].tap()
         app.buttons["splitPerson-2"].tap()
         app.buttons["splitEditPerson"].tap()
@@ -293,15 +296,17 @@ extension ReceiptSplitUITests {
         app.swipeDown()
         XCTAssertTrue(count.waitForExistence(timeout: 5))
         app.buttons["splitBatchApply"].tap()
-        app.buttons["splitPeopleMenu"].tap(); app.buttons["splitPerson-1"].tap()
-        capture(app, "P1105-large-text-assignment")
+        let person = app.buttons["splitPerson-1"]
+        reveal(person, app: app); person.tap()
+        XCTAssertTrue(app.navigationBars["Assign items"].waitForExistence(timeout: 5))
+        capture(app, "Split-large-text-assignment")
         let edit = app.buttons["splitEditPerson"]; reveal(edit, app: app); edit.tap()
         let remove = app.buttons["splitRemovePerson"]
         reveal(remove, app: app); remove.tap()
         app.buttons.matching(identifier: "splitConfirmRemoval").firstMatch.tap()
         XCTAssertTrue(app.buttons["splitAddPerson"].waitForExistence(timeout: 5))
         app.buttons["splitAddPerson"].tap()
-        XCTAssertTrue(app.buttons["splitPeopleMenu"].label.contains("Person 2"))
+        XCTAssertEqual(app.staticTexts["splitActivePerson"].label, "Person 2")
         let empty = app.staticTexts["0 selected · 0 shared"]
         for _ in 0..<8 {
             if empty.exists && empty.isHittable { break }
@@ -315,18 +320,12 @@ extension ReceiptSplitUITests {
 }
 
 extension ReceiptSplitUITests {
-    func testPendingSelectionRequiresDecisionBeforeSwitchAndClose() {
+    func testPendingSelectionRequiresDecisionBeforeClose() {
         let app = launch()
         app.buttons["splitAddPerson"].tap()
         let item = app.buttons["splitItem-0"]; reveal(item, app: app); item.tap()
-        app.buttons["splitAddPerson"].tap()
-        XCTAssertTrue(app.buttons["Apply and continue"].waitForExistence(timeout: 5))
-        app.buttons["Apply and continue"].tap()
-        XCTAssertTrue(app.buttons["splitPerson-2"].waitForExistence(timeout: 5))
-        reveal(item, app: app); XCTAssertTrue(item.label.contains("Person 1")); item.tap()
+        XCTAssertFalse(app.buttons["splitAddPerson"].exists)
         app.buttons["splitDone"].tap()
-        XCTAssertTrue(app.buttons["Discard selection"].waitForExistence(timeout: 5))
-        app.buttons["Discard selection"].tap()
         XCTAssertTrue(app.buttons["Discard choices"].waitForExistence(timeout: 5))
         app.buttons["Discard choices"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 5))

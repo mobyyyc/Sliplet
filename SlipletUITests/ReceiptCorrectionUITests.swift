@@ -164,7 +164,7 @@ import XCTest
             app.buttons["saveDraft"].tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
             app.buttons["splitOpen"].tap()
             XCTAssertTrue(app.staticTexts["Receipt needs review. Finish its corrections first."].waitForExistence(timeout: 5))
-            XCTAssertFalse(app.buttons["splitFinalize"].isEnabled, "Drafts cannot finalize a split")
+            XCTAssertFalse(app.buttons["splitFinalize"].exists, "An empty split on a draft cannot finalize")
             app.buttons["splitDone"].tap()
             XCTAssertTrue(app.buttons["splitDone"].waitForNonExistence(timeout: 5))
             XCTAssertTrue(app.buttons["edit"].isEnabled)

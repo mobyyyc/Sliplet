@@ -90,3 +90,10 @@ U05 and U06 are addressed: compact expandable filters with scope/reset, return t
 U07 and the remaining price eligibility portion of U08 are addressed. Match status appears before receipt evidence. The unit-price entry explains missing product or pack confirmation, review, currency compatibility or source values before opening setup. Saved results show both normalized unit prices and the tax basis immediately, with explicit Edit, Cancel and Clear actions. Line totals and printed unit prices have separate labels. The existing exact calculations and verification gates remain in effect.
 
 Six unit checks passed, including saved verification persistence, reversal and clearing. One optional private fixture was absent. Two fictional Simulator journeys passed across focused runs: saved comparison preview, save, view, edit, cancel and clear, and match confirmation, source inspection, undo and return position. Phone and manual VoiceOver acceptance remain P11-08.
+
+
+## P11-08 split redesign · November 11, 2026
+
+The owner found the pinned people strip confusing during the phone walkthrough. The overview now begins with a People section and a labeled Add person row. Adding a person opens a focused item assignment view. Apply items or Cancel returns to the overview, and closing with unsaved work offers a single discard prompt. Color, optional names, equal sharing, explicit allocation review and exact finalization remain available.
+
+Four fictional Simulator journeys passed across the redesign checks: bulk selection and saved colors, maximum text size and removal, finalize/share/restart and unsaved dismissal. The final summary and badge polish passed another maximum text size run. Owner acceptance of the revised split remains pending.
