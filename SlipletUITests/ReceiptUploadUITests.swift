@@ -225,8 +225,14 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(purchase.label.contains("Taxed"))
         XCTAssertFalse(app.staticTexts["Discounts to review"].exists)
         let subtotal = reader.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Subtotal'")).firstMatch
-        XCTAssertLessThan(row("-0.20").frame.minY, subtotal.frame.minY)
-        XCTAssertGreaterThan(row("-0.50").frame.minY, subtotal.frame.minY)
+        let loyalty = row("-0.50"), unassigned = row("-0.20"), tax = row("0.63")
+        XCTAssertTrue(unassigned.label.contains("Unassigned discount"))
+        XCTAssertGreaterThan(loyalty.frame.minY, subtotal.frame.minY)
+        XCTAssertGreaterThan(unassigned.frame.minY, loyalty.frame.minY)
+        XCTAssertGreaterThan(tax.frame.minY, unassigned.frame.minY)
+        let summarySpacing = unassigned.frame.midY - loyalty.frame.midY
+        XCTAssertEqual(tax.frame.midY - unassigned.frame.midY, summarySpacing, accuracy: 1)
+        XCTAssertEqual(loyalty.frame.midY - subtotal.frame.midY, summarySpacing, accuracy: 1)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Receipt hierarchy " + appearance
         screenshot.lifetime = .keepAlways

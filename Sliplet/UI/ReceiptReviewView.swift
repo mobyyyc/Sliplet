@@ -370,7 +370,7 @@ struct ReceiptPaper: View {
                 unassigned.append(discount)
             }
         }
-        return VStack(alignment: .leading, spacing: 18) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Text(fields.merchant ?? "Merchant missing").font(.title2.weight(.semibold)).accessibilityIdentifier("receiptPaperMerchant")
                 Spacer(minLength: 0)
@@ -379,19 +379,24 @@ struct ReceiptPaper: View {
             Text("\(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing") · \(fields.currency?.code ?? "Currency missing")").font(.subheadline).receiptPaperSecondaryInk()
             Divider()
             Text("Items").font(.headline)
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(fields.items) { item in
                     itemGroup(item, discounts: linked[item.id, default: []])
                         .id(item.id)
                 }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
-            adjustmentRows(unassigned)
             Divider()
-            amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
-            adjustmentRows(basket)
-            adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
-            adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
+            VStack(alignment: .leading, spacing: detailSpacing) {
+                amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
+                    .fontWeight(.semibold)
+                    .frame(minHeight: 44)
+                adjustmentRows(basket)
+                adjustmentRows(unassigned, title: "Unassigned discount")
+                adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
+                adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
+            }
+            .font(.subheadline)
             Divider()
             amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
         }.fontDesign(.monospaced).padding(24).frame(maxWidth: .infinity, alignment: .leading)
@@ -399,6 +404,9 @@ struct ReceiptPaper: View {
     private func itemGroup(_ item: ReceiptLine, discounts: [ReceiptAdjustment]) -> some View {
         let compact = !discounts.isEmpty && !typeSize.isAccessibilitySize
         let details = itemDetail(item)
+        let isTaxed = item.taxMarker.map {
+            taxedMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+        } ?? false
         return VStack(alignment: .leading, spacing: detailSpacing) {
             editableRow(item.id, compact: compact) {
                 VStack(alignment: .leading, spacing: detailSpacing) {
@@ -406,6 +414,7 @@ struct ReceiptPaper: View {
                         Text(item.paperName)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
+                        if isTaxed { taxBadge }
                         itemPrice(item.amount, lineID: item.id)
                     }
                     if !details.isEmpty {
@@ -441,11 +450,17 @@ struct ReceiptPaper: View {
             values.append("Quantity " + ExactInput.quantity(quantity) + unit)
         }
         if let price = item.unitPrice { values.append(money(price) + "/" + item.paperPriceUnit) }
-        if let marker = item.taxMarker?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(),
-           taxedMarkers.contains(marker) {
-            values.append("Taxed")
-        }
         return values.joined(separator: " · ")
+    }
+
+    private var taxBadge: some View {
+        Text("T")
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
+            .receiptPaperSecondaryInk()
+            .accessibilityLabel("Taxed")
     }
 
     private func itemPrice(_ amount: ReceiptMoney?, lineID: UUID) -> some View {
@@ -453,10 +468,10 @@ struct ReceiptPaper: View {
             .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
     }
 
-    private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
+    private func adjustmentRows(_ adjustments: [ReceiptAdjustment], title: String? = nil) -> some View {
         ForEach(adjustments) { adjustment in
             editableRow(adjustment.id) {
-                amountRow(adjustmentTitle(adjustment), adjustment.amount,
+                amountRow(title ?? adjustmentTitle(adjustment), adjustment.amount,
                           raw: input?.lines.first { $0.id == adjustment.id }?.amount, secondary: true)
             }
         }
@@ -496,11 +511,14 @@ struct ReceiptPaper: View {
         }
     }
     private func amountRow(_ name: String, _ value: ReceiptMoney?, raw: String? = nil, secondary: Bool = false) -> some View {
-        LabeledContent {
-            Text(money(value, raw: raw)).monospacedDigit().receiptPaperSecondaryInk(secondary)
-        } label: {
-            Text(name).receiptPaperSecondaryInk(secondary)
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(name)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Text(money(value, raw: raw))
+                .monospacedDigit().lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
         }
+        .receiptPaperSecondaryInk(secondary)
         .accessibilityElement(children: .combine)
     }
 }
