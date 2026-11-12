@@ -103,3 +103,7 @@ Four fictional Simulator journeys passed across the redesign checks: bulk select
 Reviewed the UI sources for gesture recognizers, transitions, control styles and UIKit wrappers. Receipt cards in the wallet and rows in the library now use SwiftUI swipe actions. The wallet uses the iOS 27 swipe container to coordinate reveal and dismissal. Receipt identity keys the projected stack as cards move or leave it. Swipe left reveals Delete with confirmation and swipe right reveals Archive, or Unarchive in the archive. A long reverse swipe can reveal the opposite side. A short swipe reveals the action. A full swipe invokes it directly, including the existing confirmation for Delete.
 
 The People form uses native swipe actions. Search, forms, pickers, menus, sheets, alerts and sharing use platform controls. Photo and backup selection use system pickers, the camera uses AVFoundation, and the original viewer uses UIKit scrolling and zoom. SwiftUI composes the wallet artwork, the paper lift and the import transitions. Crop and cover editing use UIKit gestures with Sliplet’s receipt-specific handles and selection rules.
+
+## P11-08 phone checkpoint · November 12, 2026
+
+The owner passed the receipt swipe and split walkthrough on the installed iPhone build at `ee768b6`. The next phone check is search return, repeat-purchase history and undo, and unit prices when an eligible pair is available. Record unavailable cases as skipped.
