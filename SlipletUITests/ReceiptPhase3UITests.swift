@@ -19,19 +19,20 @@ import XCTest
         }
         XCTAssertTrue(element.isHittable)
     }
-    func testReverseSwipeClosesRevealedActionBeforeOppositeAction() {
+    func testNativeReverseSwipeRevealsOppositeActionWithoutExecuting() {
         let app = launch(); let card = app.buttons["receipt-0"]
         XCTAssertTrue(card.waitForExistence(timeout: 30)); let center = card.frame.midX
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
         let action = app.buttons["swipeAction-receipt-0"]
-        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertEqual(action.label, "Archive")
-        capture(app, "left-action")
+        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.40, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
-        XCTAssertTrue(action.waitForNonExistence(timeout: 5), "Reversing the current gesture closes; it must not expose Star")
+        let archive = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label BEGINSWITH 'Archive'"), object: action)
+        XCTAssertEqual(XCTWaiter.wait(for: [archive], timeout: 5), .completed)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["1 saved"].exists)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
         XCTAssertEqual(card.frame.midX, center, accuracy: 2)
-        capture(app, "reverse-centered")
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.20, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.78, dy: 0.14)))
-        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertEqual(action.label, "Star")
         app.terminate()
     }
     func testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard() {
@@ -68,22 +69,17 @@ import XCTest
         app.buttons["Discard changes"].tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 5))
         app.terminate()
     }
-    func testRevealedActionClosesEvenWhenOppositeSwipeIsDisabled() {
-        let app = launch(); XCTAssertTrue(app.buttons["receipt-0"].waitForExistence(timeout: 30))
-        app.buttons["walletSettings"].tap()
-        let setting = app.buttons["rightSwipeSetting"]
-        for _ in 0..<8 {
-            if setting.exists && setting.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(setting.isHittable)
-        setting.tap(); app.buttons["None"].tap(); app.buttons["Done"].tap()
-        let card = app.buttons["receipt-0"], action = app.buttons["swipeAction-receipt-0"]
-        let center = card.frame.midX
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
+    func testVerticalScrollDismissesNativeReceiptSwipe() {
+        let app = launch("many")
+        let card = app.buttons["receipt-0"]
+        XCTAssertTrue(card.waitForExistence(timeout: 30))
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14))
+            .press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
+        let action = app.buttons["swipeAction-receipt-0"]
         XCTAssertTrue(action.waitForExistence(timeout: 5))
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
-        XCTAssertTrue(action.waitForNonExistence(timeout: 5)); XCTAssertEqual(card.frame.midX, center, accuracy: 2)
+        app.swipeUp()
+        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.alerts.firstMatch.exists)
         app.terminate()
     }
     func testLargeDarkReviewActionsFitAndStorageCopyMatchesBackups() {

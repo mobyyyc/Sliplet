@@ -60,23 +60,6 @@ import CryptoKit
         XCTAssertEqual(model.flow, .detail); XCTAssertEqual(model.selected, record)
         XCTAssertEqual(model.selected?.splitPlan?.finalizedRevision, record.current.id)
     }
-    func testReverseSwipeIsContinuousClosesAtCenterAndHonorsDisabledActions() {
-        for start: CGFloat in [-108, 108] {
-            var previous = start
-            for step in 0...300 {
-                let translation = CGFloat(step) * (start < 0 ? 1 : -1)
-                let next = ReceiptSwipeGeometry.offset(start: start, translation: translation, leftEnabled: false, rightEnabled: false)
-                XCTAssertLessThanOrEqual(abs(next - previous), 1)
-                XCTAssertTrue(start < 0 ? next <= 0 : next >= 0)
-                previous = next
-            }
-            XCTAssertEqual(previous, 0); XCTAssertEqual(ReceiptSwipeGeometry.settled(previous), 0)
-        }
-        XCTAssertEqual(ReceiptSwipeGeometry.offset(start: 0, translation: -100, leftEnabled: false, rightEnabled: true), 0)
-        XCTAssertEqual(ReceiptSwipeGeometry.offset(start: 0, translation: 100, leftEnabled: true, rightEnabled: false), 0)
-        XCTAssertEqual(ReceiptSwipeGeometry.settled(-70), -108)
-        XCTAssertEqual(ReceiptSwipeGeometry.settled(30), 0)
-    }
     func testIncrementalSearchKeepsEvidenceAndMetadataWithoutRetokenizingTheWallet() {
         var records = (0..<500).map { _ in SearchFixture.record() }
         var index = ReceiptSearchIndex(records)

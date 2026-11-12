@@ -97,3 +97,9 @@ Six unit checks passed, including saved verification persistence, reversal and c
 The owner found the pinned people strip confusing during the phone walkthrough. The overview now begins with a People section and a labeled Add person row. Adding a person opens a focused item assignment view. Apply items or Cancel returns to the overview, and closing with unsaved work offers a single discard prompt. Color, optional names, equal sharing, explicit allocation review and exact finalization remain available.
 
 Four fictional Simulator journeys passed across the redesign checks: bulk selection and saved colors, maximum text size and removal, finalize/share/restart and unsaved dismissal. The final summary and badge polish passed another maximum text size run. Owner acceptance of the revised split remains pending.
+
+## P11-08 native controls review · November 12, 2026
+
+Reviewed the UI sources for gesture recognizers, transitions, control styles and UIKit wrappers. Receipt cards in the wallet and rows in the library now use SwiftUI swipe actions. The wallet uses the iOS 27 swipe container to coordinate reveal and dismissal. Receipt identity keys the projected stack as cards move or leave it. Swipe left reveals Delete with confirmation and swipe right reveals Archive, or Unarchive in the archive. A long reverse swipe can reveal the opposite side. Both receipt actions require a tap.
+
+The People form uses native swipe actions. Search, forms, pickers, menus, sheets, alerts and sharing use platform controls. Photo and backup selection use system pickers, the camera uses AVFoundation, and the original viewer uses UIKit scrolling and zoom. SwiftUI composes the wallet artwork, the paper lift and the import transitions. Crop and cover editing use UIKit gestures with Sliplet’s receipt-specific handles and selection rules.

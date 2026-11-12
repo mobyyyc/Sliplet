@@ -173,6 +173,7 @@ struct ReceiptWalletScene: View {
                                 endBounce = reduceMotion ? 0 : pull
                             }
                     }
+                    .swipeActionsContainer()
                     .onChange(of: jumpToNewest) { _, _ in
                         withAnimation(motion) { proxy.scrollTo("walletEnd", anchor: .bottom) }
                     }
@@ -321,8 +322,7 @@ struct ReceiptWalletScene: View {
         let baseY = stackSceneY ?? stackTop(in: geometry)
         let visible = curve.visibleIndices(baseY: baseY, count: snapshot.count, endPull: endBounce)
         return ZStack(alignment: .topLeading) {
-            ForEach(visible, id: \.self) { index in
-                let record = snapshot[index]
+            ForEach(visible.map { (index: $0, record: snapshot[$0]) }, id: \.record.id) { index, record in
                 let y = curve.displayedPosition(baseY + CGFloat(index) * ReceiptStackProjection.pitch, endPull: endBounce)
                 card(record, index: index, geometry: geometry)
                     .frame(height: ReceiptStackProjection.paperHeight)
@@ -342,16 +342,15 @@ struct ReceiptWalletScene: View {
         .padding(.horizontal, 10)
     }
     private func card(_ record: ReceiptRecord, index: Int, geometry: GeometryProxy) -> some View {
-        return ReceiptSwipePaper(record: record, settings: workspace.walletSettings, revealedID: $revealedID, identifier: "receipt-\(index)") {
-            if revealedID != nil { withAnimation(motion) { revealedID = nil } }
-            else {
-                // Freeze the screen rectangle before navigation changes native insets.
-                preparePresentation(record, geometry: geometry)
-                workspace.open(record)
-            }
+        return ReceiptSwipePaper(record: record, identifier: "receipt-\(index)") {
+            // Freeze the screen rectangle before navigation changes native insets.
+            preparePresentation(record, geometry: geometry)
+            workspace.open(record)
         } perform: { action in
-            withAnimation(motion) { revealedID = nil }
             if action == .delete { requestDelete(record) } else { workspace.organize(record, action: action) }
+        } onPresentationChanged: { isPresented in
+            if isPresented { revealedID = record.id }
+            else if revealedID == record.id { revealedID = nil }
         }
         .allowsHitTesting(presented == nil)
     }
@@ -742,71 +741,23 @@ struct ReceiptPaperBackground: View {
 
 private struct ReceiptSwipePaper: View {
     let record: ReceiptRecord
-    let settings: ReceiptWalletSettings
-    @Binding var revealedID: UUID?
     let identifier: String
     var open: () -> Void
     var perform: (ReceiptWalletAction) -> Void
-    @Environment(\.dynamicTypeSize) private var typeSize
-    @Environment(\.accessibilityReduceMotion) private var systemMotion
-    @State private var offset: CGFloat = 0
-    @State private var horizontal = false
-    @State private var gestureStart: CGFloat = 0
-    private var action: ReceiptWalletAction { offset < 0 ? settings.leftSwipe : settings.rightSwipe }
-    private var animation: Animation { ReceiptAccessibility.reduceMotion(systemMotion) ? .easeOut(duration: 0.1) : .spring(response: 0.32, dampingFraction: 0.88) }
+    var onPresentationChanged: (Bool) -> Void
+
     var body: some View {
-        ZStack(alignment: offset < 0 ? .topTrailing : .topLeading) {
-            if revealedID == record.id, action != .none {
-                let distance = abs(offset)
-                let progress = min(1, distance / 108)
-                Button { perform(action) } label: {
-                    VStack(spacing: 7) { Image(systemName: action.symbol).font(.title3); Text(action.title(for: record)).font(.caption.weight(.semibold)) }
-                        .frame(width: 84, height: typeSize.isAccessibilitySize ? 100 : 78)
-                        .scaleEffect(0.65 + 0.35 * progress)
-                        .opacity(progress)
-                        .frame(width: max(1, distance - 12), height: 44 + 38 * progress)
-                        .clipped()
-                        .glassEffect(action == .delete ? .regular.tint(.red).interactive() : .regular.interactive(), in: .rect(cornerRadius: 18))
-                }.buttonStyle(.plain)
-                    .accessibilityLabel(action.title(for: record))
-                    .accessibilityIdentifier("swipeAction-\(identifier)")
-                    .allowsHitTesting(!horizontal && distance >= 56)
-                    .padding(.top, 24)
-            }
+        Button(action: open) {
             ReceiptPreviewSurface(record: record)
                 .contentShape(ReceiptPaperEdge())
-                .onTapGesture(perform: open)
-                .accessibilityElement(children: .ignore)
-                .accessibilityAddTraits(.isButton)
-                .accessibilityAction { open() }
-                .accessibilityLabel(summary)
-                .accessibilityHint(revealedID == record.id ? "Closes the swipe action" : "Expands receipt. Swipe left or right for actions.")
-                .accessibilityIdentifier(identifier)
-                .gesture(ReceiptHorizontalPan { translation, phase in
-                    if phase == .began { gestureStart = revealedID == record.id ? offset : 0; horizontal = true }
-                    if phase == .began || phase == .changed {
-                        offset = ReceiptSwipeGeometry.offset(start: gestureStart, translation: translation,
-                            leftEnabled: settings.leftSwipe != .none, rightEnabled: settings.rightSwipe != .none)
-                        if offset != 0 { revealedID = record.id }
-                    } else {
-                        let destination = phase == .cancelled ? gestureStart : ReceiptSwipeGeometry.settled(offset)
-                        withAnimation(animation) {
-                            offset = destination; revealedID = destination == 0 ? nil : record.id
-                        }
-                        horizontal = false
-                    }
-                })
-                .accessibilityRepresentation {
-                    Button(action: open) { Text(summary) }
-                        .accessibilityIdentifier(identifier)
-                        .accessibilityHint(revealedID == record.id ? "Closes the swipe action" : "Expands receipt. Swipe left or right for actions.")
-                        .accessibilityAction(named: Text(record.isStarred ? "Unstar" : "Star")) { perform(.star) }
-                        .accessibilityAction(named: Text(record.isArchived ? "Unarchive" : "Archive")) { perform(.archive) }
-                        .accessibilityAction(named: Text("Delete")) { perform(.delete) }
-                }
-                .offset(x: revealedID == record.id || horizontal ? offset : 0)
         }
-        .onChange(of: revealedID) { _, next in if next != record.id { withAnimation(animation) { offset = 0 } } }
+        .buttonStyle(.plain)
+        .accessibilityLabel(summary)
+        .accessibilityHint("Opens receipt")
+        .accessibilityIdentifier(identifier)
+        .accessibilityAction(named: Text(record.isStarred ? "Unstar" : "Star")) { perform(.star) }
+        .receiptSwipeActions(record, identifier: identifier, perform: perform,
+                             onPresentationChanged: onPresentationChanged)
     }
     private var summary: String {
         [record.current.fields.merchant ?? "Merchant missing", ExactInput.dateText(record.current.fields.purchaseDate),
@@ -915,10 +866,10 @@ struct ReceiptWalletSettingsView: View {
                         ForEach(ReceiptPaperAppearance.allCases) { Text($0.title).tag($0) }
                     }.accessibilityIdentifier("paperAppearanceSetting")
                 } header: { Text("Appearance") } footer: { Text("Keep receipts white, or let the paper follow Light and Dark Mode.") }
-                Section {
-                    actionPicker("Swipe left", left: true).accessibilityIdentifier("leftSwipeSetting")
-                    actionPicker("Swipe right", left: false).accessibilityIdentifier("rightSwipeSetting")
-                } header: { Text("Receipt actions") } footer: { Text("Swipe to reveal an action, then tap it. Delete always asks for confirmation.") }
+                Section("Receipt actions") {
+                    LabeledContent("Swipe left", value: "Delete")
+                    LabeledContent("Swipe right", value: "Archive")
+                }
                 if let notice = workspace.notice { Section { Text(notice) } }
             }
             .navigationTitle("Settings").navigationBarTitleDisplayMode(.inline)
@@ -928,42 +879,22 @@ struct ReceiptWalletSettingsView: View {
             .sheet(item: $backupMode, onDismiss: { workspace.cancelBackup() }) { mode in ReceiptBackupView(workspace: workspace, mode: mode) }
             .onChange(of: workspace.active) { _, active in if !active { backupMode = nil } }
     }
-    private func actionPicker(_ label: String, left: Bool) -> some View {
-        Picker(label, selection: Binding(get: { left ? workspace.walletSettings.leftSwipe : workspace.walletSettings.rightSwipe }, set: { action in
-            var settings = workspace.walletSettings
-            if left { settings.leftSwipe = action } else { settings.rightSwipe = action }
-            workspace.setWalletSettings(settings)
-        })) { ForEach(ReceiptWalletAction.allCases) { Text($0.title).tag($0) } }
-    }
 }
 
-/// Reject vertical pans before recognition so the surrounding ScrollView keeps its native gesture.
-private struct ReceiptHorizontalPan: UIGestureRecognizerRepresentable {
-    enum Phase { case began, changed, ended, cancelled }
-    var change: (CGFloat, Phase) -> Void
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator { Coordinator() }
-    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
-        let gesture = UIPanGestureRecognizer()
-        gesture.maximumNumberOfTouches = 1
-        gesture.delegate = context.coordinator
-        return gesture
-    }
-    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
-        switch recognizer.state {
-        case .began: change(recognizer.translation(in: recognizer.view).x, .began)
-        case .changed: change(recognizer.translation(in: recognizer.view).x, .changed)
-        case .ended: change(recognizer.translation(in: recognizer.view).x, .ended)
-        case .cancelled, .failed: change(0, .cancelled)
-        default: break
-        }
-    }
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return false }
-            let velocity = pan.velocity(in: pan.view)
-            return abs(velocity.x) > abs(velocity.y) * 1.35
-        }
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool { true }
+extension View {
+    func receiptSwipeActions(_ record: ReceiptRecord, identifier: String,
+                             perform: @escaping (ReceiptWalletAction) -> Void,
+                             onPresentationChanged: @escaping (Bool) -> Void = { _ in }) -> some View {
+        self
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button("Delete", systemImage: "trash") { perform(.delete) }
+                    .tint(.red).accessibilityLabel("Delete").accessibilityIdentifier("swipeAction-\(identifier)")
+            } onPresentationChanged: { onPresentationChanged($0) }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                Button(record.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox") { perform(.archive) }
+                    .tint(.blue).accessibilityLabel(record.isArchived ? "Unarchive" : "Archive")
+                    .accessibilityIdentifier("swipeAction-\(identifier)")
+            } onPresentationChanged: { onPresentationChanged($0) }
     }
 }
 

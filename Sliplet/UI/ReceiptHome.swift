@@ -363,7 +363,9 @@ struct ReceiptHome: View {
     private var wallet: some View {
         Group {
             if workspace.library && workspace.flow == .wallet {
-                ReceiptLibraryView(workspace: workspace)
+                ReceiptPurchaseHistoryView(workspace: workspace) { record in
+                    deleteTarget = record; delete = true
+                }
             } else if workspace.library {
                 ReceiptSearchDetailView(workspace: workspace)
             } else {
@@ -443,9 +445,4 @@ struct ReceiptSummary: View {
             }
         }.foregroundStyle(.primary).accessibilityElement(children: .combine)
     }
-}
-
-struct ReceiptLibraryView: View {
-    @Bindable var workspace: ReceiptWorkspace
-    var body: some View { ReceiptPurchaseHistoryView(workspace: workspace) }
 }

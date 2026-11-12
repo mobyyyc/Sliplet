@@ -346,7 +346,7 @@ import Vision
         }
         app.terminate()
     }
-    func testReducedMotionPreservesScrolledWalletAndClosesReverseSwipe() {
+    func testReducedMotionPreservesScrolledWalletAndDismissesSwipe() {
         let app = launch("many", extra: ["--t05-reduce-motion"])
         app.buttons["latestReceipt"].tap()
         let paper = app.buttons["receipt-29"]
@@ -360,30 +360,11 @@ import Vision
         swipeHeader(paper, left: true)
         let action = app.buttons["swipeAction-receipt-29"]
         XCTAssertTrue(action.waitForExistence(timeout: 5))
-        paper.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.14))
-            .press(forDuration: 0.05, thenDragTo: paper.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: paper.frame.midY / app.frame.height)).tap()
         XCTAssertTrue(action.waitForNonExistence(timeout: 5))
         XCTAssertEqual(paper.frame.minX, origin.minX, accuracy: 2)
         XCTAssertEqual(paper.frame.minY, origin.minY, accuracy: 2)
         app.terminate()
-    }
-    func testReversingSwipeRestoresPaperAcrossWalletSizes() {
-        for mode in ["one", "wallet", "many"] {
-            let app = launch(mode)
-            let paper = app.buttons["receipt-0"]
-            let action = app.buttons["swipeAction-receipt-0"]
-            XCTAssertTrue(paper.waitForExistence(timeout: 10))
-            let position = paper.frame.origin
-            swipeHeader(paper, left: true)
-            XCTAssertTrue(action.waitForExistence(timeout: 5))
-            XCTAssertEqual(action.label, "Archive")
-            paper.coordinate(withNormalizedOffset: CGVector(dx: 0.4, dy: 0.14))
-                .press(forDuration: 0.05, thenDragTo: paper.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
-            XCTAssertTrue(action.waitForNonExistence(timeout: 5))
-            XCTAssertEqual(paper.frame.minX, position.x, accuracy: 2)
-            XCTAssertEqual(paper.frame.minY, position.y, accuracy: 2)
-            app.terminate()
-        }
     }
     func testShortStackReturnsTuckedWithoutCorrectiveSwipe() throws {
         for mode in ["one", "two", "wallet"] {
@@ -610,55 +591,54 @@ import Vision
         }
         app.terminate()
     }
-    func testRevealStarArchiveRestoreAndPersistence() {
+    func testNativeArchiveSwipeRestoresFromArchiveAfterRestart() {
         let app = launch()
         let oldest = app.buttons["receipt-0"]
         XCTAssertTrue(oldest.waitForExistence(timeout: 30))
         swipeHeader(oldest, left: false)
-        let star = app.buttons["swipeAction-receipt-0"]
-        XCTAssertTrue(star.waitForExistence(timeout: 5)); XCTAssertEqual(star.label, "Star")
-        XCTAssertTrue(star.isHittable)
-        XCTAssertGreaterThanOrEqual(star.frame.width, 44)
-        XCTAssertLessThan(star.frame.maxX, oldest.frame.minX, "Glass action must fit entirely beside the shifted paper")
-        XCTAssertFalse(oldest.label.contains("Starred"), "Swiping must not execute the action")
-        capture(app, "Revealed-star")
-        star.tap(); XCTAssertTrue(oldest.label.contains("Starred"))
-        swipeHeader(oldest, left: true)
         let archive = app.buttons["swipeAction-receipt-0"]
-        XCTAssertTrue(archive.waitForExistence(timeout: 5)); XCTAssertEqual(archive.label, "Archive")
+        XCTAssertTrue(archive.waitForExistence(timeout: 5))
+        XCTAssertTrue(archive.label.hasPrefix("Archive"))
         XCTAssertTrue(archive.isHittable)
-        XCTAssertGreaterThan(archive.frame.minX, oldest.frame.maxX, "Left swipe must expose the entire action")
-        archive.tap(); XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15))
-        app.terminate(); app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]; app.launch()
+        XCTAssertTrue(app.staticTexts["3 saved"].exists)
+        capture(app, "Native-archive-swipe")
+        archive.tap()
+        XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15))
+        app.terminate()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]
+        app.launch()
         XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 30))
-        app.buttons["walletSettings"].tap(); app.buttons["openArchive"].tap()
-        XCTAssertTrue(app.buttons["walletTab"].waitForExistence(timeout: 10))
-        let archived = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "SYNTHETIC STORE")).firstMatch
-        XCTAssertTrue(archived.waitForExistence(timeout: 10)); archived.tap()
-        XCTAssertTrue(app.buttons["original"].waitForExistence(timeout: 15))
-        app.buttons["receiptOptions"].tap(); app.buttons["Unarchive receipt"].tap()
-        XCTAssertTrue(app.buttons["walletTab"].waitForExistence(timeout: 10)); app.buttons["walletTab"].tap()
+        app.buttons["walletSettings"].tap()
+        app.buttons["openArchive"].tap()
+        let archived = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchReceipt-'")).firstMatch
+        XCTAssertTrue(archived.waitForExistence(timeout: 10))
+        archived.swipeRight()
+        let unarchive = app.buttons["swipeAction-" + archived.identifier]
+        XCTAssertTrue(unarchive.waitForExistence(timeout: 5))
+        XCTAssertTrue(unarchive.label.hasPrefix("Unarchive"))
+        unarchive.tap()
+        XCTAssertTrue(app.staticTexts["0 receipts"].waitForExistence(timeout: 10))
+        app.buttons["walletTab"].tap()
         XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.buttons["receipt-0"].label.contains("Starred"))
         app.terminate()
     }
-    func testConfigurableDeleteSwipeRequiresTapAndConfirmation() {
+
+    func testNativeDeleteSwipeRequiresTapAndConfirmation() {
         let app = launch()
-        app.buttons["walletSettings"].tap()
-        app.buttons["leftSwipeSetting"].tap(); app.buttons["Delete"].tap()
-        app.buttons["Done"].tap()
         let card = app.buttons["receipt-0"]
         swipeHeader(card, left: true)
         let action = app.buttons["swipeAction-receipt-0"]
-        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertEqual(action.label, "Delete")
+        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
         XCTAssertFalse(app.alerts.firstMatch.exists); action.tap()
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
         XCTAssertTrue(app.staticTexts["3 saved"].exists)
-        app.terminate(); app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]; app.launch()
-        XCTAssertTrue(card.waitForExistence(timeout: 30)); swipeHeader(card, left: true)
-        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertEqual(action.label, "Delete")
+        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+        swipeHeader(card, left: true)
+        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
         action.tap(); app.buttons["Delete receipt and original"].tap()
-        XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15)); app.terminate()
+        XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15))
+        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+        app.terminate()
     }
     func testManyReceiptsAndAccessibleMotionFallback() {
         let app = launch("many")

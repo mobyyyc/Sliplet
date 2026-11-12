@@ -46,6 +46,7 @@ struct ReceiptSearchDetailView: View {
 
 struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
+    var requestDelete: (ReceiptRecord) -> Void
     private var hasFilters: Bool {
         workspace.collection != "All receipts" || workspace.includeArchived || workspace.merchantFilter != .all || workspace.monthFilter != .all
     }
@@ -131,6 +132,10 @@ struct ReceiptPurchaseHistoryView: View {
                                     if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
                                 }.padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                             }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchReceipt-" + result.id.uuidString).id("receipt-" + result.id.uuidString)
+                            .receiptSwipeActions(result.record, identifier: "searchReceipt-" + result.id.uuidString) { action in
+                                if action == .delete { requestDelete(result.record) }
+                                else { workspace.organize(result.record, action: action) }
+                            }
                             ForEach(result.matches) { match in
                                 Button { workspace.searchReturnID = "match-" + match.id; workspace.open(result.record, match: match) } label: {
                                     ReceiptSearchMatchLabel(match: match, record: result.record, compact: true)
