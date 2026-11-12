@@ -27,6 +27,14 @@ import CryptoKit
                 }
                 d.subtotal = "27.12"; d.total = "27.75"
             }
+            if ProcessInfo.processInfo.arguments.contains("--discount-layout-fixture") {
+                d.merchant = "COSTCO"
+                d.lines[0].sku = "81234"
+                d.lines.append(.init(id: UUID(), kind: "discount", name: "910001 / 81234", quantity: "", amount: "-1.00", sourceLineIDs: []))
+                d.lines.append(.init(id: UUID(), kind: "discount", name: "FICTIONAL COUPON", quantity: "", amount: "-0.20", sourceLineIDs: []))
+                d.lines.append(.init(id: UUID(), kind: "discount", name: "FICTIONAL LOYALTY SAVINGS", quantity: "", amount: "-0.50", sourceLineIDs: [], discountScope: .subtotal))
+                d.total = "13.93"
+            }
             let content = [d.merchant, d.date + " CAD"] + d.lines.map { $0.name + " " + $0.amount }
                 + ["SUBTOTAL " + d.subtotal, "TOTAL " + d.total, "FICTIONAL TEST — NOT A PURCHASE"]
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true

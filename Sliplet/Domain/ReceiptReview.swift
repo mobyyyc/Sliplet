@@ -64,7 +64,8 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
         lines = parsed.lines.map {
             EditableReceiptLine(id: $0.id, kind: $0.kind, name: $0.description,
                 quantity: ExactInput.quantity($0.quantity), amount: ExactInput.format($0.amount), sourceLineIDs: $0.sourceLineIDs,
-                sku: $0.sku, unitPriceText: $0.unitPrice.map { ExactInput.format($0) }, taxMarker: $0.taxMarker, rate: $0.rate, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
+                sku: $0.sku, unitPriceText: $0.unitPrice.map { ExactInput.format($0) }, taxMarker: $0.taxMarker, rate: $0.rate, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                discountScope: $0.discountScope)
         }
         if useDefaultCurrency && !parsed.issues.contains(where: { $0.code == "currency_conflicting" }) { applyDefaultCurrency() }
     }

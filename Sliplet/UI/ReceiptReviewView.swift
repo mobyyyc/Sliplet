@@ -344,12 +344,26 @@ struct ReceiptPaper: View {
     }
     private var content: some View {
         let discounts = fields.adjustments.filter { $0.kind == .discount }
+        let references = discounts.contains { $0.discountScope == nil }
+            ? ReceiptDiscountReferences(merchant: fields.merchant, items: fields.items) : nil
         let itemIDs = Set(fields.items.map(\.id))
-        let unconfirmed = discounts.filter { discount in
+        var linked: [UUID: [ReceiptAdjustment]] = [:]
+        var basket: [ReceiptAdjustment] = []
+        var unassigned: [ReceiptAdjustment] = []
+        for discount in discounts {
             switch discount.discountScope {
-            case .subtotal: return false
-            case .item(let id): return !itemIDs.contains(id)
-            case nil: return true
+            case .subtotal:
+                basket.append(discount)
+            case .item(let id) where itemIDs.contains(id):
+                linked[id, default: []].append(discount)
+            case nil:
+                if let id = references?.itemID(for: discount.label) {
+                    linked[id, default: []].append(discount)
+                } else {
+                    unassigned.append(discount)
+                }
+            case .item:
+                unassigned.append(discount)
             }
         }
         return VStack(alignment: .leading, spacing: 18) {
@@ -380,24 +394,31 @@ struct ReceiptPaper: View {
                             }
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
-                            Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount))
-                                .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
+                            itemPrice(item.amount, lineID: item.id)
                         }
                         .font(.system(.subheadline, design: .monospaced))
                         .accessibilityElement(children: .combine)
                     }
                     .id(item.id)
-                    adjustmentRows(discounts.filter { $0.discountScope == .item(item.id) }, underItem: true)
+                    ForEach(linked[item.id, default: []]) { discount in
+                        editableRow(discount.id) {
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Text(adjustmentTitle(discount))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.leading, 12)
+                                itemPrice(discount.amount, lineID: discount.id)
+                            }
+                            .font(.system(.subheadline, design: .monospaced))
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
                 }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
-            if !unconfirmed.isEmpty {
-                Text("Discounts to review").font(.subheadline.weight(.semibold))
-                adjustmentRows(unconfirmed)
-            }
+            adjustmentRows(unassigned)
             Divider()
             amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
-            adjustmentRows(discounts.filter { $0.discountScope == .subtotal })
+            adjustmentRows(basket)
             adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
             adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
             Divider()
@@ -414,14 +435,17 @@ struct ReceiptPaper: View {
         return values.joined(separator: " · ")
     }
 
-    private func adjustmentRows(_ adjustments: [ReceiptAdjustment], underItem: Bool = false) -> some View {
+    private func itemPrice(_ amount: ReceiptMoney?, lineID: UUID) -> some View {
+        Text(money(amount, raw: input?.lines.first { $0.id == lineID }?.amount))
+            .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
+    }
+
+    private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
         ForEach(adjustments) { adjustment in
             editableRow(adjustment.id) {
                 amountRow(adjustmentTitle(adjustment), adjustment.amount,
                           raw: input?.lines.first { $0.id == adjustment.id }?.amount)
             }
-            .font(underItem ? .caption : .body)
-            .padding(.leading, underItem ? 12 : 0)
         }
     }
     private func adjustmentTitle(_ adjustment: ReceiptAdjustment) -> String {

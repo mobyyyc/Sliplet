@@ -18,7 +18,7 @@ enum ReceiptModelError: Error { case malformedResponse, incompleteResponse, unsu
 
 /// All model text is untrusted data. No tool execution, inferred source boxes or balancing.
 enum ReceiptModelAdapter {
-    static let version = "p8-03-layout-v3"
+    static let version = "p8-03-layout-v4"
     static let rootKeys: Set<String> = ["merchant", "date_raw", "date", "currency", "currency_raw", "subtotal", "total", "rows", "tax_legend"]
     static let rowKeys: Set<String> = ["kind", "description", "amount", "quantity", "unit", "unit_price", "raw_text", "product_code", "tax_marker", "tax_base", "tax_rate"]
     static let kinds: Set<String> = ["purchase", "return", "discount", "tax", "tip", "fee", "payment", "change", "other"]
@@ -162,6 +162,14 @@ enum ReceiptModelAdapter {
         return recover(candidate, legend: nil) ? clean : nil
     }
 
+    private static func discountLabel(in raw: String, amount: String) -> String? {
+        let tokens = ReceiptParser.monetaryTokens(raw)
+        guard tokens.count == 1, let token = tokens.first, let range = Range(token.range, in: raw),
+              let printed = ReceiptParser.printedMoney(String(raw[range])), printed < 0,
+              printed == ExactInput.money(amount) else { return nil }
+        return String(raw[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     static func decode(_ envelope: Data, provider: String, model: String) throws -> ReceiptModelReading {
         let bytes = try candidate(from: envelope)
         guard var object = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
@@ -228,6 +236,19 @@ enum ReceiptModelAdapter {
             draft.lines.append(.init(id: rowIDs[index], kind: kind == "return" ? "purchase" : (kind == "fee" ? "other" : kind), name: name,
                 quantity: quantity, amount: amount, sourceLineIDs: [], sku: row["product_code"] as? String,
                 unitPriceText: unitPrice, taxMarker: marker, rate: rate, unit: unit, discountScope: scope))
+        }
+        if draft.lines.contains(where: { $0.kind == "discount" }) {
+            let references = ReceiptDiscountReferences(merchant: draft.merchant, items: draft.fields.items)
+            let rawRows = Dictionary(uniqueKeysWithValues: zip(rowIDs, rows))
+            for index in draft.lines.indices where draft.lines[index].kind == "discount" {
+                let discount = draft.lines[index]
+                let rawLabel = (rawRows[discount.id]?["raw_text"] as? String).flatMap {
+                    discountLabel(in: $0, amount: discount.amount)
+                }
+                if let item = references.itemID(for: rawLabel) ?? references.itemID(for: discount.name) {
+                    draft.lines[index].discountScope = .item(item)
+                }
+            }
         }
         issue("model_source_review_required")
         // Preserve recognized fields before applying a visible user default; never claim CAD was read.

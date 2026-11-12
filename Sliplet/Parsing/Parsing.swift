@@ -16,6 +16,7 @@ struct ParsedReceipt: Codable, Sendable {
         var taxMarker: String? = nil
         var rate: ReceiptDecimal? = nil
         var unit: String? = nil
+        var discountScope: ReceiptDiscountScope? = nil
     }
     var merchant: String?
     var date: ReceiptDate?
@@ -37,7 +38,8 @@ struct ParsedReceipt: Codable, Sendable {
                             sourceLineIDs: $0.sourceLineIDs, unit: $0.unit)
             }, adjustments: lines.filter { $0.kind != "purchase" }.map {
                 ReceiptAdjustment(id: $0.id, kind: ReceiptAdjustment.Kind(rawValue: $0.kind) ?? .other,
-                                  label: $0.description, amount: money($0.amount), rate: $0.rate, sourceLineIDs: $0.sourceLineIDs)
+                                  label: $0.description, amount: money($0.amount), rate: $0.rate, sourceLineIDs: $0.sourceLineIDs,
+                                  discountScope: $0.discountScope)
             }, subtotal: money(subtotal), total: money(total))
     }
 }
@@ -103,7 +105,7 @@ enum ExactInput {
 }
 
 enum ReceiptParser {
-    static let version = "p7-06-weight-extensions-0.7.1"
+    static let version = "p7-06-weight-extensions-0.7.2"
     struct Row { var text: String; var ids: [UUID]; var center: Double; var height: Double; var parts: [ReceiptOCRLine] }
     static func matches(_ pattern: String, _ text: String) -> [NSTextCheckingResult] {
         (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]))?.matches(in: text, range: NSRange(text.startIndex..., in: text)) ?? []
@@ -508,6 +510,7 @@ enum ReceiptParser {
         var totalAmbiguous = false, subtotalAmbiguous = false
         var dates: [(ReceiptDate, [UUID])] = []
         var currencies: [(ReceiptCurrency, [UUID])] = []
+        var numericCostcoCoupons: Set<UUID> = []
         func issue(_ code: String, _ ids: [UUID]) { result.issues.append(.init(code: code, sourceLineIDs: ids, detail: nil)) }
         if observations.contains(where: { $0.boundingBox == nil }) {
             issue("geometry_incomplete", observations.filter { $0.boundingBox == nil }.map(\.id))
@@ -602,9 +605,10 @@ enum ReceiptParser {
             }
             // A standalone rate never supplies a purchase or a calculated extension.
             if first(#"^\d+(?:\.\d+)?\s*(?:(?:KG|LB|LBS|X)\b|@)"#, upper) != nil { pendingQuantity = row; continue }
-            // Numeric-only promotion codes stay unresolved until their printed meaning is
-            // verified; a matching product code alone does not establish an adjustment.
-            guard !prefix.isEmpty, first(#"\p{L}"#, prefix) != nil else {
+            // Costco prints coupon code / item code on signed discount rows.
+            let costcoCoupon = result.merchant == "COSTCO" && amount < 0 && tokens.count == 1
+                && ReceiptDiscountReferences.costcoItemCode(in: prefix) != nil
+            guard !prefix.isEmpty, costcoCoupon || first(#"\p{L}"#, prefix) != nil else {
                 issue("unpaired_amount", row.ids); continue
             }
             let inlineQuantity = first(quantityPattern, prefix)
@@ -642,6 +646,7 @@ enum ReceiptParser {
                 line.taxMarker = suffix.isEmpty ? nil : suffix.uppercased()
             }
             if kind == "tax" { line.rate = printedTaxRate(prefix) }
+            if costcoCoupon { numericCostcoCoupons.insert(line.id) }
             result.lines.append(line)
         }
         if let pendingQuantity { issue("quantity_association_uncertain", pendingQuantity.ids) }
@@ -661,6 +666,20 @@ enum ReceiptParser {
         }
         recoverExplicitCountExtensions(&result, rows: grouped)
         recoverWeightedExtensions(&result, rows: grouped)
+        if result.lines.contains(where: { $0.kind == "discount" }) {
+            let references = ReceiptDiscountReferences(merchant: result.merchant, items: result.fields().items)
+            var unresolved: Set<UUID> = []
+            for index in result.lines.indices where result.lines[index].kind == "discount" {
+                let discount = result.lines[index]
+                if let item = references.itemID(for: discount.description) {
+                    result.lines[index].discountScope = .item(item)
+                } else if numericCostcoCoupons.contains(discount.id) {
+                    issue("unpaired_amount", discount.sourceLineIDs)
+                    unresolved.insert(discount.id)
+                }
+            }
+            result.lines.removeAll { unresolved.contains($0.id) }
+        }
         for (missing, code) in [(result.merchant == nil, "merchant_missing"), (result.date == nil, "date_missing"), (result.currency == nil, "currency_missing"), (result.total == nil, "total_missing")] where missing { issue(code, []) }
         issue("source_review_required", observations.map(\.id))
         return result

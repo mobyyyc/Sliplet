@@ -198,6 +198,25 @@ extension ReceiptUploadUITests {
         XCTAssertLessThan(total.frame.maxY, app.buttons["edit"].frame.minY)
     }
 
+    func testSavedItemDiscountRendersDirectlyUnderItsPurchase() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "split", "--t05-light", "--discount-layout-fixture"]
+        app.launch()
+        let reader = app.scrollViews["detailScreen"]
+        func row(_ text: String) -> XCUIElement {
+            reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label CONTAINS %@", text)).firstMatch
+        }
+        let purchase = row("FICTIONAL APPLES"), discount = row("-1.00"), next = row("FICTIONAL TEA")
+        XCTAssertTrue(purchase.waitForExistence(timeout: 30))
+        XCTAssertGreaterThan(discount.frame.minY, purchase.frame.minY)
+        XCTAssertLessThan(discount.frame.minY, next.frame.minY)
+        XCTAssertEqual(discount.frame.height, purchase.frame.height, accuracy: 3)
+        XCTAssertFalse(app.staticTexts["Discounts to review"].exists)
+        let subtotal = reader.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Subtotal'")).firstMatch
+        XCTAssertLessThan(row("-0.20").frame.minY, subtotal.frame.minY)
+        XCTAssertGreaterThan(row("-0.50").frame.minY, subtotal.frame.minY)
+    }
+
     func testSavedDetailLineCancelAndSaveDraft() {
         let app = XCUIApplication()
         continueAfterFailure = false

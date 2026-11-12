@@ -90,6 +90,28 @@ import XCTest
         XCTAssertEqual(edit.fields.adjustments.map(\.discountScope), [nil, .subtotal, nil, nil])
     }
 
+    func testDiscountReferenceRecoversMissingScopeAndKeepsDuplicatesUnassigned() throws {
+        var soap = row("81234 FICTIONAL SOAP")
+        soap["product_code"] = "81234"
+        var tea = row("81235 FICTIONAL TEA")
+        tea["product_code"] = "81235"
+        var coupon = row("910001 / 0081234", amount: "-0.20")
+        coupon["kind"] = "discount"
+        coupon["description"] = "Coupon"
+        coupon["raw_text"] = "910001 / 0081234 0.20-"
+        var unknown = row("910002 / 88888", amount: "-0.10")
+        unknown["kind"] = "discount"
+        let reading = try decode(envelope(rows: [soap, tea, coupon, unknown]) { $0["merchant"] = "COSTCO" })
+        let fields = reading.draft.fields
+        XCTAssertEqual(fields.adjustments.map(\.discountScope), [.item(fields.items[0].id), nil])
+        XCTAssertEqual(fields.adjustments.compactMap(\.amount?.minorUnits), [-20, -10])
+        let repeated = try decode(envelope(rows: [soap, soap, coupon]) { $0["merchant"] = "COSTCO" })
+        XCTAssertNil(repeated.draft.fields.adjustments.first?.discountScope)
+        let generic = ReceiptDiscountReferences(merchant: "Fictional shop", items: fields.items)
+        XCTAssertNil(generic.itemID(for: "910001 / 81234"))
+        XCTAssertEqual(generic.itemID(for: "Discount for item#81234"), fields.items[0].id)
+    }
+
     func testNoFrillsCompositeTaxFlagRequiresPrintedHSTMapping() throws {
         var taxed = row("81234 FICTIONAL ITEM HMRJ")
         taxed["raw_text"] = "81234 FICTIONAL ITEM HMRJ 2.50"

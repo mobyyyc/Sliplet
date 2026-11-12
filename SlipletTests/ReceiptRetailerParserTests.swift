@@ -50,6 +50,27 @@ final class ReceiptRetailerParserTests: XCTestCase {
         XCTAssertEqual(p.lines.map(\.description), ["1234 XTRA CEREAL", "2 XMAS BREAD", "8877 KGREEN TEA"])
         XCTAssertTrue(p.lines.allSatisfy { $0.quantity == nil })
     }
+    func testCostcoSignedCouponLinksByPrintedReferenceAndKeepsItsAmount() {
+        let rows = source("""
+        COSTCO
+        CAD
+        81234 SOAP 4.00
+        81235 TEA 3.00
+        910001 / 81234 1.00-
+        910002 / 88888 0.50-
+        910003 / 81235 2.00
+        TOTAL 6.00
+        """)
+        let parsed = ReceiptParser.parse(rows)
+        let discounts = parsed.lines.filter { $0.kind == "discount" }
+        XCTAssertEqual(discounts.map(\.amount), [-100])
+        XCTAssertEqual(discounts.map(\.discountScope), [.item(parsed.lines[0].id)])
+        XCTAssertTrue(parsed.issues.contains { $0.code == "unpaired_amount" && $0.sourceLineIDs.contains(rows[5].id) })
+        XCTAssertEqual(discounts.first?.sourceLineIDs, [rows[4].id])
+        XCTAssertEqual(ReceiptReviewDraft(parsed: parsed).fields.adjustments.map(\.discountScope),
+                       [.item(parsed.lines[0].id)])
+    }
+
     func testInlineRateAndPrintedExtensionMustAgree() {
         let p = ReceiptParser.parse(source("COSTCO\nSOAP 2 X 3.50 7.00\nTOTAL 7.00"))
         XCTAssertEqual(p.lines.first?.amount, 700)
@@ -216,7 +237,7 @@ final class ReceiptRetailerParserTests: XCTestCase {
         XCTAssertNil(ReceiptParser.parse(source("COSTCO\nSOAP $4.00")).currency)
     }
     func testNumericPromotionCodeDoesNotInventAdjustmentMeaning() {
-        for text in ["999999/123456 1.00-", "999999/654321 1.00-", "999999/123456 1.00", "999999/123456 100-"] {
+        for text in ["999999/654321 1.00-", "999999/123456 1.00", "999999/123456 100-", "123456 1.00-"] {
             let parsed = ReceiptParser.parse(source("COSTCO\n123456 SOAP 4.00\n" + text))
             XCTAssertEqual(parsed.lines.count, 1)
             XCTAssertTrue(parsed.issues.contains { $0.code == "unpaired_amount" || $0.code == "amount_unparsed_check_source" || $0.code == "source_review_required" })

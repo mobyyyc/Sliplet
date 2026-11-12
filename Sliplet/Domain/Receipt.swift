@@ -179,6 +179,59 @@ struct ReceiptFields: Codable, Equatable, Sendable {
     }
 }
 
+/// Resolves explicit printed references within one receipt. A repeated code does not identify a row.
+struct ReceiptDiscountReferences {
+    private let isCostco: Bool
+    private let itemsByCode: [String: [UUID]]
+
+    init(merchant: String?, items: [ReceiptLine]) {
+        let costco = merchant?.range(of: #"(?i)^\s*COSTCO\b"#, options: .regularExpression) != nil
+        isCostco = costco
+        var codes: [String: [UUID]] = [:]
+        for item in items {
+            let printed = item.sku ?? item.description.flatMap { description in
+                if costco, let code = Self.referenceCode(in: description, pattern: #"^(?:[AEHN]\s+)?([0-9]{4,14})\s+(?=\p{L})"#) {
+                    return code
+                }
+                return ReceiptParser.printedSKU(description)
+            }
+            if let code = printed.flatMap({ Self.normalizedCode($0, costco: costco) }) {
+                codes[code, default: []].append(item.id)
+            }
+        }
+        itemsByCode = codes
+    }
+
+    func itemID(for label: String?) -> UUID? {
+        guard let label else { return nil }
+        let code = (isCostco ? Self.costcoItemCode(in: label) : nil)
+            ?? Self.referenceCode(in: label, pattern: #"(?i)\b(?:item|sku|product)(?:\s+code)?(?:\s*[:#]\s*|\s+)([A-Z0-9-]{4,24})\b"#)
+        guard let code = code.flatMap({ Self.normalizedCode($0, costco: isCostco) }),
+              let ids = itemsByCode[code], ids.count == 1 else { return nil }
+        return ids.first
+    }
+
+    static func costcoItemCode(in label: String) -> String? {
+        referenceCode(in: label, pattern: #"^\s*[0-9]{4,14}\s*/\s*([0-9]{4,14})\s*$"#)
+    }
+
+    private static func referenceCode(in text: String, pattern: String) -> String? {
+        let matches = ReceiptParser.matches(pattern, text)
+        guard matches.count == 1, let match = matches.first,
+              let range = Range(match.range(at: 1), in: text) else { return nil }
+        return String(text[range])
+    }
+
+    private static func normalizedCode(_ value: String, costco: Bool) -> String? {
+        let code = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard code.range(of: #"^[A-Z0-9-]{4,24}$"#, options: .regularExpression) != nil else { return nil }
+        if costco, code.utf8.allSatisfy({ (48...57).contains($0) }) {
+            return String(code.drop(while: { $0 == "0" })).nilIfEmpty
+        }
+        return code
+    }
+}
+
 /// Image-normalized Vision geometry; this is spatial data, never financial arithmetic.
 struct ReceiptOCRBox: Codable, Equatable, Sendable {
     let x: Double
