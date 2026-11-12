@@ -220,6 +220,8 @@ extension ReceiptUploadUITests {
         XCTAssertGreaterThan(discount.frame.minY, purchase.frame.minY)
         XCTAssertLessThan(discount.frame.minY, next.frame.minY)
         XCTAssertEqual(discount.frame.minY - purchase.frame.maxY, 4, accuracy: 1)
+        let betweenItems = next.frame.minY - discount.frame.maxY
+        XCTAssertEqual(betweenItems, 8, accuracy: 1)
         XCTAssertTrue(purchase.label.contains("Quantity 2"))
         XCTAssertTrue(purchase.label.contains("5.00/each"))
         XCTAssertTrue(purchase.label.contains("Taxed"))
@@ -233,6 +235,7 @@ extension ReceiptUploadUITests {
         let summarySpacing = unassigned.frame.midY - loyalty.frame.midY
         XCTAssertEqual(tax.frame.midY - unassigned.frame.midY, summarySpacing, accuracy: 1)
         XCTAssertEqual(loyalty.frame.midY - subtotal.frame.midY, summarySpacing, accuracy: 1)
+        XCTAssertEqual(loyalty.frame.minY - subtotal.frame.maxY, betweenItems, accuracy: 1)
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "Receipt hierarchy " + appearance
         screenshot.lifetime = .keepAlways

@@ -337,8 +337,10 @@ struct ReceiptPaper: View {
     var highlightedLineID: UUID? = nil
     var editLine: ((UUID) -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
+    private let rowSpacing: CGFloat = 8
     private let detailSpacing: CGFloat = 4
     private let detailIndent: CGFloat = 12
+    private var minimumRowHeight: CGFloat? { typeSize.isAccessibilitySize ? 44 : nil }
 
     private func money(_ value: ReceiptMoney?, raw: String? = nil) -> String {
         value.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? raw?.nilIfEmpty ?? "Missing"
@@ -379,7 +381,7 @@ struct ReceiptPaper: View {
             Text("\(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing") · \(fields.currency?.code ?? "Currency missing")").font(.subheadline).receiptPaperSecondaryInk()
             Divider()
             Text("Items").font(.headline)
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: rowSpacing) {
                 ForEach(fields.items) { item in
                     itemGroup(item, discounts: linked[item.id, default: []])
                         .id(item.id)
@@ -387,10 +389,10 @@ struct ReceiptPaper: View {
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
             Divider()
-            VStack(alignment: .leading, spacing: detailSpacing) {
+            VStack(alignment: .leading, spacing: rowSpacing) {
                 amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
                     .fontWeight(.semibold)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: minimumRowHeight)
                 adjustmentRows(basket)
                 adjustmentRows(unassigned, title: "Unassigned discount")
                 adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
@@ -402,13 +404,12 @@ struct ReceiptPaper: View {
         }.fontDesign(.monospaced).padding(24).frame(maxWidth: .infinity, alignment: .leading)
     }
     private func itemGroup(_ item: ReceiptLine, discounts: [ReceiptAdjustment]) -> some View {
-        let compact = !discounts.isEmpty && !typeSize.isAccessibilitySize
         let details = itemDetail(item)
         let isTaxed = item.taxMarker.map {
             taxedMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
         } ?? false
         return VStack(alignment: .leading, spacing: detailSpacing) {
-            editableRow(item.id, compact: compact) {
+            editableRow(item.id) {
                 VStack(alignment: .leading, spacing: detailSpacing) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(item.paperName)
@@ -427,7 +428,7 @@ struct ReceiptPaper: View {
                 .accessibilityElement(children: .combine)
             }
             ForEach(discounts) { discount in
-                editableRow(discount.id, compact: compact) {
+                editableRow(discount.id) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(adjustmentTitle(discount))
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -440,7 +441,6 @@ struct ReceiptPaper: View {
             }
         }
         .font(.system(.subheadline, design: .monospaced))
-        .frame(minHeight: 44, alignment: .topLeading)
     }
 
     private func itemDetail(_ item: ReceiptLine) -> String {
@@ -490,9 +490,8 @@ struct ReceiptPaper: View {
         }
     }
 
-    @ViewBuilder private func editableRow<Content: View>(_ id: UUID, compact: Bool = false,
-                                             @ViewBuilder content: () -> Content) -> some View {
-        let row = content().frame(maxWidth: .infinity, minHeight: compact ? nil : 44, alignment: .leading)
+    @ViewBuilder private func editableRow<Content: View>(_ id: UUID, @ViewBuilder content: () -> Content) -> some View {
+        let row = content().frame(maxWidth: .infinity, minHeight: minimumRowHeight, alignment: .leading)
         if let editLine {
             Button { editLine(id) } label: {
                 row.contentShape(Rectangle())
