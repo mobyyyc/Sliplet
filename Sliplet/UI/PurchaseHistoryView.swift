@@ -82,9 +82,7 @@ private struct PurchaseComparisonView: View {
                 let decision = PurchaseLinkEngine.decision(a, line: left.id, b, line: right.id)
                 let previous = (a.purchaseLinks?.decisions ?? []) + (b.purchaseLinks?.decisions ?? [])
                 Form {
-                    purchase(a, line: left, title: "This purchase", identifier: "historyFirst")
-                    purchase(b, line: right, title: "Other purchase", identifier: "historySecond")
-                    Section {
+                    Section("Match status") {
                         if let decision {
                             Label(decision.verdict == .sameProduct ? "Same product confirmed" : "Marked as different products",
                                   systemImage: decision.verdict == .sameProduct ? "checkmark.circle" : "minus.circle")
@@ -95,6 +93,10 @@ private struct PurchaseComparisonView: View {
                                  ? "A receipt or link changed. Compare both originals before confirming again."
                                  : "This is a possible match. Compare the descriptions, codes and pack sizes.")
                         }
+                    }
+                    purchase(a, line: left, title: "This purchase", identifier: "historyFirst")
+                    purchase(b, line: right, title: "Other purchase", identifier: "historySecond")
+                    Section {
                         Picker("Pack size or variant", selection: $pack) {
                             Text("Unknown").tag(PurchaseLinkDecision.Pack.unknown)
                             Text("Same").tag(PurchaseLinkDecision.Pack.same)
@@ -116,10 +118,20 @@ private struct PurchaseComparisonView: View {
                                 .accessibilityIdentifier("undoPurchaseLink")
                         }
                     }
-                    Section {
-                        NavigationLink("Compare unit prices") {
-                            PurchasePriceView(workspace: workspace, first: first, second: second)
-                        }.accessibilityIdentifier("compareUnitPrices")
+                    Section("Unit prices") {
+                        if let blocker = PurchasePriceComparison.setupBlocker(a, line: left, b, line: right) {
+                            Label(blocker, systemImage: "info.circle")
+                                .font(.subheadline).accessibilityIdentifier("priceSetupBlocker")
+                        } else {
+                            let saved = decision?.first.endpoint == first ? decision?.priceEvidence : decision?.priceEvidence?.reversed
+                            let result = saved.flatMap {
+                                try? PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: $0)
+                            }
+                            if let result { Label(result.summary, systemImage: "checkmark.circle") }
+                            NavigationLink(result == nil ? "Compare unit prices" : "View verified prices") {
+                                PurchasePriceView(workspace: workspace, first: first, second: second)
+                            }.accessibilityIdentifier("compareUnitPrices")
+                        }
                     }
                 }
                 .disabled(workspace.saving)
@@ -146,7 +158,7 @@ private struct PurchaseComparisonView: View {
             if let quantity = line.quantity { LabeledContent("Quantity", value: ExactInput.quantity(quantity)) }
             if let unit = line.unit { LabeledContent("Unit", value: unit) }
             if let price = line.unitPrice {
-                LabeledContent("Unit price", value: "\(price.currency.code) \(ExactInput.format(price.minorUnits, scale: price.currency.minorUnitScale))")
+                LabeledContent("Printed unit price", value: "\(price.currency.code) \(ExactInput.format(price.minorUnits, scale: price.currency.minorUnitScale))")
             }
             NavigationLink("View receipt") { PurchaseReceiptView(workspace: workspace, receiptID: record.id) }
                 .accessibilityIdentifier(identifier + "Receipt")

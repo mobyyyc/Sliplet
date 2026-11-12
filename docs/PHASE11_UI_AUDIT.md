@@ -83,3 +83,10 @@ U01/U02/U03 are addressed in the scoped implementation: immediate numbered/color
 ## P11-06 handoff · November 10, 2026
 
 U05 and U06 are addressed: compact expandable filters with scope/reset, return to the opened result, and saved-line summary/history before explicit editing. U08 decision buttons now have primary/secondary hierarchy with separate Undo; price eligibility remains P11-07. Ten unit checks and eight distinct scoped UI journeys pass. See [search/history evidence and limits](PHASE11_SEARCH_HISTORY.md). Phone and full manual VoiceOver acceptance remain P11-08.
+
+
+## P11-07 handoff · November 11, 2026
+
+U07 and the remaining price eligibility portion of U08 are addressed. Match status appears before receipt evidence. The unit-price entry explains missing product or pack confirmation, review, currency compatibility or source values before opening setup. Saved results show both normalized unit prices and the tax basis immediately, with explicit Edit, Cancel and Clear actions. Line totals and printed unit prices have separate labels. The existing exact calculations and verification gates remain in effect.
+
+Six unit checks passed, including saved verification persistence, reversal and clearing. One optional private fixture was absent. Two fictional Simulator journeys passed across focused runs: saved comparison preview, save, view, edit, cancel and clear, and match confirmation, source inspection, undo and return position. Phone and manual VoiceOver acceptance remain P11-08.

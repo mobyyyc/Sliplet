@@ -102,6 +102,31 @@ enum PurchasePriceComparison {
         }
     }
 
+    /// Explains blockers that cannot be resolved by the comparison controls.
+    static func setupBlocker(_ a: ReceiptRecord, line first: ReceiptLine,
+                             _ b: ReceiptRecord, line second: ReceiptLine) -> String? {
+        guard let decision = PurchaseLinkEngine.decision(a, line: first.id, b, line: second.id),
+              decision.verdict == .sameProduct, decision.pack == .same else {
+            return PurchasePriceError.confirmProduct.localizedDescription
+        }
+        guard ReceiptCompletion.isComplete(a), ReceiptCompletion.isComplete(b) else {
+            return PurchasePriceError.reviewReceipts.localizedDescription
+        }
+        guard a.current.fields.currency == b.current.fields.currency else {
+            return PurchasePriceError.currency.localizedDescription
+        }
+        for (line, title) in [(first, "This purchase"), (second, "Other purchase")] {
+            if (line.unitPrice?.minorUnits ?? 0) > 0 { continue }
+            guard (line.amount?.minorUnits ?? 0) > 0 else {
+                return "\(title) needs a positive line total or printed unit price."
+            }
+            guard (line.quantity?.coefficient ?? 0) > 0 else {
+                return "\(title) needs a quantity or a printed unit price."
+            }
+        }
+        return nil
+    }
+
     static func compare(_ a: ReceiptRecord, line firstID: UUID,
                         _ b: ReceiptRecord, line secondID: UUID,
                         evidence: PurchasePriceEvidence) throws -> Result {

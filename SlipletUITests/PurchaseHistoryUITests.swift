@@ -19,6 +19,15 @@ import XCTest
         XCTAssertTrue(element.isHittable)
     }
 
+    private func assertMatchStatus(_ label: String, app: XCUIApplication) {
+        let status = app.staticTexts[label]
+        for _ in 0..<8 {
+            if status.exists && status.isHittable { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(status.waitForExistence(timeout: 5))
+    }
+
     private func firstMatch(_ app: XCUIApplication) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'purchaseHistoryEntry-'")).firstMatch
     }
@@ -45,14 +54,14 @@ import XCTest
         let confirm = app.buttons["confirmPurchaseLink"]
         reveal(confirm, app: app)
         confirm.tap()
-        XCTAssertTrue(app.staticTexts["Same product confirmed"].waitForExistence(timeout: 10))
+        assertMatchStatus("Same product confirmed", app: app)
         let undo = app.buttons["undoPurchaseLink"]
         reveal(undo, app: app); undo.tap()
         XCTAssertTrue(undo.waitForNonExistence(timeout: 10))
         let reject = app.buttons["rejectPurchaseLink"]
         app.swipeDown()
         reveal(reject, app: app); reject.tap()
-        XCTAssertTrue(app.staticTexts["Marked as different products"].waitForExistence(timeout: 10))
+        assertMatchStatus("Marked as different products", app: app)
         reveal(app.buttons["undoPurchaseLink"], app: app); app.buttons["undoPurchaseLink"].tap()
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(firstMatch(app).waitForExistence(timeout: 10))
@@ -88,11 +97,23 @@ import XCTest
         screenshot.name = "Unit price comparison"; screenshot.lifetime = .keepAlways; add(screenshot)
         let save = app.buttons["savePriceEvidence"]
         reveal(save, app: app); save.tap()
-        XCTAssertTrue(app.staticTexts["Price verification saved."].waitForExistence(timeout: 10))
+        let editVerification = app.buttons["editPriceEvidence"]
+        XCTAssertTrue(editVerification.waitForExistence(timeout: 10))
+        let saved = app.staticTexts["savedUnitPriceResult"]
+        for _ in 0..<8 {
+            if saved.exists && saved.isHittable { break }
+            app.swipeDown()
+        }
+        XCTAssertEqual(saved.label, "Same unit price")
+        XCTAssertFalse(app.buttons["priceTaxBasis"].exists)
+        editVerification.tap()
+        XCTAssertTrue(app.buttons["cancelPriceEvidenceEdit"].waitForExistence(timeout: 5))
+        app.buttons["cancelPriceEvidenceEdit"].tap()
         let clear = app.buttons["clearPriceEvidence"]
         reveal(clear, app: app); clear.tap()
         XCTAssertTrue(clear.waitForNonExistence(timeout: 10))
         XCTAssertFalse(result.exists)
+        XCTAssertFalse(saved.exists)
         app.terminate()
     }
 

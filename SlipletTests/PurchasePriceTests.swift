@@ -82,6 +82,20 @@ import XCTest
         XCTAssertThrowsError(try compare(link(b, usd), evidence)) { XCTAssertEqual($0 as? PurchasePriceError, .currency) }
     }
 
+    func testSetupGuidanceNamesTheBlockedPurchaseAndAcceptsPrintedRatesWithoutQuantity() throws {
+        let a = record(amount: 500, quantity: nil, price: 500, marker: 1)
+        let b = record(amount: 500, quantity: nil, price: nil, marker: 2)
+        let c = record(amount: 500, quantity: nil, price: 500, marker: 3)
+        func blocker(_ pair: [ReceiptRecord]) -> String? {
+            PurchasePriceComparison.setupBlocker(pair[0], line: pair[0].current.fields.items[0],
+                                                 pair[1], line: pair[1].current.fields.items[0])
+        }
+        XCTAssertEqual(blocker([a, b]), PurchasePriceError.confirmProduct.localizedDescription)
+        XCTAssertEqual(blocker(link(a, b)), "Other purchase needs a quantity or a printed unit price.")
+        XCTAssertEqual(blocker(link(b, a)), "This purchase needs a quantity or a printed unit price.")
+        XCTAssertNil(blocker(link(a, c)))
+    }
+
     func testHugeValuesFailAndSeparateDiscountDoesNotChangeRowRate() throws {
         var line = record(amount: 1, quantity: nil, price: nil, marker: 1).current.fields.items[0]
         line.amount = ReceiptMoney(minorUnits: Int64.max, currency: .cad)
