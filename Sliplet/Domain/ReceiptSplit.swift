@@ -39,8 +39,6 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
     var assignments: [UUID: [UUID]] = [:]
     var policies: [SplitAdjustmentPolicy] = []
     var finalizedRevision: UUID? = nil
-    // Optional metadata keeps version-1 plans/backups readable; never reuse removed numbers.
-    var nextPersonNumber: Int? = nil
 
     func number(for person: SplitParticipant) -> Int {
         if let number = person.number { return number }
@@ -61,16 +59,16 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
             if participants[index].number == nil { participants[index].number = number(for: participants[index]) }
             if participants[index].color == nil { participants[index].color = color(for: participants[index]) }
         }
-        nextPersonNumber = max(nextPersonNumber ?? 1, (participants.compactMap(\.number).max() ?? 0) + 1)
     }
     @discardableResult mutating func addPerson() -> UUID? {
         guard participants.count < 100 else { return nil }
         materializeAppearance()
-        let number = nextPersonNumber ?? 1
-        guard number < 1_000_000 else { return nil }
+        let used = Set(participants.compactMap(\.number))
+        var number = 1
+        while used.contains(number) { number += 1 }
         let person = SplitParticipant(id: UUID(), name: "Person \(number)", number: number,
             color: SplitPersonColor.allCases[(number - 1) % SplitPersonColor.allCases.count])
-        participants.append(person); nextPersonNumber = number + 1; finalizedRevision = nil
+        participants.append(person); finalizedRevision = nil
         for i in policies.indices { policies[i].accepted = false }
         return person.id
     }
@@ -106,7 +104,6 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
     func validateStructure() throws {
         let numbers = participants.compactMap(\.number)
         guard numbers.allSatisfy({ (1..<1_000_000).contains($0) }), Set(numbers).count == numbers.count,
-              nextPersonNumber.map({ $0 > (numbers.max() ?? 0) && $0 <= 1_000_000 }) ?? true,
               version == 1, participants.count <= 100, assignments.count <= 10_000, policies.count <= 10_000,
               Set(participants.map(\.id)).count == participants.count,
               Set(policies.map(\.id)).count == policies.count,

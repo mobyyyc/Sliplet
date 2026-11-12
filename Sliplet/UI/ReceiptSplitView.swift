@@ -27,6 +27,9 @@ struct ReceiptSplitView: View {
     }
     private var record: ReceiptRecord? { workspace.selected }
     private var pristine: Bool { record?.splitPlan == plan || (record?.splitPlan == nil && plan.participants.isEmpty && plan.assignments.isEmpty && plan.policies.isEmpty) }
+    private var showsSplitDetails: Bool {
+        !plan.participants.isEmpty || undoPlan?.participants.isEmpty == false
+    }
     private var result: ReceiptSplitResult? { record.flatMap { try? ReceiptSplitEngine.compute($0, plan: plan) } }
     private var failure: String? {
         guard let record else { return "Receipt unavailable." }
@@ -71,7 +74,7 @@ struct ReceiptSplitView: View {
                         }
                     }
                 }
-                if !plan.participants.isEmpty {
+                if showsSplitDetails {
                     Section {
                         Picker("Show items", selection: $unassignedOnly) {
                             Text("All items").tag(false); Text("Unassigned").tag(true)
@@ -109,7 +112,7 @@ struct ReceiptSplitView: View {
                         Text(activePerson == nil ? "Tap a purchase to see who shares it." : "Tap the items this person will pay for. Selecting an assigned item shares it equally.")
                     }
                 }
-                if activePerson == nil, !plan.participants.isEmpty, let record, !record.current.fields.adjustments.isEmpty {
+                if activePerson == nil, showsSplitDetails, let record, !record.current.fields.adjustments.isEmpty {
                     Section {
                         ForEach(Array(record.current.fields.adjustments.enumerated()), id: \.element.id) { index, adjustment in
                             NavigationLink(value: Destination.policy(adjustment.id)) {
@@ -126,7 +129,7 @@ struct ReceiptSplitView: View {
                         Text("Confirm how each tax, discount or fee is shared before finalizing.")
                     }
                 }
-                if activePerson == nil, !plan.participants.isEmpty { Section {
+                if activePerson == nil, showsSplitDetails { Section {
                     if let result {
                         ForEach(plan.participants) { person in
                             LabeledContent(person.name) { Text(money(result.totals[person.id] ?? 0)).foregroundStyle(Color(uiColor: .label)) }.accessibilityIdentifier("splitTotal-\(person.name)")
@@ -264,9 +267,11 @@ struct ReceiptSplitView: View {
     }
     private func removePerson(_ id: UUID) {
         guard plan.participants.contains(where: { $0.id == id }) else { return }
-        let previous = plan
-        change { $0.removePerson(id) }
-        undoPlan = previous
+        var updated = plan
+        updated.removePerson(id)
+        undoPlan = plan
+        copied = false
+        plan = updated
     }
 
     private func undoBatch() {
@@ -314,7 +319,8 @@ struct ReceiptSplitView: View {
                 .accessibilityLabel("\(person.name), \(plan.color(for: person).title), \(assignmentLabel)")
                 .accessibilityHint("Assign items or edit this person")
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button("Delete", systemImage: "trash", role: .destructive) {
+                    // The model removes the row. Avoid SwiftUI's separate optimistic removal animation.
+                    Button("Delete", systemImage: "trash") {
                         removePerson(person.id)
                     }.tint(.red).accessibilityIdentifier("splitSwipeDelete")
                 }
@@ -327,7 +333,7 @@ struct ReceiptSplitView: View {
         } header: {
             Text("People")
         } footer: {
-            if plan.participants.isEmpty { Text("Add someone to choose their items. You can give them a name later.") }
+            if !showsSplitDetails { Text("Add someone to choose their items. You can give them a name later.") }
         }
     }
     private var sharedCount: Int {

@@ -306,7 +306,7 @@ extension ReceiptSplitUITests {
         app.buttons.matching(identifier: "splitConfirmRemoval").firstMatch.tap()
         XCTAssertTrue(app.buttons["splitAddPerson"].waitForExistence(timeout: 5))
         app.buttons["splitAddPerson"].tap()
-        XCTAssertEqual(app.staticTexts["splitActivePerson"].label, "Person 2")
+        XCTAssertEqual(app.staticTexts["splitActivePerson"].label, "Person 1")
         let empty = app.staticTexts["0 selected · 0 shared"]
         for _ in 0..<8 {
             if empty.exists && empty.isHittable { break }
@@ -350,6 +350,9 @@ extension ReceiptSplitUITests {
         XCTAssertTrue(person.waitForNonExistence(timeout: 5))
         XCTAssertTrue(undo.exists)
         XCTAssertTrue(app.buttons["splitSave"].isHittable)
+        app.buttons["splitAddPerson"].tap()
+        XCTAssertEqual(app.staticTexts["splitActivePerson"].label, "Person 1")
+        XCTAssertEqual(item.value as? String, "Not selected")
     }
 
     func testPendingSelectionRequiresDecisionBeforeClose() {

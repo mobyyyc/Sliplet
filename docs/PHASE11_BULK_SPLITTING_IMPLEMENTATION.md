@@ -16,7 +16,7 @@ At accessibility text sizes, a compact people menu replaces the horizontal chips
 
 ## Storage and money
 
-Version-1 plans add optional number/color metadata and an optional next-number counter. Legacy named people and IDs decode unchanged; appearance is materialized only on an actual edit, so simply opening an old plan does not dirty it. Removed numbers are not reused, including after save/reopen. A six-color palette repeats with stable numbers for larger groups. No contact permission or account is introduced.
+Version-1 plans support optional number and color metadata. Legacy names and IDs decode unchanged. Appearance is materialized on an actual edit. The next person gets the lowest unused number, including after save and reopen. Older saved plans may contain a next-number counter, which the current app ignores. A six-color palette repeats with stable numbers for larger groups. No contact permission or account is introduced.
 
 The integer split engine is unchanged. Assignment edits and participant membership changes invalidate adjustment acceptance, since the allocation recipients or weights may change. Adding a person never expands existing item owner sets. Rename/recolor leaves memberships and monetary calculations unchanged. Existing source-tax scope confirmation, reconciliation, signed/zero rows, odd-cent balancing, stale-write protection and incomplete-draft gates remain authoritative.
 

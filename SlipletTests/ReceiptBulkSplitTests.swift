@@ -2,16 +2,18 @@ import XCTest
 @testable import Sliplet
 
 final class ReceiptBulkSplitTests: XCTestCase {
-    func testLegacyDecodeAndStableNumbersAfterRemoval() throws {
+    func testLegacyDecodeReusesFreedNumberAndKeepsOtherNumbers() throws {
         let record = SplitFixture.record(amounts: [101])
         let legacy = SplitFixture.plan(record)
         let data = try JSONEncoder().encode(legacy)
-        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("nextPersonNumber"))
-        var decoded = try JSONDecoder().decode(ReceiptSplitPlan.self, from: data)
+        var oldPlan = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        oldPlan["nextPersonNumber"] = 40
+        let oldData = try JSONSerialization.data(withJSONObject: oldPlan)
+        var decoded = try JSONDecoder().decode(ReceiptSplitPlan.self, from: oldData)
         XCTAssertEqual(decoded, legacy)
         decoded.removePerson(SplitFixture.b)
         let added = try XCTUnwrap(decoded.addPerson())
-        XCTAssertEqual(decoded.participants.first(where: { $0.id == added })?.name, "Person 4")
+        XCTAssertEqual(decoded.participants.first(where: { $0.id == added })?.name, "Person 2")
         XCTAssertEqual(decoded.participants.first(where: { $0.id == SplitFixture.c })?.number, 3)
         try decoded.validateStructure()
         XCTAssertEqual(try JSONDecoder().decode(ReceiptSplitPlan.self, from: JSONEncoder().encode(decoded)), decoded)
