@@ -337,8 +337,8 @@ struct ReceiptPaper: View {
     var highlightedLineID: UUID? = nil
     var editLine: ((UUID) -> Void)?
     @Environment(\.dynamicTypeSize) private var typeSize
-    private let rowSpacing: CGFloat = 8
-    private let detailSpacing: CGFloat = 4
+    private let rowSpacing: CGFloat = 14
+    private let detailSpacing: CGFloat = 5
     private let detailIndent: CGFloat = 12
     private var minimumRowHeight: CGFloat? { typeSize.isAccessibilitySize ? 44 : nil }
 
@@ -413,6 +413,7 @@ struct ReceiptPaper: View {
                 VStack(alignment: .leading, spacing: detailSpacing) {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text(item.paperName)
+                            .fontWeight(.medium)
                             .fixedSize(horizontal: false, vertical: true)
                             .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
                         if isTaxed { taxBadge }
