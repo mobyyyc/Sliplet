@@ -425,6 +425,7 @@ private struct WalletReadingScene: View {
     var onReady: () -> Void
     private let reviewInput: ReceiptReviewDraft?
     private let contentReady: Bool
+    private let taxedMarkers: Set<String>
     @State private var retainedInput: ReceiptReviewDraft?
     @State private var fullHeight: CGFloat = 0
     let settled: Bool
@@ -440,6 +441,7 @@ private struct WalletReadingScene: View {
         self.visibleToAccessibility = visibleToAccessibility; self.onReady = onReady
         self.editLine = editLine
         reviewInput = input; self.contentReady = contentReady
+        taxedMarkers = record.original.paperTaxedMarkers
     }
     private var ready: Bool { contentReady && fullHeight > 0 && paperTop > 0 && canvasMeasured }
 
@@ -457,7 +459,7 @@ private struct WalletReadingScene: View {
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { paperTop = $0 + 12 }
                             .opacity(expanded ? 1 : 0)
                         ReceiptPaper(fields: record.current.fields, input: reviewInput ?? retainedInput,
-                                     reviewed: ReceiptCompletion.isComplete(record), editLine: editLine)
+                                     reviewed: ReceiptCompletion.isComplete(record), taxedMarkers: taxedMarkers, editLine: editLine)
                             .fixedSize(horizontal: false, vertical: true)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { fullHeight = $0 }
                             .padding(.horizontal, 30).padding(.top, 12)
@@ -482,7 +484,7 @@ private struct WalletReadingScene: View {
                 .allowsHitTesting(expanded)
                 .accessibilityIdentifier("detailScreen")
 
-                WalletMorphingPaper(reviewInput: reviewInput ?? retainedInput, record: record,
+                WalletMorphingPaper(reviewInput: reviewInput ?? retainedInput, record: record, taxedMarkers: taxedMarkers,
                                     settled: settled, progress: expanded ? 1 : 0,
                                     origin: origin,
                                     destination: CGRect(x: 30, y: paperTop + (expanded ? canvasY : returnCanvasY ?? canvasY),
@@ -523,6 +525,7 @@ private struct WalletReadingScene: View {
 private struct WalletMorphingPaper: View, Animatable {
     let reviewInput: ReceiptReviewDraft?
     let record: ReceiptRecord
+    let taxedMarkers: Set<String>
     let settled: Bool
     var progress: CGFloat
     let origin: CGRect
@@ -542,7 +545,7 @@ private struct WalletMorphingPaper: View, Animatable {
         let width = max(0, blend(start.width, destination.width))
         let height = max(0, blend(start.height, destination.height))
         return ZStack(alignment: .topLeading) {
-            WalletReadingContent(fields: record.current.fields, input: reviewInput, reviewed: ReceiptCompletion.isComplete(record)).equatable()
+            WalletReadingContent(fields: record.current.fields, input: reviewInput, reviewed: ReceiptCompletion.isComplete(record), taxedMarkers: taxedMarkers).equatable()
                 .frame(width: destination.width).fixedSize(horizontal: false, vertical: true)
                 .scaleEffect(x: destination.width > 0 ? width / destination.width : 1, y: 1, anchor: .topLeading)
                 .opacity(progress)
@@ -566,11 +569,12 @@ private struct WalletReadingContent: View, Equatable {
     let fields: ReceiptFields
     let input: ReceiptReviewDraft?
     let reviewed: Bool
+    let taxedMarkers: Set<String>
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.fields == rhs.fields && lhs.input == rhs.input && lhs.reviewed == rhs.reviewed
+        lhs.fields == rhs.fields && lhs.input == rhs.input && lhs.reviewed == rhs.reviewed && lhs.taxedMarkers == rhs.taxedMarkers
     }
     var body: some View {
-        ReceiptPaper(fields: fields, input: input, showsSurface: false, reviewed: reviewed)
+        ReceiptPaper(fields: fields, input: input, showsSurface: false, reviewed: reviewed, taxedMarkers: taxedMarkers)
     }
 }
 
@@ -845,7 +849,7 @@ struct ReceiptPreviewPaper: View, Equatable {
             VStack(alignment: .leading, spacing: 9) {
                 ForEach(fields.items.prefix(long ? 6 : 3)) { item in
                     HStack(alignment: .firstTextBaseline) {
-                        Text(item.description ?? "Description missing").lineLimit(1)
+                        Text(item.paperName).lineLimit(1)
                         Spacer(minLength: 10)
                         Text(item.amount.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? "—").monospacedDigit()
                     }.font(.system(.footnote, design: .monospaced))

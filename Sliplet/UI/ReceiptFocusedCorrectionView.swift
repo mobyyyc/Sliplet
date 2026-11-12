@@ -187,7 +187,7 @@ struct ReceiptFocusedCorrectionView: View {
                                     ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                                 }
                                 if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
-                                    LabeledContent("Quantity") { TextField("Unknown", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
+                                    LabeledContent("Quantity") { TextField("1 (default)", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
                                     if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }
                                     if let marker = input.lines[index].taxMarker { LabeledContent("Printed tax marker", value: marker) }
                                     LabeledContent("Unit") {
@@ -199,7 +199,7 @@ struct ReceiptFocusedCorrectionView: View {
                                             .keyboardType(.numbersAndPunctuation).focused($editing, equals: "unitPrice")
                                             .accessibilityIdentifier("focusedUnitPrice")
                                     }
-                                    Text("Use the printed full line amount. Unknown quantities stay blank.").font(.footnote)
+                                    Text("Use the printed line total. Enter a quantity only if it appears on the receipt.").font(.footnote)
                                 } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {
                                     LabeledContent("Printed rate", value: ExactInput.quantity(rate))
                                 }

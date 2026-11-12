@@ -183,7 +183,8 @@ private struct PurchaseReceiptView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         if record.isArchived { Label("Archived", systemImage: "archivebox") }
                         if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle") }
-                        ReceiptPaper(fields: record.current.fields, reviewed: ReceiptCompletion.isComplete(record))
+                        ReceiptPaper(fields: record.current.fields, reviewed: ReceiptCompletion.isComplete(record),
+                                     taxedMarkers: record.original.paperTaxedMarkers)
                     }.padding(24)
                 }.background { AtmosphericBackground().ignoresSafeArea() }
                 .toolbar {

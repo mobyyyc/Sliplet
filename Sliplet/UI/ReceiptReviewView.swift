@@ -28,7 +28,7 @@ struct ReceiptReviewView: View {
                             .buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("Edit receipt fields")
                             .accessibilityIdentifier("editReviewFields")
                     }
-                    ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft, editLine: { id in
+                    ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft, taxedMarkers: workspace.extraction?.paperTaxedMarkers ?? [], editLine: { id in
                         guard let line = workspace.draft.lines.first(where: { $0.id == id }) else { return }
                         focusedCheck = .forLine(line)
                     })
@@ -255,7 +255,7 @@ private struct ReceiptLineEditor: View {
                 }
                 if line.kind == "purchase" {
                     LabeledContent("Quantity") {
-                        TextField("Unknown", text: field(\.quantity)).keyboardType(.decimalPad).multilineTextAlignment(.trailing).focused(editing, equals: "quantity-\(id)")
+                        TextField("1 (default)", text: field(\.quantity)).keyboardType(.decimalPad).multilineTextAlignment(.trailing).focused(editing, equals: "quantity-\(id)")
                             .accessibilityLabel("Printed quantity").accessibilityIdentifier("lineQuantity-\(id)")
                     }
                 }
@@ -303,8 +303,8 @@ struct ReceiptPaper: View {
     var input: ReceiptReviewDraft? = nil
     var showsSurface = true
     var reviewed = false
+    var taxedMarkers: Set<String> = []
     var editLine: ((UUID) -> Void)?
-    @Environment(\.dynamicTypeSize) private var typeSize
     private func money(_ value: ReceiptMoney?, raw: String? = nil) -> String {
         value.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? raw?.nilIfEmpty ?? "Missing"
     }
@@ -326,19 +326,27 @@ struct ReceiptPaper: View {
             Text("Items").font(.headline)
             ForEach(fields.items) { item in
                 editableRow(item.id) {
-                    VStack(alignment: .leading, spacing: 5) {
-                        ViewThatFits(in: .horizontal) {
-                            HStack(alignment: .top) { Text(item.description ?? "Description missing"); Spacer(minLength: 20); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
-                            VStack(alignment: .leading, spacing: 4) { Text(item.description ?? "Description missing"); Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount)).monospacedDigit() }
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            let taxed = item.taxMarker.map {
+                                taxedMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+                            } ?? false
+                            if taxed {
+                                Text("\(item.paperName) \(Text("Taxed").font(.caption.weight(.semibold)))")
+                            } else {
+                                Text(item.paperName)
+                            }
+                            if item.quantity != nil || item.unitPrice != nil {
+                                Text(itemDetail(item)).font(.system(.caption, design: .monospaced))
+                            }
                         }
-                        Text(item.quantity.map { "Quantity \(ExactInput.quantity($0))" + (item.unit.map { " " + $0 } ?? "") } ?? "Qty unknown").font(.caption).foregroundStyle(.primary)
-                        if let price = item.unitPrice {
-                            Text("Unit price " + money(price)).font(.caption)
-                        }
-                        if let marker = item.taxMarker, !marker.isEmpty {
-                            Text("Tax marker " + marker).font(.caption)
-                        }
-                    }.accessibilityElement(children: .combine)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
+                        Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount))
+                            .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
+                    }
+                    .font(.system(.subheadline, design: .monospaced))
+                    .accessibilityElement(children: .combine)
                 }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
@@ -351,6 +359,16 @@ struct ReceiptPaper: View {
             amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
         }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
     }
+    private func itemDetail(_ item: ReceiptLine) -> String {
+        var values: [String] = []
+        if let quantity = item.quantity {
+            let unit = item.unit.map { " " + $0 } ?? ""
+            values.append("Quantity " + ExactInput.quantity(quantity) + unit)
+        }
+        if let price = item.unitPrice { values.append("Unit " + money(price)) }
+        return values.joined(separator: " · ")
+    }
+
     private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
         ForEach(adjustments) { adjustment in
             editableRow(adjustment.id) {

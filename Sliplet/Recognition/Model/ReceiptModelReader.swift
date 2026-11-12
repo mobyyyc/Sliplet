@@ -202,3 +202,53 @@ struct GeminiReceiptReader: ReceiptModelReader {
         return try ReceiptModelAdapter.decode(bytes, provider: provider, model: model)
     }
 }
+
+
+extension ReceiptExtraction {
+    /// The same receipt must explicitly define the printed marker. Unmapped codes
+    /// and bare tax totals do not establish which purchases were taxed.
+    var paperTaxedMarkers: Set<String> {
+        let candidate = modelTaxCandidate
+        let legends = rawOCR.map(\.text) + [candidate?["tax_legend"] as? String].compactMap { $0 }
+        var markers = Set<String>()
+        for line in legends {
+            for match in ReceiptModelAdapter.matches(
+                #"(?im)^[ \t]*([A-Z0-9]{1,8})[ \t]*[=:–-][ \t]*TAXED[ \t]*$"#, line
+            ) {
+                if let marker = ReceiptModelAdapter.group(match, 1, line) { markers.insert(marker.uppercased()) }
+            }
+        }
+        let taxLabels = fields.adjustments.compactMap { adjustment in
+            adjustment.kind == .tax && (adjustment.amount?.minorUnits ?? 0) > 0 ? adjustment.label : nil
+        }
+        // Model captures can have a printed tax charge before a currency is set.
+        // Require the model's literal row to corroborate both label and charge.
+        let modelTaxLabels = (candidate?["rows"] as? [[String: Any]] ?? []).compactMap { row -> String? in
+            guard row["kind"] as? String == "tax", let label = row["description"] as? String,
+                  let raw = row["raw_text"] as? String,
+                  let token = ReceiptModelAdapter.token(row["amount"] as? String),
+                  let amount = Decimal(string: token, locale: Locale(identifier: "en_US_POSIX")), amount > 0 else { return nil }
+            let labelWords = label.split(whereSeparator: \.isWhitespace)
+            let printedWords = raw.split(whereSeparator: \.isWhitespace)
+            guard !labelWords.isEmpty, printedWords.count > labelWords.count,
+                  printedWords.starts(with: labelWords),
+                  ReceiptModelAdapter.token(printedWords.last.map(String.init)).flatMap({
+                      Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX"))
+                  }) == amount else { return nil }
+            return label
+        }
+        for label in taxLabels + modelTaxLabels {
+            guard let match = ReceiptModelAdapter.matches(
+                #"(?i)^\s*([A-Z0-9]{1,8})[ \t]*[=:][ \t]*(?:GST|HST|PST|QST|VAT|SALES TAX)\b"#, label
+            ).first, let marker = ReceiptModelAdapter.group(match, 1, label) else { continue }
+            markers.insert(marker.uppercased())
+        }
+        return markers
+    }
+
+    private var modelTaxCandidate: [String: Any]? {
+        guard parser == "Sliplet image model adapter",
+              let bytes = try? ReceiptModelAdapter.candidate(from: rawParserOutput) else { return nil }
+        return (try? JSONSerialization.jsonObject(with: bytes)) as? [String: Any]
+    }
+}

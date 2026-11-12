@@ -96,6 +96,16 @@ struct ReceiptLine: Codable, Equatable, Sendable, Identifiable {
     var unitPrice: ReceiptMoney?
     var amount: ReceiptMoney?
     var taxMarker: String?
+    /// Display only. Keep the exact printed description for source checks and search.
+    var paperName: String {
+        guard let name = description?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return "Description missing" }
+        guard let code = sku?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return name }
+        let escapedCode = NSRegularExpression.escapedPattern(for: code)
+        let pattern = #"^(?:SKU\s*[:#]?\s*)?"# + escapedCode + #"\s+(?=\S)"#
+        guard let prefix = name.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else { return name }
+        return String(name[prefix.upperBound...])
+    }
+
     /// OCR line identities; optional because source linkage may be unavailable.
     var sourceLineIDs: [UUID]
     /// Literal printed measurement unit; never inferred from the item description.
