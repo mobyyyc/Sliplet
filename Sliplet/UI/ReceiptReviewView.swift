@@ -496,7 +496,10 @@ struct ReceiptPaper: View {
         if let editLine {
             Button { editLine(id) } label: {
                 row.contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityHint("Edit this line").accessibilityIdentifier("paperLine-" + id.uuidString)
+            }
+            .buttonStyle(ReceiptRowPressStyle())
+            .accessibilityHint("Edit this line")
+            .accessibilityIdentifier("paperLine-" + id.uuidString)
         } else if highlightedLineID == id {
             row
                 .background {
@@ -520,6 +523,27 @@ struct ReceiptPaper: View {
         }
         .receiptPaperSecondaryInk(secondary)
         .accessibilityElement(children: .combine)
+    }
+}
+
+private struct ReceiptRowPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(.primary.opacity(ReceiptAccessibility.contrast(contrast) == .increased ? 0.16 : 0.09))
+                    .padding(.horizontal, -8)
+                    .opacity(configuration.isPressed ? 1 : 0)
+                    .animation(
+                        configuration.isPressed || ReceiptAccessibility.reduceMotion(reduceMotion) ? nil : .easeOut(duration: 0.16),
+                        value: configuration.isPressed
+                    )
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }
 
