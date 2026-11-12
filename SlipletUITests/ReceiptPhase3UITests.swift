@@ -19,20 +19,24 @@ import XCTest
         }
         XCTAssertTrue(element.isHittable)
     }
-    func testNativeReverseSwipeRevealsOppositeActionWithoutExecuting() {
-        let app = launch(); let card = app.buttons["receipt-0"]
-        XCTAssertTrue(card.waitForExistence(timeout: 30)); let center = card.frame.midX
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
+    func testShortNativeSwipesRevealWithoutExecuting() {
+        let app = launch()
+        let card = app.buttons["receipt-0"]
+        XCTAssertTrue(card.waitForExistence(timeout: 30))
+        let center = card.frame.midX
         let action = app.buttons["swipeAction-receipt-0"]
-        XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.40, dy: 0.14)).press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.14)))
-        let archive = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label BEGINSWITH 'Archive'"), object: action)
-        XCTAssertEqual(XCTWaiter.wait(for: [archive], timeout: 5), .completed)
-        XCTAssertFalse(app.alerts.firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["1 saved"].exists)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
-        XCTAssertTrue(action.waitForNonExistence(timeout: 5))
-        XCTAssertEqual(card.frame.midX, center, accuracy: 2)
+        for (startX, endX, label) in [(0.80, 0.43, "Delete"), (0.20, 0.57, "Archive")] {
+            let start = card.coordinate(withNormalizedOffset: CGVector(dx: startX, dy: 0.14))
+            let end = card.coordinate(withNormalizedOffset: CGVector(dx: endX, dy: 0.14))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.1)
+            XCTAssertTrue(action.waitForExistence(timeout: 5))
+            XCTAssertTrue(action.label.hasPrefix(label))
+            XCTAssertFalse(app.alerts.firstMatch.exists)
+            XCTAssertTrue(app.staticTexts["1 saved"].exists)
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25)).tap()
+            XCTAssertTrue(action.waitForNonExistence(timeout: 5))
+            XCTAssertEqual(card.frame.midX, center, accuracy: 2)
+        }
         app.terminate()
     }
     func testOpeningUnchangedEditPreservesReviewAndCancelsWithoutDiscard() {
@@ -74,7 +78,8 @@ import XCTest
         let card = app.buttons["receipt-0"]
         XCTAssertTrue(card.waitForExistence(timeout: 30))
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.14))
-            .press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.14)))
+            .press(forDuration: 0.05, thenDragTo: card.coordinate(withNormalizedOffset: CGVector(dx: 0.48, dy: 0.14)),
+                   withVelocity: .slow, thenHoldForDuration: 0.1)
         let action = app.buttons["swipeAction-receipt-0"]
         XCTAssertTrue(action.waitForExistence(timeout: 5))
         app.swipeUp()

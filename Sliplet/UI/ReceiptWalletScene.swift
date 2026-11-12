@@ -886,11 +886,11 @@ extension View {
                              perform: @escaping (ReceiptWalletAction) -> Void,
                              onPresentationChanged: @escaping (Bool) -> Void = { _ in }) -> some View {
         self
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                 Button("Delete", systemImage: "trash") { perform(.delete) }
                     .tint(.red).accessibilityLabel("Delete").accessibilityIdentifier("swipeAction-\(identifier)")
             } onPresentationChanged: { onPresentationChanged($0) }
-            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
                 Button(record.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox") { perform(.archive) }
                     .tint(.blue).accessibilityLabel(record.isArchived ? "Unarchive" : "Archive")
                     .accessibilityIdentifier("swipeAction-\(identifier)")

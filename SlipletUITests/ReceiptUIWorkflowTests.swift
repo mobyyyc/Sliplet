@@ -325,11 +325,6 @@ import Vision
     private func capture(_ app: XCUIApplication, _ name: String) {
         let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
-    private func swipeHeader(_ card: XCUIElement, left: Bool) {
-        let start = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.8 : 0.2, dy: 0.18))
-        let end = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.18))
-        start.press(forDuration: 0.05, thenDragTo: end)
-    }
     func testCrowdedWalletRoundTripResourceBaseline() {
         let app = launch("many")
         let paper = app.buttons["receipt-1"]
@@ -357,7 +352,7 @@ import Vision
         app.buttons["back"].tap()
         XCTAssertTrue(paper.waitForExistence(timeout: 5))
         XCTAssertEqual(paper.frame.minY, origin.minY, accuracy: 2)
-        swipeHeader(paper, left: true)
+        partialReceiptSwipe(paper, left: true)
         let action = app.buttons["swipeAction-receipt-29"]
         XCTAssertTrue(action.waitForExistence(timeout: 5))
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: paper.frame.midY / app.frame.height)).tap()
@@ -595,7 +590,7 @@ import Vision
         let app = launch()
         let oldest = app.buttons["receipt-0"]
         XCTAssertTrue(oldest.waitForExistence(timeout: 30))
-        swipeHeader(oldest, left: false)
+        partialReceiptSwipe(oldest, left: false)
         let archive = app.buttons["swipeAction-receipt-0"]
         XCTAssertTrue(archive.waitForExistence(timeout: 5))
         XCTAssertTrue(archive.label.hasPrefix("Archive"))
@@ -626,20 +621,48 @@ import Vision
     func testNativeDeleteSwipeRequiresTapAndConfirmation() {
         let app = launch()
         let card = app.buttons["receipt-0"]
-        swipeHeader(card, left: true)
+        partialReceiptSwipe(card, left: true)
         let action = app.buttons["swipeAction-receipt-0"]
         XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
         XCTAssertFalse(app.alerts.firstMatch.exists); action.tap()
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
         XCTAssertTrue(app.staticTexts["3 saved"].exists)
         XCTAssertTrue(action.waitForNonExistence(timeout: 5))
-        swipeHeader(card, left: true)
+        partialReceiptSwipe(card, left: true)
         XCTAssertTrue(action.waitForExistence(timeout: 5)); XCTAssertTrue(action.label.hasPrefix("Delete"))
         action.tap(); app.buttons["Delete receipt and original"].tap()
         XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15))
         XCTAssertTrue(action.waitForNonExistence(timeout: 5))
         app.terminate()
     }
+
+    func testFullReceiptSwipeRunsArchiveAndRequestsDelete() {
+        let app = launch()
+        let card = app.buttons["receipt-0"]
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        fullReceiptSwipe(card, left: false, in: app)
+        XCTAssertTrue(app.staticTexts["2 saved"].waitForExistence(timeout: 15))
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        fullReceiptSwipe(card, left: true, in: app)
+        XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["2 saved"].exists)
+        XCTAssertTrue(app.buttons["swipeAction-receipt-0"].waitForNonExistence(timeout: 5))
+    }
+
+    private func partialReceiptSwipe(_ card: XCUIElement, left: Bool) {
+        let start = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.80 : 0.20, dy: 0.14))
+        let end = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.43 : 0.57, dy: 0.14))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.1)
+    }
+
+    private func fullReceiptSwipe(_ card: XCUIElement, left: Bool, in app: XCUIApplication) {
+        let start = card.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.95 : 0.05, dy: 0.14))
+        let y = (card.frame.minY + card.frame.height * 0.14) / app.frame.height
+        let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.02 : 0.98, dy: y))
+        start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .default, thenHoldForDuration: 0.2)
+    }
+
     func testManyReceiptsAndAccessibleMotionFallback() {
         let app = launch("many")
         XCTAssertTrue(app.buttons["latestReceipt"].waitForExistence(timeout: 40))
