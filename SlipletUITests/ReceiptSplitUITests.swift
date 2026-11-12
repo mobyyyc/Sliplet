@@ -320,6 +320,38 @@ extension ReceiptSplitUITests {
 }
 
 extension ReceiptSplitUITests {
+    func testPersonSwipeRevealsDeleteAndFullSwipeRemoves() {
+        let app = launch()
+        app.buttons["splitAddPerson"].tap()
+        let item = app.buttons["splitItem-0"]
+        reveal(item, app: app); item.tap()
+        app.buttons["splitBatchApply"].tap()
+        let person = app.buttons["splitPerson-1"]
+        reveal(person, app: app)
+        let start = person.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5))
+        let middle = person.coordinate(withNormalizedOffset: CGVector(dx: 0.56, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: middle, withVelocity: .slow, thenHoldForDuration: 0.1)
+        let delete = app.buttons["splitSwipeDelete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        XCTAssertTrue(person.exists)
+        capture(app, "Split-person-swipe-delete")
+        delete.tap()
+        XCTAssertTrue(person.waitForNonExistence(timeout: 5))
+        let undo = app.buttons["splitUndoBatch"]
+        XCTAssertEqual(undo.label, "Undo removal")
+        undo.tap()
+        XCTAssertTrue(person.waitForExistence(timeout: 5))
+        XCTAssertTrue(person.label.contains("1 item assigned"))
+
+        let y = person.frame.midY / app.frame.height
+        let trailing = app.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: y))
+        let leading = app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: y))
+        trailing.press(forDuration: 0.05, thenDragTo: leading, withVelocity: .default, thenHoldForDuration: 0.2)
+        XCTAssertTrue(person.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(undo.exists)
+        XCTAssertTrue(app.buttons["splitSave"].isHittable)
+    }
+
     func testPendingSelectionRequiresDecisionBeforeClose() {
         let app = launch()
         app.buttons["splitAddPerson"].tap()

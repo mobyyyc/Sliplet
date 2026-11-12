@@ -204,7 +204,7 @@ struct ReceiptSplitView: View {
                             p.participants[index].name = name; p.participants[index].color = color
                         }
                     }
-                } remove: { change { $0.removePerson(person.id) }; cancelBatch() }
+                } remove: { removePerson(person.id); cancelBatch() }
             }
             .sheet(isPresented: $source) { ReceiptSourceView(workspace: workspace) }
             .confirmationDialog("Discard unsaved split choices?", isPresented: $discard, titleVisibility: .visible) {
@@ -262,6 +262,13 @@ struct ReceiptSplitView: View {
         }
         cancelBatch()
     }
+    private func removePerson(_ id: UUID) {
+        guard plan.participants.contains(where: { $0.id == id }) else { return }
+        let previous = plan
+        change { $0.removePerson(id) }
+        undoPlan = previous
+    }
+
     private func undoBatch() {
         guard let previous = undoPlan else { return }
         plan = previous; undoPlan = nil; copied = false
@@ -286,12 +293,13 @@ struct ReceiptSplitView: View {
 
             ForEach(plan.participants) { person in
                 let count = items.filter { plan.assignments[$0.id, default: []].contains(person.id) }.count
+                let assignmentLabel = "\(count) \(count == 1 ? "item" : "items") assigned"
                 Button { selectPerson(person.id) } label: {
                     HStack(spacing: 12) {
                         personBadge(person)
                         VStack(alignment: .leading, spacing: 3) {
                             Text(person.name).font(.body.weight(.medium))
-                            Text("\(count) \(count == 1 ? "item" : "items") assigned")
+                            Text(assignmentLabel)
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 4)
@@ -303,11 +311,17 @@ struct ReceiptSplitView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("splitPerson-\(plan.number(for: person))")
-                .accessibilityLabel("\(person.name), \(plan.color(for: person).title), \(count) items assigned")
+                .accessibilityLabel("\(person.name), \(plan.color(for: person).title), \(assignmentLabel)")
                 .accessibilityHint("Assign items or edit this person")
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button("Delete", systemImage: "trash", role: .destructive) {
+                        removePerson(person.id)
+                    }.tint(.red).accessibilityIdentifier("splitSwipeDelete")
+                }
             }
-            if undoPlan != nil {
-                Button("Undo assignment", systemImage: "arrow.uturn.backward") { undoBatch() }
+            if let undoPlan {
+                let title = undoPlan.participants.count > plan.participants.count ? "Undo removal" : "Undo assignment"
+                Button(title, systemImage: "arrow.uturn.backward") { undoBatch() }
                     .accessibilityIdentifier("splitUndoBatch")
             }
         } header: {
@@ -332,6 +346,8 @@ struct ReceiptSplitView: View {
         let selected = activePerson != nil && selectedItems.contains(item.id)
         let ids = Set(plan.assignments[item.id, default: []].filter { $0 != activePerson })
             .union(selected ? [activePerson!] : activePerson == nil ? plan.assignments[item.id, default: []] : [])
+        let highlight = plan.participants.first(where: { $0.id == activePerson })
+            .map { plan.color(for: $0).tint.opacity(0.07) } ?? .clear
         return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.description ?? "Purchase")
@@ -343,8 +359,11 @@ struct ReceiptSplitView: View {
                 }
             }.frame(maxWidth: .infinity, alignment: .leading)
             if activePerson != nil { Image(systemName: selected ? "checkmark.circle.fill" : "circle") }
-        }.foregroundStyle(.primary).padding(.vertical, 6).frame(minHeight: 48)
-            .background(selected ? plan.participants.first(where: { $0.id == activePerson }).map { plan.color(for: $0).tint.opacity(0.10) } ?? .clear : .clear)
+        }.foregroundStyle(.primary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .frame(minHeight: 48)
+            .background(selected ? highlight : .clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .contentShape(Rectangle())
             .accessibilityElement(children: .combine)
             .accessibilityLabel((item.description ?? "Purchase") + ", " + (item.amount.map { money($0.minorUnits) } ?? "Amount missing") + ", " + (ids.isEmpty ? "Unassigned" : plan.participants.filter { ids.contains($0.id) }.map { "\($0.name), person \(plan.number(for: $0))" }.joined(separator: ", ")) + (ids.count > 1 ? ", Shared equally" : ""))
