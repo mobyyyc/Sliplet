@@ -126,21 +126,23 @@ struct ReceiptPurchaseHistoryView: View {
                 ForEach(groups.keys.sorted(by: >), id: \.self) { key in
                     Section {
                         ForEach(groups[key] ?? []) { result in
-                            Button { workspace.searchReturnID = "receipt-" + result.id.uuidString; workspace.open(result.record) } label: {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ReceiptSummary(record: result.record)
-                                    if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
-                                }.padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                            }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchReceipt-" + result.id.uuidString).id("receipt-" + result.id.uuidString)
-                            .receiptSwipeActions(result.record, identifier: "searchReceipt-" + result.id.uuidString) { action in
-                                if action == .delete { requestDelete(result.record) }
-                                else { workspace.organize(result.record, action: action) }
-                            }
-                            ForEach(result.matches) { match in
-                                Button { workspace.searchReturnID = "match-" + match.id; workspace.open(result.record, match: match) } label: {
-                                    ReceiptSearchMatchLabel(match: match, record: result.record, compact: true)
-                                        .padding(.vertical, 6).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                                }.buttonStyle(.plain).frame(minHeight: 44).accessibilityIdentifier("searchMatch-" + match.id).id("match-" + match.id)
+                            if result.matches.isEmpty || result.matches.first?.basis == .merchant {
+                                let merchantMatch = result.matches.first
+                                resultRow(record: result.record, match: merchantMatch) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        ReceiptSummary(record: result.record)
+                                        if let merchantMatch, merchantMatch.matchedText != result.record.current.fields.merchant {
+                                            Text("Original merchant: \(merchantMatch.matchedText)").font(.caption).foregroundStyle(.secondary)
+                                        }
+                                        if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
+                                    }
+                                }
+                            } else {
+                                ForEach(result.matches) { match in
+                                    resultRow(record: result.record, match: match) {
+                                        ItemSearchResultLabel(match: match, record: result.record)
+                                    }
+                                }
                             }
                         }
                     } header: { Text(ReceiptHistory.monthTitle(key.isEmpty ? nil : key)).foregroundStyle(Color(uiColor: .label)) }
@@ -170,16 +172,87 @@ struct ReceiptPurchaseHistoryView: View {
             }
         }
     }
+    private func resultRow<Content: View>(record: ReceiptRecord, match: ReceiptSearchIndex.Match?,
+                                          @ViewBuilder content: () -> Content) -> some View {
+        let itemMatch = match.flatMap { $0.basis == .merchant ? nil : $0 }
+        let id = itemMatch.map { "match-" + $0.id } ?? "receipt-" + record.id.uuidString
+        let identifier = itemMatch.map { "searchMatch-" + $0.id } ?? "searchReceipt-" + record.id.uuidString
+        return Button {
+            workspace.searchReturnID = id
+            workspace.open(record, match: match)
+        } label: {
+            content()
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+                .accessibilityElement(children: .combine)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+        .id(id)
+        .receiptSwipeActions(record, identifier: identifier) { action in
+            if action == .delete { requestDelete(record) }
+            else { workspace.organize(record, action: action) }
+        }
+    }
+
+}
+
+private struct ItemSearchResultLabel: View {
+    let match: ReceiptSearchIndex.Match
+    let record: ReceiptRecord
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var item: ReceiptLine? {
+        record.current.fields.items.first { $0.id == match.itemID }
+    }
+
+    var body: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
+        VStack(alignment: .leading, spacing: 6) {
+            layout {
+                Text(record.current.fields.merchant ?? "Merchant missing")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let item {
+                    if let amount = item.amount {
+                        Text(PurchasePresentation.price(amount))
+                            .font(.headline.monospacedDigit())
+                            .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: false)
+                    } else {
+                        Text("Price unavailable").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            Text(item?.paperName ?? match.title)
+                .font(.subheadline)
+                .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+            Text(PurchasePresentation.date(record.current.fields.purchaseDate))
+                .font(.caption).foregroundStyle(.secondary)
+            if record.isArchived {
+                Label("Archived", systemImage: "archivebox").font(.caption).foregroundStyle(.secondary)
+            }
+            if match.originalOnly {
+                Text(match.unparsed ? "Original text · not linked to a current purchase" : "Original extraction · removed from current receipt")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else if match.basis == .original {
+                Text("Original description match").font(.caption).foregroundStyle(.secondary)
+            } else if match.basis == .originalSKU {
+                Text("Original SKU match").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
 }
 
 struct ReceiptSearchMatchLabel: View {
     let match: ReceiptSearchIndex.Match
     let record: ReceiptRecord
-    var compact = false
     private var item: ReceiptLine? { record.current.fields.items.first { $0.id == match.itemID } }
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(match.title).font(.body.weight(.medium)).lineLimit(compact ? 2 : nil).fixedSize(horizontal: false, vertical: true)
+            Text(match.title).font(.body.weight(.medium)).fixedSize(horizontal: false, vertical: true)
             if match.originalOnly {
                 Text(match.unparsed ? "Original text · not linked to a current purchase" : "Original extraction · removed from current receipt").font(.caption)
             } else if let item {
@@ -196,7 +269,7 @@ struct ReceiptSearchMatchLabel: View {
                 if match.matchedText != record.current.fields.merchant { Text("Original merchant: \(match.matchedText)").font(.caption) }
             case .corrected: Text("Current purchase description").font(.caption)
             }
-        }.lineLimit(compact ? 2 : nil).foregroundStyle(.primary).accessibilityElement(children: .combine)
+        }.foregroundStyle(.primary).accessibilityElement(children: .combine)
     }
 }
 

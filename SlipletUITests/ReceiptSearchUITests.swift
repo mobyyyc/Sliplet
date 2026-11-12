@@ -83,6 +83,9 @@ import Vision
         returnToResults(app)
         XCTAssertEqual(app.searchFields.firstMatch.value as? String, "milk", "Returning preserves the search")
         // Receipt-level results use the same reading view even without a match context.
+        let query = app.searchFields.firstMatch
+        query.tap()
+        query.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: "milk".count) + "\n")
         let receipt = receipts(app).firstMatch; reveal(receipt, app: app); receipt.tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["searchOriginal"].exists)
@@ -134,9 +137,17 @@ import Vision
         XCTAssertTrue(original.waitForExistence(timeout: 10)); reveal(original, app: app); original.tap()
         XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); capture(app, "linked-original-evidence")
         app.buttons["sourceDone"].tap(); returnToResults(app)
-        for (query, label) in [("milk", "Current purchase description"), ("old 123456", "Original SKU"), ("fennel", "not linked to a current purchase"), ("removed apples", "removed from current receipt")] {
+        for (query, label) in [("milk", "Organic milk"), ("old 123456", "Original SKU"), ("fennel", "not linked to a current purchase"), ("removed apples", "removed from current receipt")] {
             search(query, app: app); let match = matches(app).firstMatch
             reveal(match, app: app); XCTAssertTrue(match.waitForExistence(timeout: 10)); XCTAssertTrue(match.label.contains(label), match.label)
+            if query == "milk" {
+                XCTAssertTrue(match.label.hasPrefix("FICTIONAL CORNER MART"))
+                XCTAssertTrue(match.label.contains("CAD"))
+                XCTAssertTrue(match.label.contains("1.23"))
+                XCTAssertFalse(match.label.contains("3.23"))
+                XCTAssertFalse(receipts(app).firstMatch.exists)
+                capture(app, "item-merchant-and-price")
+            }
             if query == "removed apples" || query == "fennel" {
                 XCTAssertFalse(match.label.contains("CAD")); capture(app, query == "fennel" ? "unparsed-source-result" : "removed-original-result")
                 match.tap(); XCTAssertTrue(app.buttons["searchOriginal"].waitForExistence(timeout: 10))
@@ -182,7 +193,7 @@ import Vision
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
         XCTAssertTrue(app.staticTexts["searchFilterSummary"].label.contains("FICTIONAL GROVE"))
         capture(app, "P1106-compact-filters")
-        let target = receipts(app).element(boundBy: 1)
+        let target = matches(app).element(boundBy: 1)
         reveal(target, app: app)
         let identifier = target.identifier
         target.tap()
