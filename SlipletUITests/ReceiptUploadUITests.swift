@@ -103,6 +103,27 @@ extension ReceiptUploadUITests {
         return app
     }
 
+    func testDiscountsAppearAtTheirConfirmedScope() {
+        let app = sendAuditFixture("--linked-discounts-fixture")
+        let paper = app.scrollViews["paperReview"]
+        XCTAssertTrue(paper.waitForExistence(timeout: 10))
+        func line(_ text: String) -> XCUIElement {
+            paper.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label CONTAINS %@", text)).firstMatch
+        }
+        let item = line("FICTIONAL APPLES")
+        let linked = line("-0.20")
+        let basket = line("-0.10")
+        let unclear = line("-0.05")
+        let subtotal = paper.staticTexts.containing(NSPredicate(format: "label BEGINSWITH 'Subtotal'")).firstMatch
+        XCTAssertTrue(linked.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(linked.frame.midY, item.frame.midY)
+        XCTAssertLessThan(linked.frame.midY, unclear.frame.midY)
+        XCTAssertLessThan(unclear.frame.midY, subtotal.frame.midY)
+        XCTAssertGreaterThan(basket.frame.midY, subtotal.frame.midY)
+        linked.tap()
+        XCTAssertTrue(app.buttons["discountScope"].waitForExistence(timeout: 5))
+    }
+
     func testCleanReviewWithoutEditingFields() {
         let app = sendAuditFixture("--p901-clean-read")
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))

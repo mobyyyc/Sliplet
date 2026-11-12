@@ -140,6 +140,11 @@ struct ReceiptLine: Codable, Equatable, Sendable, Identifiable {
     var unit: String? = nil
 }
 
+enum ReceiptDiscountScope: Codable, Hashable, Sendable {
+    case subtotal
+    case item(UUID)
+}
+
 struct ReceiptAdjustment: Codable, Equatable, Sendable, Identifiable {
     enum Kind: String, Codable, Sendable { case discount, tax, deposit, tip, other }
     let id: UUID
@@ -148,6 +153,8 @@ struct ReceiptAdjustment: Codable, Equatable, Sendable, Identifiable {
     var amount: ReceiptMoney?
     var rate: ReceiptDecimal?
     var sourceLineIDs: [UUID]
+    /// Optional for receipts saved before discount placement was tracked.
+    var discountScope: ReceiptDiscountScope? = nil
 }
 
 /// Optional values preserve unknowns. Even a matching total does not establish source verification.

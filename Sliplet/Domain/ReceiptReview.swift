@@ -17,6 +17,7 @@ struct EditableReceiptLine: Identifiable, Codable, Equatable, Sendable {
     var taxMarker: String? = nil
     var rate: ReceiptDecimal? = nil
     var unit: String? = nil
+    var discountScope: ReceiptDiscountScope? = nil
     static func blank(kind: String = "purchase") -> Self {
         .init(id: UUID(), kind: kind, name: "", quantity: "", amount: "", sourceLineIDs: [])
     }
@@ -76,7 +77,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
                 amount: text($0.amount), sourceLineIDs: $0.sourceLineIDs, sku: $0.sku, unitPrice: $0.unitPrice, taxMarker: $0.taxMarker, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
         } + fields.adjustments.map {
             EditableReceiptLine(id: $0.id, kind: $0.kind.rawValue, name: $0.label ?? "", quantity: "", amount: text($0.amount),
-                sourceLineIDs: $0.sourceLineIDs, rate: $0.rate)
+                sourceLineIDs: $0.sourceLineIDs, rate: $0.rate, discountScope: $0.discountScope)
         }
     }
     /// Raw editable values matter even while a typed value is temporarily malformed.
@@ -91,6 +92,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
             guard let c, let cents = ExactInput.money(value, scale: c.minorUnitScale) else { return nil }
             return ReceiptMoney(minorUnits: cents, currency: c)
         }
+        let purchaseIDs = Set(lines.filter { $0.kind == "purchase" }.map(\.id))
         return ReceiptFields(merchant: merchant.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
             purchaseDate: ExactInput.date(date), currency: c,
             items: lines.filter { $0.kind == "purchase" }.map {
@@ -99,9 +101,15 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
                     unitPrice: money($0.editableUnitPrice), amount: money($0.amount),
                     taxMarker: $0.taxMarker, sourceLineIDs: $0.sourceLineIDs, unit: $0.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty)
             }, adjustments: lines.filter { $0.kind != "purchase" }.map {
-                ReceiptAdjustment(id: $0.id, kind: ReceiptAdjustment.Kind(rawValue: $0.kind) ?? .other,
+                let scope: ReceiptDiscountScope?
+                switch ($0.kind, $0.discountScope) {
+                case ("discount", .subtotal): scope = .subtotal
+                case ("discount", .item(let id)) where purchaseIDs.contains(id): scope = .item(id)
+                default: scope = nil
+                }
+                return ReceiptAdjustment(id: $0.id, kind: ReceiptAdjustment.Kind(rawValue: $0.kind) ?? .other,
                     label: $0.name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty, amount: money($0.amount),
-                    rate: $0.rate, sourceLineIDs: $0.sourceLineIDs)
+                    rate: $0.rate, sourceLineIDs: $0.sourceLineIDs, discountScope: scope)
             }, subtotal: money(subtotal), total: money(total))
     }
     var reconciliation: ReceiptReconciliation {

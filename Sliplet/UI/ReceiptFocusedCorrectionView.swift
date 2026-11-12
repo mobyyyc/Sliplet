@@ -186,6 +186,9 @@ struct ReceiptFocusedCorrectionView: View {
                                 Picker("Type", selection: lineField(\.kind)) {
                                     ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                                 }
+                                if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "discount" {
+                                    ReceiptDiscountScopePicker(lines: input.lines, selection: $input.lines[index].discountScope)
+                                }
                                 if let index = input.lines.firstIndex(where: { $0.id == lineID }), input.lines[index].kind == "purchase" {
                                     LabeledContent("Quantity") { TextField("1 (default)", text: lineField(\.quantity)).keyboardType(.decimalPad).focused($editing, equals: "quantity").accessibilityIdentifier("focusedQuantity") }
                                     if let sku = input.lines[index].sku { LabeledContent("SKU", value: sku) }

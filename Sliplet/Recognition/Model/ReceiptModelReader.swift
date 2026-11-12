@@ -178,7 +178,7 @@ enum ReceiptModelAdapter {
         func validStrings(_ object: [String: Any], excluding: Set<String>) -> Bool {
             object.filter { !excluding.contains($0.key) }.values.allSatisfy { $0 is NSNull || (($0 as? String).map { $0.utf8.count <= 8192 } ?? false) }
         }
-        guard validStrings(object, excluding: ["rows"]), rows.allSatisfy({ Set($0.keys) == rowKeys && validStrings($0, excluding: []) && kinds.contains($0["kind"] as? String ?? "") }) else { throw ReceiptModelError.unsupportedShape }
+        guard validStrings(object, excluding: ["rows"]), rows.allSatisfy({ rowKeys.isSubset(of: $0.keys) && Set($0.keys).isSubset(of: rowKeys.union(["discount_scope"])) && validStrings($0, excluding: []) && kinds.contains($0["kind"] as? String ?? "") }) else { throw ReceiptModelError.unsupportedShape }
         func string(_ key: String) -> String? { object[key] as? String }
         var draft = ReceiptReviewDraft(), issues: [ReceiptExtractionIssue] = []
         func issue(_ code: String) { issues.append(.init(code: code, sourceLineIDs: [], detail: nil)) }
@@ -189,7 +189,8 @@ enum ReceiptModelAdapter {
            ExactInput.currency(currency) != nil { draft.currency = currency; draft.currencyOrigin = nil }
         draft.subtotal = moneyText(string("subtotal")) ?? ""; draft.total = moneyText(string("total")) ?? ""
         let noFrillsHST = draft.merchant == "NOFRILLS" && printedTaxLabels(rows).contains(where: definesHSTMarker)
-        for originalRow in rows {
+        let rowIDs = rows.map { _ in UUID() }
+        for (index, originalRow) in rows.enumerated() {
             var row = originalRow
             if let name = separateHeading(row) { row["description"] = name; issue("department_heading_needs_review") }
             let kind = row["kind"] as! String
@@ -214,9 +215,19 @@ enum ReceiptModelAdapter {
             if row["quantity"] is String && quantity.isEmpty { issue("invalid_quantity_needs_review") }
             if let unitPrice, moneyText(unitPrice) == nil { issue("unit_price_precision_needs_review") }
             let rate = token(row["tax_rate"] as? String).flatMap(ExactInput.decimal)
-            draft.lines.append(.init(id: UUID(), kind: kind == "return" ? "purchase" : (kind == "fee" ? "other" : kind), name: name,
+            var scope: ReceiptDiscountScope?
+            if kind == "discount", let printedScope = row["discount_scope"] as? String {
+                if printedScope == "subtotal" {
+                    scope = .subtotal
+                } else if let rowNumber = Int(printedScope), (1...rows.count).contains(rowNumber),
+                          let targetKind = rows[rowNumber - 1]["kind"] as? String,
+                          targetKind == "purchase" || targetKind == "return" {
+                    scope = .item(rowIDs[rowNumber - 1])
+                }
+            }
+            draft.lines.append(.init(id: rowIDs[index], kind: kind == "return" ? "purchase" : (kind == "fee" ? "other" : kind), name: name,
                 quantity: quantity, amount: amount, sourceLineIDs: [], sku: row["product_code"] as? String,
-                unitPriceText: unitPrice, taxMarker: marker, rate: rate, unit: unit))
+                unitPriceText: unitPrice, taxMarker: marker, rate: rate, unit: unit, discountScope: scope))
         }
         issue("model_source_review_required")
         // Preserve recognized fields before applying a visible user default; never claim CAD was read.

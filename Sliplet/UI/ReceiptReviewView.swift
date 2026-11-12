@@ -253,6 +253,18 @@ private struct ReceiptLineEditor: View {
                 Picker("Type", selection: field(\.kind)) {
                     ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                 }
+                if line.kind == "discount" {
+                    ReceiptDiscountScopePicker(lines: workspace.draft.lines, selection: Binding(
+                        get: { self.line?.discountScope },
+                        set: { scope in
+                            workspace.updateDraft { draft in
+                                if let index = draft.lines.firstIndex(where: { $0.id == id }) {
+                                    draft.lines[index].discountScope = scope
+                                }
+                            }
+                        }
+                    ))
+                }
                 if line.kind == "purchase" {
                     LabeledContent("Quantity") {
                         TextField("1 (default)", text: field(\.quantity)).keyboardType(.decimalPad).multilineTextAlignment(.trailing).focused(editing, equals: "quantity-\(id)")
@@ -298,6 +310,24 @@ private struct ReceiptLineEditor: View {
     }
 }
 
+struct ReceiptDiscountScopePicker: View {
+    let lines: [EditableReceiptLine]
+    @Binding var selection: ReceiptDiscountScope?
+
+    var body: some View {
+        let purchases = lines.filter { $0.kind == "purchase" }
+        Picker("Applies to", selection: $selection) {
+            Text("Unconfirmed").tag(nil as ReceiptDiscountScope?)
+            Text("Subtotal").tag(Optional(ReceiptDiscountScope.subtotal))
+            ForEach(Array(purchases.enumerated()), id: \.element.id) { index, item in
+                Text("\(index + 1). \(item.name.nilIfEmpty ?? "Unnamed item")")
+                    .tag(Optional(ReceiptDiscountScope.item(item.id)))
+            }
+        }
+        .accessibilityIdentifier("discountScope")
+    }
+}
+
 struct ReceiptPaper: View {
     let fields: ReceiptFields
     var input: ReceiptReviewDraft? = nil
@@ -312,7 +342,16 @@ struct ReceiptPaper: View {
         content.background { if showsSurface { ReceiptPaperBackground() } }.receiptPaperStyle()
     }
     private var content: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        let discounts = fields.adjustments.filter { $0.kind == .discount }
+        let itemIDs = Set(fields.items.map(\.id))
+        let unconfirmed = discounts.filter { discount in
+            switch discount.discountScope {
+            case .subtotal: return false
+            case .item(let id): return !itemIDs.contains(id)
+            case nil: return true
+            }
+        }
+        return VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 12) {
                 Text(fields.merchant ?? "Merchant missing").font(.title2.weight(.semibold)).accessibilityIdentifier("receiptPaperMerchant")
                 Spacer(minLength: 0)
@@ -346,12 +385,17 @@ struct ReceiptPaper: View {
                         .font(.system(.subheadline, design: .monospaced))
                         .accessibilityElement(children: .combine)
                     }
+                    adjustmentRows(discounts.filter { $0.discountScope == .item(item.id) }, underItem: true)
                 }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
+            if !unconfirmed.isEmpty {
+                Text("Discounts to review").font(.subheadline.weight(.semibold))
+                adjustmentRows(unconfirmed)
+            }
             Divider()
             amountRow("Subtotal", fields.subtotal, raw: input?.subtotalNotPrinted == true ? "Not printed" : input?.subtotal)
-            adjustmentRows(fields.adjustments.filter { $0.kind == .discount })
+            adjustmentRows(discounts.filter { $0.discountScope == .subtotal })
             adjustmentRows(fields.adjustments.filter { $0.kind == .tax })
             adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
             Divider()
@@ -368,12 +412,14 @@ struct ReceiptPaper: View {
         return values.joined(separator: " · ")
     }
 
-    private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
+    private func adjustmentRows(_ adjustments: [ReceiptAdjustment], underItem: Bool = false) -> some View {
         ForEach(adjustments) { adjustment in
             editableRow(adjustment.id) {
                 amountRow(adjustmentTitle(adjustment), adjustment.amount,
                           raw: input?.lines.first { $0.id == adjustment.id }?.amount)
             }
+            .font(underItem ? .caption : .body)
+            .padding(.leading, underItem ? 12 : 0)
         }
     }
     private func adjustmentTitle(_ adjustment: ReceiptAdjustment) -> String {

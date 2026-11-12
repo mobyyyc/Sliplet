@@ -27,7 +27,8 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
         var candidate = Dictionary(uniqueKeysWithValues: ReceiptModelAdapter.rootKeys.map { ($0, NSNull() as Any) })
         candidate["merchant"] = "FICTIONAL PREVIEW"; candidate["rows"] = [row]; candidate["total"] = "1.00"
         let longRead = ProcessInfo.processInfo.arguments.contains("--p902-long-read")
-        if longRead || ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
+        let linkedDiscounts = ProcessInfo.processInfo.arguments.contains("--linked-discounts-fixture")
+        if longRead || linkedDiscounts || ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
             candidate["date_raw"] = "2026-10-24"
             candidate["date"] = "2026-10-24"
             candidate["currency_raw"] = "CAD"
@@ -42,6 +43,24 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
                 }
                 candidate["subtotal"] = "36.00"; candidate["total"] = "36.00"
             }
+        }
+        if linkedDiscounts {
+            func discount(_ label: String, _ amount: String, scope: String?) -> [String: Any] {
+                var result = row
+                result["kind"] = "discount"
+                result["description"] = label
+                result["amount"] = amount
+                result["raw_text"] = label + " " + amount
+                result["discount_scope"] = scope ?? NSNull() as Any
+                return result
+            }
+            candidate["rows"] = [row, discount("Item coupon", "-0.20", scope: "1"),
+                                 discount("Basket coupon", "-0.10", scope: "subtotal"),
+                                 discount("Unclear coupon", "-0.05", scope: nil)]
+            candidate["subtotal"] = "1.00"
+            candidate["total"] = "0.65"
+            candidate["currency"] = "CAD"
+            candidate["currency_raw"] = "CAD"
         }
         let text = String(decoding: try! JSONSerialization.data(withJSONObject: candidate), as: UTF8.self)
         let data = try! JSONSerialization.data(withJSONObject: ["candidates": [["finishReason": "STOP", "content": ["parts": [["text": text]]]]]])

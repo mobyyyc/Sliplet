@@ -71,6 +71,25 @@ import XCTest
             $0["tax_legend"] = "T = TAXED\nN = NOT TAXED"
         }).extraction.paperTaxedMarkers, ["T"])
     }
+    func testDiscountScopeSurvivesEditingAndRejectsInvalidTargets() throws {
+        func discount(_ scope: String?) -> [String: Any] {
+            var result = row("FICTIONAL COUPON", amount: "-0.20")
+            result["kind"] = "discount"
+            result["discount_scope"] = scope
+            return result
+        }
+        let result = try decode(envelope(rows: [row(), discount("1"), discount("subtotal"), discount("2"), discount(nil)]))
+        let fields = result.draft.fields
+        let item = try XCTUnwrap(fields.items.first)
+        XCTAssertEqual(fields.adjustments.map(\.discountScope), [.item(item.id), .subtotal, nil, nil])
+        let saved = try JSONDecoder().decode(ReceiptFields.self, from: JSONEncoder().encode(fields))
+        var edit = ReceiptReviewDraft(fields: saved)
+        XCTAssertEqual(edit.fields.adjustments, fields.adjustments)
+        XCTAssertEqual(edit.reconciliation.difference, result.draft.reconciliation.difference)
+        edit.lines.removeAll { $0.id == item.id }
+        XCTAssertEqual(edit.fields.adjustments.map(\.discountScope), [nil, .subtotal, nil, nil])
+    }
+
     func testNoFrillsCompositeTaxFlagRequiresPrintedHSTMapping() throws {
         var taxed = row("81234 FICTIONAL ITEM HMRJ")
         taxed["raw_text"] = "81234 FICTIONAL ITEM HMRJ 2.50"
