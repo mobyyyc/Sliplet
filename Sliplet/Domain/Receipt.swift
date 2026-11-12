@@ -98,12 +98,40 @@ struct ReceiptLine: Codable, Equatable, Sendable, Identifiable {
     var taxMarker: String?
     /// Display only. Keep the exact printed description for source checks and search.
     var paperName: String {
-        guard let name = description?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return "Description missing" }
+        guard let description = description?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return "Description missing" }
+        let price = unitPrice.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) }
+        let name = Self.removingUnitPrice(from: description, matching: price)
         guard let code = sku?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return name }
         let escapedCode = NSRegularExpression.escapedPattern(for: code)
         let pattern = #"^(?:SKU\s*[:#]?\s*)?"# + escapedCode + #"\s+(?=\S)"#
         guard let prefix = name.range(of: pattern, options: [.regularExpression, .caseInsensitive]) else { return name }
         return String(name[prefix.upperBound...])
+    }
+
+    /// Strip a trailing price annotation only when its number matches the recorded unit price.
+    static func removingUnitPrice(from name: String, matching price: String?) -> String {
+        let locale = Locale(identifier: "en_US_POSIX")
+        guard let price, let expected = Decimal(string: price, locale: locale) else { return name }
+        let number = #"([0-9]+(?:\.[0-9]+)?)"#
+        let unit = #"(?:[ \t]*/[ \t]*[A-Za-z]+)?"#
+        let annotated = #"(?i)\s+(?:(?:unit[ \t]+price|price[ \t]+per[ \t]+unit)[ \t]*[:=]?|(?:[0-9]+(?:\.[0-9]+)?[ \t]*(?:kg|g|lb|oz|l|ml|ea|each)?[ \t]*)?@)[ \t]*\$?"# + number + unit
+        let perUnit = #"\s+\$?"# + number + #"[ \t]*/[ \t]*[A-Za-z]+"#
+        let pattern = "(?:" + annotated + "|" + perUnit + #")[ \t]*$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+              let suffix = Range(match.range, in: name),
+              let numberRange = Range(match.range(at: 1), in: name) ?? Range(match.range(at: 2), in: name),
+              Decimal(string: String(name[numberRange]), locale: locale) == expected,
+              let cleaned = String(name[..<suffix.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return name }
+        return cleaned
+    }
+
+    var paperPriceUnit: String {
+        guard let unit = unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty else { return "each" }
+        switch unit.lowercased() {
+        case "ea", "each", "pc", "pcs": return "each"
+        default: return unit
+        }
     }
 
     /// OCR line identities; optional because source linkage may be unavailable.

@@ -727,6 +727,7 @@ struct ReceiptPaperEdge: Shape {
 }
 
 struct ReceiptPaperBackground: View {
+    var walletPreview = false
     @Environment(\.colorScheme) private var scheme
     @Environment(\.colorSchemeContrast) private var systemContrast
     private var contrast: ColorSchemeContrast { ReceiptAccessibility.contrast(systemContrast) }
@@ -734,7 +735,7 @@ struct ReceiptPaperBackground: View {
         ReceiptPaperEdge().fill(Color(uiColor: .secondarySystemGroupedBackground))
             .overlay { ReceiptPaperEdge().stroke(.primary.opacity(contrast == .increased ? 0.6 : 0.12), lineWidth: 0.5) }
             .compositingGroup()
-            .shadow(color: .black.opacity(scheme == .dark ? 0.45 : 0.16), radius: 12, y: 6)
+            .shadow(color: .black.opacity(walletPreview ? (scheme == .dark ? 0.52 : 0.21) : (scheme == .dark ? 0.45 : 0.16)), radius: walletPreview ? 14 : 12, y: 6)
             .shadow(color: .black.opacity(scheme == .dark ? 0.3 : 0.12), radius: 2, y: 2)
     }
 }
@@ -818,7 +819,7 @@ private struct ReceiptPreviewSurface: View {
     let record: ReceiptRecord
     var body: some View {
         ReceiptPreviewPaper(record: record).equatable()
-            .background { ReceiptPaperBackground() }
+            .background { ReceiptPaperBackground(walletPreview: true) }
             .receiptPaperStyle()
     }
 }
@@ -865,6 +866,7 @@ struct ReceiptPreviewPaper: View, Equatable {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
             }.font(.caption).padding(.bottom, 4) }
         }
+        .fontDesign(.monospaced)
         .accessibilityRepresentation { EmptyView() }
         .foregroundStyle(.primary).padding(.horizontal, 22).padding(.top, 30).padding(.bottom, 14)
         .frame(height: typeSize.isAccessibilitySize ? nil : 244, alignment: .top)

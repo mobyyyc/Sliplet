@@ -204,7 +204,7 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(save.waitForNonExistence(timeout: 10))
         XCTAssertNotEqual(reader.buttons[id].label, original)
         XCTAssertTrue(app.staticTexts["Needs review"].exists)
-        let tax = reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label CONTAINS 'FICTIONAL TAX'")).firstMatch
+        let tax = reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label BEGINSWITH 'Tax'")).firstMatch
         reveal(tax, in: app); tax.tap()
         let name = app.textFields["focusedLineName"]
         reveal(name, in: app)

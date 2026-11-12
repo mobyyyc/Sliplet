@@ -319,34 +319,33 @@ struct ReceiptPaper: View {
                 if reviewed { ReceiptReviewedMark() }
             }
             Text("\(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing") · \(fields.currency?.code ?? "Currency missing")").font(.subheadline).foregroundStyle(.primary)
-            if let context = input?.currencyContextMessage {
-                Text(context).font(.footnote).accessibilityIdentifier("currencyContext")
-            }
             Divider()
             Text("Items").font(.headline)
-            ForEach(fields.items) { item in
-                editableRow(item.id) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            let taxed = item.taxMarker.map {
-                                taxedMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
-                            } ?? false
-                            if taxed {
-                                Text("\(item.paperName) \(Text("Taxed").font(.caption.weight(.semibold)))")
-                            } else {
-                                Text(item.paperName)
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(fields.items) { item in
+                    editableRow(item.id) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                let taxed = item.taxMarker.map {
+                                    taxedMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased())
+                                } ?? false
+                                if taxed {
+                                    Text("\(item.paperName) \(Text("Taxed").font(.caption.weight(.semibold)))")
+                                } else {
+                                    Text(item.paperName)
+                                }
+                                if item.quantity != nil || item.unitPrice != nil {
+                                    Text(itemDetail(item)).font(.system(.caption, design: .monospaced))
+                                }
                             }
-                            if item.quantity != nil || item.unitPrice != nil {
-                                Text(itemDetail(item)).font(.system(.caption, design: .monospaced))
-                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
+                            Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount))
+                                .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
                         }
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(minWidth: 60, maxWidth: .infinity, alignment: .leading)
-                        Text(money(item.amount, raw: input?.lines.first { $0.id == item.id }?.amount))
-                            .lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .accessibilityElement(children: .combine)
                     }
-                    .font(.system(.subheadline, design: .monospaced))
-                    .accessibilityElement(children: .combine)
                 }
             }
             if fields.items.isEmpty { Text("Purchases missing").foregroundStyle(.primary) }
@@ -357,7 +356,7 @@ struct ReceiptPaper: View {
             adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
             Divider()
             amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
-        }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+        }.fontDesign(.monospaced).padding(24).frame(maxWidth: .infinity, alignment: .leading)
     }
     private func itemDetail(_ item: ReceiptLine) -> String {
         var values: [String] = []
@@ -365,18 +364,32 @@ struct ReceiptPaper: View {
             let unit = item.unit.map { " " + $0 } ?? ""
             values.append("Quantity " + ExactInput.quantity(quantity) + unit)
         }
-        if let price = item.unitPrice { values.append("Unit " + money(price)) }
+        if let price = item.unitPrice { values.append(money(price) + "/" + item.paperPriceUnit) }
         return values.joined(separator: " · ")
     }
 
     private func adjustmentRows(_ adjustments: [ReceiptAdjustment]) -> some View {
         ForEach(adjustments) { adjustment in
             editableRow(adjustment.id) {
-                amountRow(adjustment.label ?? adjustment.kind.rawValue.capitalized, adjustment.amount,
+                amountRow(adjustmentTitle(adjustment), adjustment.amount,
                           raw: input?.lines.first { $0.id == adjustment.id }?.amount)
             }
         }
     }
+    private func adjustmentTitle(_ adjustment: ReceiptAdjustment) -> String {
+        switch adjustment.kind {
+        case .tax: return "Tax"
+        case .tip: return "Tip"
+        case .deposit: return "Deposit"
+        case .discount:
+            let label = adjustment.label ?? ""
+            let loyalty = label.range(of: #"\b(?:loyalty|members?|membership|rewards?|points)\b"#,
+                                      options: [.regularExpression, .caseInsensitive]) != nil
+            return loyalty ? "Loyalty discount" : "Discount"
+        case .other: return adjustment.label ?? "Other charge"
+        }
+    }
+
     @ViewBuilder private func editableRow<Content: View>(_ id: UUID, @ViewBuilder content: () -> Content) -> some View {
         let row = content().frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
         if let editLine {

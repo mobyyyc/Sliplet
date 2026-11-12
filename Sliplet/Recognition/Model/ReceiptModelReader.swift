@@ -21,7 +21,7 @@ enum ReceiptModelAdapter {
     static let version = "p8-03-layout-v3"
     static let rootKeys: Set<String> = ["merchant", "date_raw", "date", "currency", "currency_raw", "subtotal", "total", "rows", "tax_legend"]
     static let rowKeys: Set<String> = ["kind", "description", "amount", "quantity", "unit", "unit_price", "raw_text", "product_code", "tax_marker", "tax_base", "tax_rate"]
-    static let kinds: Set<String> = ["purchase", "return", "discount", "tax", "fee", "payment", "change", "other"]
+    static let kinds: Set<String> = ["purchase", "return", "discount", "tax", "tip", "fee", "payment", "change", "other"]
 
     static func candidate(from envelope: Data) throws -> Data {
         guard envelope.count <= 262_144,
@@ -169,6 +169,9 @@ enum ReceiptModelAdapter {
             let unit = rawUnit.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !matches(#"[\d/@]"#, $0).isEmpty ? nil : $0 }
             let amount = moneyText(row["amount"] as? String) ?? ""
             let unitPrice = token(row["unit_price"] as? String)
+            if kind == "purchase" || kind == "return" {
+                name = ReceiptLine.removingUnitPrice(from: name, matching: unitPrice)
+            }
             if amount.isEmpty { issue("missing_line_amount") }
             if row["quantity"] is String && quantity.isEmpty { issue("invalid_quantity_needs_review") }
             if let unitPrice, moneyText(unitPrice) == nil { issue("unit_price_precision_needs_review") }
