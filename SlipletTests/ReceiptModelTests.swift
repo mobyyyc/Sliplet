@@ -71,6 +71,28 @@ import XCTest
             $0["tax_legend"] = "T = TAXED\nN = NOT TAXED"
         }).extraction.paperTaxedMarkers, ["T"])
     }
+    func testNoFrillsCompositeTaxFlagRequiresPrintedHSTMapping() throws {
+        var taxed = row("81234 FICTIONAL ITEM HMRJ")
+        taxed["raw_text"] = "81234 FICTIONAL ITEM HMRJ 2.50"
+        var plain = row("81235 FICTIONAL OTHER")
+        plain["tax_marker"] = "MRJ"
+        plain["raw_text"] = "81235 FICTIONAL OTHER MRJ 2.50"
+        var tax = row("H=HST 13%", amount: "0.33")
+        tax["kind"] = "tax"
+        tax["raw_text"] = "H=HST 13% 0.33"
+        let result = try decode(envelope(rows: [taxed, plain, tax]) { $0["merchant"] = "NO FRILLS" })
+        XCTAssertEqual(result.draft.lines[0].name, "81234 FICTIONAL ITEM")
+        XCTAssertEqual(result.draft.lines[0].taxMarker, "HMRJ")
+        XCTAssertTrue(result.extraction.paperTaxedMarkers.contains("HMRJ"))
+        XCTAssertFalse(result.extraction.paperTaxedMarkers.contains("MRJ"))
+
+        let unverified = try decode(envelope(rows: [taxed, plain]) { $0["merchant"] = "NO FRILLS" })
+        XCTAssertTrue(unverified.extraction.paperTaxedMarkers.isEmpty)
+        XCTAssertEqual(unverified.draft.lines[0].name, "81234 FICTIONAL ITEM HMRJ")
+        let otherMerchant = try decode(envelope(rows: [taxed, tax]))
+        XCTAssertFalse(otherMerchant.extraction.paperTaxedMarkers.contains("HMRJ"))
+    }
+
     func testUnitRateIsSeparatedFromNewAndSavedNamesAndTipIsAnAdjustment() throws {
         let printedName = "81234 FICTIONAL APPLES 0.500 kg @ 2.00/kg"
         var purchase = row(printedName, amount: "1.00")

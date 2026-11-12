@@ -128,6 +128,40 @@ enum ReceiptModelAdapter {
         return parts[1]
     }
 
+    static func definesHSTMarker(_ label: String) -> Bool {
+        !matches(#"(?i)^\s*H[ \t]*[=:][ \t]*HST\b"#, label).isEmpty
+    }
+
+    static func printedTaxLabels(_ rows: [[String: Any]]) -> [String] {
+        // Model captures can have a printed tax charge before a currency is set.
+        // Require the model's literal row to corroborate both label and charge.
+        return rows.compactMap { row -> String? in
+            guard row["kind"] as? String == "tax", let label = row["description"] as? String,
+                  let raw = row["raw_text"] as? String,
+                  let token = ReceiptModelAdapter.token(row["amount"] as? String),
+                  let amount = Decimal(string: token, locale: Locale(identifier: "en_US_POSIX")), amount > 0 else { return nil }
+            let labelWords = label.split(whereSeparator: \.isWhitespace)
+            let printedWords = raw.split(whereSeparator: \.isWhitespace)
+            guard !labelWords.isEmpty, printedWords.count > labelWords.count,
+                  printedWords.starts(with: labelWords),
+                  ReceiptModelAdapter.token(printedWords.last.map(String.init)).flatMap({
+                      Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX"))
+                  }) == amount else { return nil }
+            return label
+        }
+    }
+
+    private static func noFrillsCompositeName(_ row: [String: Any], name: String) -> String? {
+        guard row["kind"] as? String == "purchase" else { return nil }
+        var candidate = row
+        let suffix = name.range(of: #"[ \t]+HMRJ$"#, options: .regularExpression)
+        let clean = suffix.map { String(name[..<$0.lowerBound]) } ?? name
+        guard !clean.isEmpty, suffix != nil || row["tax_marker"] as? String == "HMRJ" else { return nil }
+        candidate["description"] = clean
+        candidate["tax_marker"] = "HMRJ"
+        return recover(candidate, legend: nil) ? clean : nil
+    }
+
     static func decode(_ envelope: Data, provider: String, model: String) throws -> ReceiptModelReading {
         let bytes = try candidate(from: envelope)
         guard var object = try JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
@@ -154,13 +188,17 @@ enum ReceiptModelAdapter {
         if let currency = string("currency"), string("currency_raw")?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == currency,
            ExactInput.currency(currency) != nil { draft.currency = currency; draft.currencyOrigin = nil }
         draft.subtotal = moneyText(string("subtotal")) ?? ""; draft.total = moneyText(string("total")) ?? ""
+        let noFrillsHST = draft.merchant == "NOFRILLS" && printedTaxLabels(rows).contains(where: definesHSTMarker)
         for originalRow in rows {
             var row = originalRow
             if let name = separateHeading(row) { row["description"] = name; issue("department_heading_needs_review") }
             let kind = row["kind"] as! String
             if ["other", "payment", "change"].contains(kind) { continue }
             var name = row["description"] as? String ?? "", marker = row["tax_marker"] as? String
-            if recover(row, legend: string("tax_legend")), let suffix = marker {
+            if noFrillsHST, let clean = noFrillsCompositeName(row, name: name) {
+                name = clean
+                marker = "HMRJ"
+            } else if recover(row, legend: string("tax_legend")), let suffix = marker {
                 name += " " + suffix; marker = nil; issue("description_boundary_needs_review")
             }
             let quantityToken = token(row["quantity"] as? String)
@@ -224,21 +262,10 @@ extension ReceiptExtraction {
         let taxLabels = fields.adjustments.compactMap { adjustment in
             adjustment.kind == .tax && (adjustment.amount?.minorUnits ?? 0) > 0 ? adjustment.label : nil
         }
-        // Model captures can have a printed tax charge before a currency is set.
-        // Require the model's literal row to corroborate both label and charge.
-        let modelTaxLabels = (candidate?["rows"] as? [[String: Any]] ?? []).compactMap { row -> String? in
-            guard row["kind"] as? String == "tax", let label = row["description"] as? String,
-                  let raw = row["raw_text"] as? String,
-                  let token = ReceiptModelAdapter.token(row["amount"] as? String),
-                  let amount = Decimal(string: token, locale: Locale(identifier: "en_US_POSIX")), amount > 0 else { return nil }
-            let labelWords = label.split(whereSeparator: \.isWhitespace)
-            let printedWords = raw.split(whereSeparator: \.isWhitespace)
-            guard !labelWords.isEmpty, printedWords.count > labelWords.count,
-                  printedWords.starts(with: labelWords),
-                  ReceiptModelAdapter.token(printedWords.last.map(String.init)).flatMap({
-                      Decimal(string: $0, locale: Locale(identifier: "en_US_POSIX"))
-                  }) == amount else { return nil }
-            return label
+        let modelTaxLabels = ReceiptModelAdapter.printedTaxLabels(candidate?["rows"] as? [[String: Any]] ?? [])
+        if ReceiptModelAdapter.brand(fields.merchant) == "NOFRILLS",
+           (taxLabels + modelTaxLabels).contains(where: ReceiptModelAdapter.definesHSTMarker) {
+            markers.insert("HMRJ")
         }
         for label in taxLabels + modelTaxLabels {
             guard let match = ReceiptModelAdapter.matches(
