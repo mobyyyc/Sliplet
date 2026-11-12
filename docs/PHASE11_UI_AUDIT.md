@@ -113,3 +113,7 @@ The owner passed the receipt swipe and split walkthrough on the installed iPhone
 The earlier history UI put a confirmation form between a purchase and its receipt. History now includes direct matches automatically and lists them by receipt date. Matching uses a store code or exact same-store description when a code is missing. Valid saved links remain visible and saved exclusions are honored. Prices are line totals. The history list opens each receipt at the highlighted item. Existing eligible unit-price comparisons remain available from the receipt menu.
 
 Line Details now leads with the item name, code when available and price, with optional quantity and unit price below. Viewing the original and editing are separate actions. Editing keeps the existing cancel and save-as-draft behavior.
+
+## P11-08 search and history phone checkpoint · November 12, 2026
+
+The owner passed search query and result-position restoration, automatic purchase history, opening the highlighted purchase row, and displaying recorded unit prices in Line Details on iPhone 15 Pro build `12cd43d`. The remaining acceptance checks cover long receipts and wallets, lock and return after interruptions, and accessibility in light and dark appearances.
