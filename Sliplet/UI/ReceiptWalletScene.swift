@@ -703,8 +703,21 @@ private struct ReceiptPaperStyle: ViewModifier {
         content.environment(\.colorScheme, appearance == .alwaysWhite ? .light : scheme)
     }
 }
+private struct ReceiptPaperSecondaryInk: ViewModifier {
+    let enabled: Bool
+    @Environment(\.colorSchemeContrast) private var systemContrast
+
+    func body(content: Content) -> some View {
+        let opacity = ReceiptAccessibility.contrast(systemContrast) == .increased ? 0.86 : 0.70
+        content.foregroundStyle(.primary.opacity(enabled ? opacity : 1))
+    }
+}
+
 extension View {
     func receiptPaperStyle() -> some View { modifier(ReceiptPaperStyle()) }
+    func receiptPaperSecondaryInk(_ enabled: Bool = true) -> some View {
+        modifier(ReceiptPaperSecondaryInk(enabled: enabled))
+    }
 }
 
 /// Opaque receipt paper with a modest torn edge; long item text fades inside the preview.
@@ -793,8 +806,8 @@ struct ReceiptPreviewPaper: View, Equatable {
                 if ReceiptCompletion.isComplete(record) { ReceiptReviewedMark() }
             }
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) { Text(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote); Spacer(); total }
-                VStack(alignment: .leading, spacing: 6) { Text(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote); total }
+                HStack(alignment: .firstTextBaseline) { Text(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote).receiptPaperSecondaryInk(); Spacer(); total }
+                VStack(alignment: .leading, spacing: 6) { Text(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote).receiptPaperSecondaryInk(); total }
             }
             if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle").font(.caption) }
             PaperRule().stroke(.primary.opacity(0.18), style: StrokeStyle(lineWidth: 1, dash: [3, 3])).frame(height: 1)
@@ -815,7 +828,7 @@ struct ReceiptPreviewPaper: View, Equatable {
                 Text("\(fields.items.count) \(fields.items.count == 1 ? "item" : "items")")
                 Spacer()
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-            }.font(.caption).padding(.bottom, 4) }
+            }.font(.caption).receiptPaperSecondaryInk().padding(.bottom, 4) }
         }
         .fontDesign(.monospaced)
         .accessibilityRepresentation { EmptyView() }

@@ -30,16 +30,23 @@ import CryptoKit
             if ProcessInfo.processInfo.arguments.contains("--discount-layout-fixture") {
                 d.merchant = "COSTCO"
                 d.lines[0].sku = "81234"
+                d.lines[0].quantity = "2"
+                d.lines[0].unit = "each"
+                d.lines[0].unitPriceText = "5.00"
+                d.lines[0].taxMarker = "A"
+                d.lines[2].name = "A=GST"
                 d.lines.append(.init(id: UUID(), kind: "discount", name: "910001 / 81234", quantity: "", amount: "-1.00", sourceLineIDs: []))
                 d.lines.append(.init(id: UUID(), kind: "discount", name: "FICTIONAL COUPON", quantity: "", amount: "-0.20", sourceLineIDs: []))
                 d.lines.append(.init(id: UUID(), kind: "discount", name: "FICTIONAL LOYALTY SAVINGS", quantity: "", amount: "-0.50", sourceLineIDs: [], discountScope: .subtotal))
                 d.total = "13.93"
             }
-            let content = [d.merchant, d.date + " CAD"] + d.lines.map { $0.name + " " + $0.amount }
+            let legend = d.merchant == "COSTCO" ? ["A = TAXED"] : []
+            let content = [d.merchant, d.date + " CAD"] + legend + d.lines.map { $0.name + " " + $0.amount }
                 + ["SUBTOTAL " + d.subtotal, "TOTAL " + d.total, "FICTIONAL TEST — NOT A PURCHASE"]
+            let size = CGSize(width: 800, height: CGFloat(max(800, content.count * 75 + 70)))
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
-            let bytes = UIGraphicsImageRenderer(size: CGSize(width: 800, height: CGFloat(max(800, content.count * 75 + 70))), format: format).pngData { _ in
-                UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 800, height: 800))
+            let bytes = UIGraphicsImageRenderer(size: size, format: format).pngData { _ in
+                UIColor.white.setFill(); UIRectFill(CGRect(origin: .zero, size: size))
                 for (index, line) in content.enumerated() {
                     (line as NSString).draw(at: CGPoint(x: 35, y: 35 + index * 75), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 28, weight: .regular), .foregroundColor: UIColor.black])
                 }

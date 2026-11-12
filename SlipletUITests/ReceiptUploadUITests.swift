@@ -199,8 +199,17 @@ extension ReceiptUploadUITests {
     }
 
     func testSavedItemDiscountRendersDirectlyUnderItsPurchase() {
+        assertReceiptHierarchy(appearance: "light", flags: ["--t05-light"])
+    }
+
+    func testSavedReceiptHierarchyUsesThePaperAppearance() {
+        assertReceiptHierarchy(appearance: "dark", flags: [])
+        assertReceiptHierarchy(appearance: "white-paper", flags: ["--t05-white-paper"])
+    }
+
+    private func assertReceiptHierarchy(appearance: String, flags: [String]) {
         let app = XCUIApplication()
-        app.launchArguments = ["--t05-synthetic-preview", "split", "--t05-light", "--discount-layout-fixture"]
+        app.launchArguments = ["--t05-synthetic-preview", "split", "--discount-layout-fixture"] + flags
         app.launch()
         let reader = app.scrollViews["detailScreen"]
         func row(_ text: String) -> XCUIElement {
@@ -210,11 +219,21 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(purchase.waitForExistence(timeout: 30))
         XCTAssertGreaterThan(discount.frame.minY, purchase.frame.minY)
         XCTAssertLessThan(discount.frame.minY, next.frame.minY)
-        XCTAssertEqual(discount.frame.height, purchase.frame.height, accuracy: 3)
+        XCTAssertEqual(discount.frame.minY - purchase.frame.maxY, 4, accuracy: 1)
+        XCTAssertTrue(purchase.label.contains("Quantity 2"))
+        XCTAssertTrue(purchase.label.contains("5.00/each"))
+        XCTAssertTrue(purchase.label.contains("Taxed"))
         XCTAssertFalse(app.staticTexts["Discounts to review"].exists)
         let subtotal = reader.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Subtotal'")).firstMatch
         XCTAssertLessThan(row("-0.20").frame.minY, subtotal.frame.minY)
         XCTAssertGreaterThan(row("-0.50").frame.minY, subtotal.frame.minY)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Receipt hierarchy " + appearance
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        discount.tap()
+        XCTAssertTrue(app.buttons["editSavedLine"].waitForExistence(timeout: 5))
+        app.terminate()
     }
 
     func testSavedDetailLineCancelAndSaveDraft() {
