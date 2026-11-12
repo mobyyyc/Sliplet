@@ -334,6 +334,7 @@ struct ReceiptPaper: View {
     var showsSurface = true
     var reviewed = false
     var taxedMarkers: Set<String> = []
+    var highlightedLineID: UUID? = nil
     var editLine: ((UUID) -> Void)?
     private func money(_ value: ReceiptMoney?, raw: String? = nil) -> String {
         value.map { ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale) } ?? raw?.nilIfEmpty ?? "Missing"
@@ -385,6 +386,7 @@ struct ReceiptPaper: View {
                         .font(.system(.subheadline, design: .monospaced))
                         .accessibilityElement(children: .combine)
                     }
+                    .id(item.id)
                     adjustmentRows(discounts.filter { $0.discountScope == .item(item.id) }, underItem: true)
                 }
             }
@@ -442,6 +444,15 @@ struct ReceiptPaper: View {
             Button { editLine(id) } label: {
                 row.contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityHint("Edit this line").accessibilityIdentifier("paperLine-" + id.uuidString)
+        } else if highlightedLineID == id {
+            row
+                .background {
+                    RoundedRectangle(cornerRadius: 9)
+                        .fill(.primary.opacity(0.08))
+                        .padding(.horizontal, -8)
+                }
+                .accessibilityHint("Purchase opened from history")
+                .accessibilityIdentifier("historyHighlightedPurchase")
         } else {
             row
         }

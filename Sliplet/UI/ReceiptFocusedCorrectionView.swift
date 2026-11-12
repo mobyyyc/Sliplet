@@ -28,7 +28,7 @@ struct ReceiptFocusedCorrectionView: View {
     private let detailLine: ReceiptWorkspace.DetailLine?
     private var browsingSavedPurchase: Bool {
         guard let detailLine else { return false }
-        return !editingSavedLine && workspace.selected?.current.fields.items.contains(where: { $0.id == detailLine.id }) == true
+        return !editingSavedLine && baseline.lines.contains { $0.id == detailLine.id }
     }
     private var baselineIsCurrent: Bool {
         if let detailLine { return workspace.selected?.current.id == detailLine.revision && workspace.flow == .detail }
@@ -67,31 +67,8 @@ struct ReceiptFocusedCorrectionView: View {
         NavigationStack {
             Form {
                 if detailLine == nil { Section { Text(check.message).font(.footnote) } }
-                if let detailLine, let selected = workspace.selected,
-                   let line = selected.current.fields.items.first(where: { $0.id == detailLine.id }) {
-                    Section("This purchase") {
-                        Text(line.description ?? "Description missing").font(.headline)
-                        if let amount = line.amount {
-                            LabeledContent("Line amount", value: "\(amount.currency.code) \(ExactInput.format(amount.minorUnits, scale: amount.currency.minorUnitScale))")
-                        }
-                        Text(selected.current.fields.merchant ?? "Merchant missing").font(.subheadline)
-                        Text(ExactInput.dateText(selected.current.fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.subheadline)
-                    }
-                    Section {
-                        NavigationLink {
-                            PurchaseHistoryView(workspace: workspace,
-                                endpoint: PurchaseEndpoint(receiptID: selected.id, lineID: detailLine.id))
-                        } label: { Label("Purchase history", systemImage: "clock.arrow.circlepath") }
-                        .disabled(input != baseline)
-                        .accessibilityIdentifier("openPurchaseHistory")
-                        if input != baseline { Text("Save or cancel your edits before opening history.").font(.footnote) }
-                        if !editingSavedLine {
-                            Button("Edit line", systemImage: "pencil") { editingSavedLine = true }
-                                .accessibilityIdentifier("editSavedLine")
-                            Button("View original", systemImage: "doc.viewfinder") { expanded = true }
-                                .disabled(workspace.image == nil).accessibilityIdentifier("viewSavedLineOriginal")
-                        }
-                    }
+                if browsingSavedPurchase, let detailLine, let selected = workspace.selected {
+                    savedLineOverview(detailLine, receipt: selected)
                 }
 
                 if !browsingSavedPurchase {
@@ -116,40 +93,7 @@ struct ReceiptFocusedCorrectionView: View {
                         } header: { Text("Missing or wrapped line") }
                     }
 
-                    Section {
-                        if workspace.active && !workspace.privacyCovered, let image = workspace.image {
-                            ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
-                                .frame(height: effectiveTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
-                            let sourceToolsLayout = effectiveTypeSize.isAccessibilitySize
-                                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
-                                : AnyLayout(HStackLayout())
-                            sourceToolsLayout {
-                                ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
-                                if !effectiveTypeSize.isAccessibilitySize { Spacer() }
-                                Button("Expand original", systemImage: "arrow.up.left.and.arrow.down.right") { editing = nil; expanded = true }
-                                    .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
-                                    .accessibilityIdentifier("expandFocusedOriginal")
-                            }
-                            Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
-                                .buttonStyle(ReceiptSecondaryStyle()).disabled(rereadFields.isEmpty).accessibilityIdentifier("focusedReread")
-                            if rereadFields.isEmpty {
-                                Text("Choose an existing line or add a purchase above, then reread its amount or description.")
-                                    .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("focusedChooseLineHint")
-                            }
-                            if sources.count > 1, case .source = check.target {
-                                HStack {
-                                    Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
-                                    Spacer()
-                                    Text("\(sourceIndex + 1) of \(sources.count)").monospacedDigit()
-                                    Spacer()
-                                    Button("Next row") { sourceIndex += 1 }.disabled(sourceIndex == sources.count - 1)
-                                }.frame(minHeight: 44).buttonStyle(.borderless)
-                            }
-                        } else { Text("Original unavailable. Close this check and reopen the receipt.") }
-                    } header: { Text("Original comparison") }
-                    footer: {
-                        Text(boxes.isEmpty ? "No position is available for this check. Compare the full original." : "Compare the photo; read text may contain errors.").font(.footnote)
-                    }
+                    if detailLine == nil { originalComparison }
                     switch check.target {
                     case .receipt:
                         Section {
@@ -181,8 +125,8 @@ struct ReceiptFocusedCorrectionView: View {
                     case .line, .source:
                         if lineID != nil {
                             Section {
-                                LabeledContent("Line amount") { TextField("Missing", text: lineField(\.amount)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "lineAmount").accessibilityIdentifier("focusedLineAmount") }
-                                TextField("Printed description", text: lineField(\.name), axis: .vertical).focused($editing, equals: "lineName").accessibilityIdentifier("focusedLineName")
+                                TextField("Item name", text: lineField(\.name), axis: .vertical).focused($editing, equals: "lineName").accessibilityIdentifier("focusedLineName")
+                                LabeledContent("Price") { TextField("Missing", text: lineField(\.amount)).keyboardType(.numbersAndPunctuation).focused($editing, equals: "lineAmount").accessibilityIdentifier("focusedLineAmount") }
                                 Picker("Type", selection: lineField(\.kind)) {
                                     ForEach(["purchase", "discount", "tax", "deposit", "tip", "other"], id: \.self) { Text($0.capitalized).tag($0) }
                                 }
@@ -206,9 +150,10 @@ struct ReceiptFocusedCorrectionView: View {
                                 } else if let rate = input.lines.first(where: { $0.id == lineID })?.rate {
                                     LabeledContent("Printed rate", value: ExactInput.quantity(rate))
                                 }
-                            } header: { Text("Focused line") }
+                            } header: { Text(detailLine == nil ? "Receipt line" : "Details") }
                         }
                     }
+                    if detailLine != nil { originalComparison }
                     if let assistance = currentAssistance {
                         Section("Reread used for this value") {
                             LabeledContent(assistance.field.title, value: assistance.value)
@@ -240,9 +185,15 @@ struct ReceiptFocusedCorrectionView: View {
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
                 .contentMargins(.bottom, 28, for: .scrollContent)
                 .accessibilityIdentifier("focusedCorrectionForm")
-                .navigationTitle(check.title).navigationBarTitleDisplayMode(.inline)
+                .navigationTitle(detailLine == nil ? check.title : (editingSavedLine ? "Edit line" : "Line details"))
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil; dismiss() }.disabled(workspace.saving).accessibilityIdentifier("cancelFocusedCorrection") }
+                    if !browsingSavedPurchase {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") { editing = nil; dismiss() }
+                                .disabled(workspace.saving).accessibilityIdentifier("cancelFocusedCorrection")
+                        }
+                    }
                     ToolbarItem(placement: .confirmationAction) {
                         Button(detailLine != nil ? (input == baseline ? "Done" : "Save draft") : (check.requiresCorrection || input != baseline ? "Apply" : "Checked")) { apply() }
                             .disabled(workspace.saving || !workspace.active || workspace.privacyCovered || workspace.image == nil || (isSourceGroup && !groupChecked && input == baseline))
@@ -283,6 +234,88 @@ struct ReceiptFocusedCorrectionView: View {
             .dynamicTypeSize(effectiveTypeSize)
             #endif
     }
+    @ViewBuilder private func savedLineOverview(_ detailLine: ReceiptWorkspace.DetailLine, receipt: ReceiptRecord) -> some View {
+        let fields = receipt.current.fields
+        let item = fields.items.first { $0.id == detailLine.id }
+        let adjustment = fields.adjustments.first { $0.id == detailLine.id }
+        let name = item?.paperName ?? adjustment?.label ?? baseline.lines.first { $0.id == detailLine.id }?.name.nilIfEmpty ?? "Unnamed line"
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                PurchaseItemHeading(name: name, code: item?.sku)
+                if let amount = item?.amount ?? adjustment?.amount {
+                    Text(PurchasePresentation.price(amount))
+                        .font(.title.weight(.semibold).monospacedDigit())
+                        .accessibilityIdentifier("savedLinePrice")
+                } else {
+                    Text("Price unavailable").font(.subheadline).foregroundStyle(.secondary)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    if let merchant = fields.merchant { Text(merchant) }
+                    if fields.purchaseDate != nil { Text(PurchasePresentation.date(fields.purchaseDate)) }
+                }.font(.subheadline).foregroundStyle(.secondary)
+            }.padding(.vertical, 8)
+        }
+        if let item, item.quantity != nil || item.unitPrice != nil {
+            Section {
+                if let quantity = item.quantity {
+                    LabeledContent("Quantity", value: ExactInput.quantity(quantity) + (item.unit.map { " " + $0 } ?? ""))
+                }
+                if let price = item.unitPrice {
+                    LabeledContent("Unit price", value: PurchasePresentation.price(price) + "/" + item.paperPriceUnit)
+                }
+            }
+        }
+        Section {
+            if item != nil {
+                NavigationLink {
+                    PurchaseHistoryView(workspace: workspace, endpoint: PurchaseEndpoint(receiptID: receipt.id, lineID: detailLine.id))
+                } label: { Label("Purchase history", systemImage: "clock.arrow.circlepath") }
+                    .accessibilityIdentifier("openPurchaseHistory")
+            }
+            Button("View original", systemImage: "doc.viewfinder") { expanded = true }
+                .disabled(workspace.image == nil).accessibilityIdentifier("viewSavedLineOriginal")
+            Button("Edit line", systemImage: "pencil") { editingSavedLine = true }
+                .accessibilityIdentifier("editSavedLine")
+        }
+    }
+
+    private var originalComparison: some View {
+        Section {
+            if workspace.active && !workspace.privacyCovered, let image = workspace.image {
+                ZoomReceiptImage(bytes: image.bytes, boxes: boxes, reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "focusedSourceRaster")
+                    .frame(height: effectiveTypeSize.isAccessibilitySize ? 180 : 150).accessibilityIdentifier("focusedSourceImage")
+                let sourceToolsLayout = effectiveTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                    : AnyLayout(HStackLayout())
+                sourceToolsLayout {
+                    ReceiptSourceZoomControls(target: zoomTarget, prefix: "focused")
+                    if !effectiveTypeSize.isAccessibilitySize { Spacer() }
+                    Button("Expand original", systemImage: "arrow.up.left.and.arrow.down.right") { editing = nil; expanded = true }
+                        .labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
+                        .accessibilityIdentifier("expandFocusedOriginal")
+                }
+                Button("Reread an area", systemImage: "text.viewfinder") { editing = nil; rereading = true }
+                    .buttonStyle(ReceiptSecondaryStyle()).disabled(rereadFields.isEmpty).accessibilityIdentifier("focusedReread")
+                if rereadFields.isEmpty {
+                    Text("Choose an existing line or add a purchase above, then reread its amount or description.")
+                        .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("focusedChooseLineHint")
+                }
+                if sources.count > 1, case .source = check.target {
+                    HStack {
+                        Button("Previous row") { sourceIndex -= 1 }.disabled(sourceIndex == 0)
+                        Spacer()
+                        Text("\(sourceIndex + 1) of \(sources.count)").monospacedDigit()
+                        Spacer()
+                        Button("Next row") { sourceIndex += 1 }.disabled(sourceIndex == sources.count - 1)
+                    }.frame(minHeight: 44).buttonStyle(.borderless)
+                }
+            } else { Text("Original unavailable. Close this check and reopen the receipt.") }
+        } header: { Text("Original comparison") }
+        footer: {
+            Text(boxes.isEmpty ? "No position is available for this check. Compare the full original." : "Compare the photo; read text may contain errors.").font(.footnote)
+        }
+    }
+
     private var rereadFields: [ReceiptAssistedField] {
         check.rereadFields(lineID: lineID)
     }

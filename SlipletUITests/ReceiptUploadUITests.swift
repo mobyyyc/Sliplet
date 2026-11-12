@@ -227,6 +227,7 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(app.staticTexts["Needs review"].exists)
         let tax = reader.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-' AND label BEGINSWITH 'Tax'")).firstMatch
         reveal(tax, in: app); tax.tap()
+        app.buttons["editSavedLine"].tap()
         let name = app.textFields["focusedLineName"]
         reveal(name, in: app)
         XCTAssertEqual(name.value as? String, "FICTIONAL TAX")

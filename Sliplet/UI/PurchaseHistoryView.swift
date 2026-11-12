@@ -3,209 +3,167 @@ import SwiftUI
 struct PurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
     let endpoint: PurchaseEndpoint
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Group {
             if !workspace.active || workspace.privacyCovered {
                 ContentUnavailableView("Wallet locked", systemImage: "lock")
-            } else {
+            } else if let record = workspace.receipts.first(where: { $0.id == endpoint.receiptID }),
+                      let item = record.current.fields.items.first(where: { $0.id == endpoint.lineID }) {
                 let entries = PurchaseHistoryEntry.entries(for: endpoint, in: workspace.receipts)
                 List {
                     Section {
-                        Text("\(entries.count) other \(entries.count == 1 ? "purchase" : "purchases")")
-                            .font(.headline).accessibilityIdentifier("purchaseHistoryCount")
-                        Text("Newest first within each match group.").font(.caption).foregroundStyle(.secondary)
-                        DisclosureGroup("About matches and amounts") {
-                            Text("Possible matches are suggestions, not confirmed products. Compare the originals before linking purchases.")
-                            Text("Amounts are printed line totals, not unit prices. Quantity, discounts and tax can change what you paid.")
-                        }.font(.subheadline)
+                        PurchaseItemHeading(name: item.paperName, code: item.sku)
+                            .listRowInsets(EdgeInsets(top: 12, leading: 4, bottom: 12, trailing: 4))
+                            .listRowBackground(Color.clear)
                     }
                     if entries.isEmpty {
                         ContentUnavailableView("No other purchases found", systemImage: "clock",
-                            description: Text("Saved receipts with matching store codes or descriptions will appear here."))
-                    }
-                    ForEach(PurchaseHistoryEntry.Status.allCases, id: \.self) { status in
-                        let group = entries.filter { $0.status == status }
-                        if !group.isEmpty {
-                            Section(status.rawValue) {
-                                ForEach(group) { entry in
-                                    NavigationLink {
-                                        PurchaseComparisonView(workspace: workspace, first: endpoint, second: entry.id)
-                                    } label: {
-                                        PurchaseHistoryRow(record: entry.record, line: entry.line)
-                                    }.accessibilityIdentifier("purchaseHistoryEntry-" + entry.line.id.uuidString)
+                            description: Text("Matching items from your saved receipts appear here automatically."))
+                            .listRowBackground(Color.clear)
+                    } else {
+                        Section {
+                            ForEach(entries) { entry in
+                                NavigationLink {
+                                    PurchaseReceiptView(workspace: workspace, source: endpoint, purchase: entry.id)
+                                } label: {
+                                    purchaseRow(entry)
                                 }
+                                .accessibilityIdentifier("purchaseHistoryEntry-" + entry.line.id.uuidString)
                             }
-                        }
-                    }
-                }.accessibilityIdentifier("purchaseHistory")
-            }
-        }
-        .navigationTitle("Purchase history").navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-private struct PurchaseHistoryRow: View {
-    let record: ReceiptRecord
-    let line: ReceiptLine
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(line.description ?? "Description missing").font(.headline)
-            Text(record.current.fields.merchant ?? "Merchant missing")
-            Text(ExactInput.dateText(record.current.fields.purchaseDate).nilIfEmpty ?? "Date missing")
-                .font(.subheadline)
-            Text(line.amount.map { "Line total · \($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" }
-                 ?? "Amount missing").monospacedDigit()
-            if record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
-            if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle").font(.caption) }
-        }.padding(.vertical, 4)
-    }
-}
-
-private struct PurchaseComparisonView: View {
-    @Bindable var workspace: ReceiptWorkspace
-    let first: PurchaseEndpoint
-    let second: PurchaseEndpoint
-    @State private var pack = PurchaseLinkDecision.Pack.unknown
-    @State private var loadedPack = false
-    @State private var error: String?
-    private var a: ReceiptRecord? { workspace.receipts.first { $0.id == first.receiptID } }
-    private var b: ReceiptRecord? { workspace.receipts.first { $0.id == second.receiptID } }
-
-    var body: some View {
-        Group {
-            if !workspace.active || workspace.privacyCovered {
-                ContentUnavailableView("Wallet locked", systemImage: "lock")
-            } else if let a, let b,
-                      let left = a.current.fields.items.first(where: { $0.id == first.lineID }),
-                      let right = b.current.fields.items.first(where: { $0.id == second.lineID }) {
-                let decision = PurchaseLinkEngine.decision(a, line: left.id, b, line: right.id)
-                let previous = (a.purchaseLinks?.decisions ?? []) + (b.purchaseLinks?.decisions ?? [])
-                Form {
-                    Section("Match status") {
-                        if let decision {
-                            Label(decision.verdict == .sameProduct ? "Same product confirmed" : "Marked as different products",
-                                  systemImage: decision.verdict == .sameProduct ? "checkmark.circle" : "minus.circle")
-                                .accessibilityIdentifier("purchaseDecisionStatus")
-                            Text(packLabel(decision.pack)).font(.subheadline)
-                        } else {
-                            Text(previous.contains { $0.connects(first, second) }
-                                 ? "A receipt or link changed. Compare both originals before confirming again."
-                                 : "This is a possible match. Compare the descriptions, codes and pack sizes.")
-                        }
-                    }
-                    purchase(a, line: left, title: "This purchase", identifier: "historyFirst")
-                    purchase(b, line: right, title: "Other purchase", identifier: "historySecond")
-                    Section {
-                        Picker("Pack size or variant", selection: $pack) {
-                            Text("Unknown").tag(PurchaseLinkDecision.Pack.unknown)
-                            Text("Same").tag(PurchaseLinkDecision.Pack.same)
-                            Text("Different").tag(PurchaseLinkDecision.Pack.different)
-                        }.accessibilityIdentifier("purchasePack")
-                        Button("Confirm same product") { save(a, b, verdict: .sameProduct) }
-                            .buttonStyle(ReceiptProminentStyle())
-                            .accessibilityIdentifier("confirmPurchaseLink")
-                        Button("Different products") { save(a, b, verdict: .differentProduct) }
-                            .buttonStyle(ReceiptSecondaryStyle())
-                            .accessibilityIdentifier("rejectPurchaseLink")
-                        if workspace.saving { ProgressView("Saving decision") }
-                        if let error { Text(error).foregroundStyle(.red).accessibilityIdentifier("purchaseLinkError") }
-                    } header: { Text("Product match") }
-                    footer: { Text("Confirming links these two purchases. It does not establish a price change.") }
-                    if previous.contains(where: { $0.connects(first, second) }) {
-                        Section("Saved decision") {
-                            Button("Undo match decision", role: .destructive) { save(a, b, verdict: nil) }
-                                .accessibilityIdentifier("undoPurchaseLink")
-                        }
-                    }
-                    Section("Unit prices") {
-                        if let blocker = PurchasePriceComparison.setupBlocker(a, line: left, b, line: right) {
-                            Label(blocker, systemImage: "info.circle")
-                                .font(.subheadline).accessibilityIdentifier("priceSetupBlocker")
-                        } else {
-                            let saved = decision?.first.endpoint == first ? decision?.priceEvidence : decision?.priceEvidence?.reversed
-                            let result = saved.flatMap {
-                                try? PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: $0)
-                            }
-                            if let result { Label(result.summary, systemImage: "checkmark.circle") }
-                            NavigationLink(result == nil ? "Compare unit prices" : "View verified prices") {
-                                PurchasePriceView(workspace: workspace, first: first, second: second)
-                            }.accessibilityIdentifier("compareUnitPrices")
+                        } header: {
+                            Text("Other purchases")
+                        } footer: {
+                            Text("Prices are receipt line totals.")
                         }
                     }
                 }
-                .disabled(workspace.saving)
-                .onAppear { if !loadedPack { pack = decision?.pack ?? .unknown; loadedPack = true } }
+                .listStyle(.insetGrouped)
+                .scrollEdgeEffectStyle(.soft, for: .vertical)
+                .accessibilityIdentifier("purchaseHistory")
             } else {
-                ContentUnavailableView("Purchase unavailable", systemImage: "doc.questionmark",
-                    description: Text("This receipt or item was removed. Return to purchase history."))
+                ContentUnavailableView("Item unavailable", systemImage: "doc.questionmark")
             }
-        }.navigationTitle("Compare purchases").navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func packLabel(_ value: PurchaseLinkDecision.Pack) -> String {
-        switch value {
-        case .same: "Same pack size or variant"
-        case .different: "Different pack size or variant"
-        case .unknown: "Pack size or variant unknown"
         }
+        .navigationTitle("Purchase history")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func purchase(_ record: ReceiptRecord, line: ReceiptLine, title: String, identifier: String) -> some View {
-        Section(title) {
-            PurchaseHistoryRow(record: record, line: line)
-            if let code = line.sku { LabeledContent("Printed code", value: code) }
-            if let quantity = line.quantity { LabeledContent("Quantity", value: ExactInput.quantity(quantity)) }
-            if let unit = line.unit { LabeledContent("Unit", value: unit) }
-            if let price = line.unitPrice {
-                LabeledContent("Printed unit price", value: "\(price.currency.code) \(ExactInput.format(price.minorUnits, scale: price.currency.minorUnitScale))")
-            }
-            NavigationLink("View receipt") { PurchaseReceiptView(workspace: workspace, receiptID: record.id) }
-                .accessibilityIdentifier(identifier + "Receipt")
-            NavigationLink("View original") { PurchaseOriginalView(workspace: workspace, receiptID: record.id) }
-                .accessibilityIdentifier(identifier + "Original")
-        }
-    }
-
-    private func save(_ a: ReceiptRecord, _ b: ReceiptRecord, verdict: PurchaseLinkDecision.Verdict?) {
-        error = nil
-        Task {
-            do {
-                try await workspace.savePurchaseDecision(first: a, line: first.lineID, second: b, line: second.lineID,
-                                                          verdict: verdict, pack: pack)
-            } catch is CancellationError { }
-            catch {
-                if workspace.active && !workspace.privacyCovered {
-                    self.error = "Could not save this decision. Return to history and try again."
+    private func purchaseRow(_ entry: PurchaseHistoryEntry) -> some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        return layout {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.record.current.fields.merchant ?? "Unknown merchant").font(.body.weight(.medium))
+                Text(PurchasePresentation.date(entry.record.current.fields.purchaseDate))
+                    .font(.subheadline).foregroundStyle(.secondary)
+                if !ReceiptCompletion.isComplete(entry.record) {
+                    Text("Needs review").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(entry.line.amount.map(PurchasePresentation.price) ?? "Price unavailable")
+                .font(.body.weight(.semibold).monospacedDigit())
         }
+        .foregroundStyle(.primary)
+        .padding(.vertical, 5)
+        .frame(minHeight: 44)
+    }
+}
+
+struct PurchaseItemHeading: View {
+    let name: String
+    let code: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(name).font(.title2.weight(.bold)).accessibilityAddTraits(.isHeader)
+            if let code = code?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
+                Text(code).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                    .accessibilityLabel("Item code \(code)")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+enum PurchasePresentation {
+    static func date(_ value: ReceiptDate?) -> String {
+        guard let value,
+              let date = ReceiptDateSelection.calendar().date(from: DateComponents(
+                year: value.year, month: value.month, day: value.day, hour: 12))
+        else { return "Date unavailable" }
+        return date.formatted(.dateTime.year().month(.abbreviated).day())
+    }
+
+    static func price(_ value: ReceiptMoney) -> String {
+        let amount = Decimal(value.minorUnits) / pow(Decimal(10), Int(value.currency.minorUnitScale))
+        return amount.formatted(.currency(code: value.currency.code).presentation(.isoCode)
+            .precision(.fractionLength(Int(value.currency.minorUnitScale))))
     }
 }
 
 private struct PurchaseReceiptView: View {
     @Bindable var workspace: ReceiptWorkspace
-    let receiptID: UUID
+    let source: PurchaseEndpoint
+    let purchase: PurchaseEndpoint
+    @State private var positioned = false
+    @State private var comparingPrices = false
+
     var body: some View {
         Group {
             if !workspace.active || workspace.privacyCovered {
                 ContentUnavailableView("Wallet locked", systemImage: "lock")
-            } else if let record = workspace.receipts.first(where: { $0.id == receiptID }) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        if record.isArchived { Label("Archived", systemImage: "archivebox") }
-                        if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle") }
-                        ReceiptPaper(fields: record.current.fields, reviewed: ReceiptCompletion.isComplete(record),
-                                     taxedMarkers: record.original.paperTaxedMarkers)
-                    }.padding(24)
-                }.background { AtmosphericBackground().ignoresSafeArea() }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        NavigationLink("Original") { PurchaseOriginalView(workspace: workspace, receiptID: receiptID) }
+            } else if let record = workspace.receipts.first(where: { $0.id == purchase.receiptID }) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            if record.isArchived { Label("Archived", systemImage: "archivebox") }
+                            if !ReceiptCompletion.isComplete(record) { Label("Needs review", systemImage: "exclamationmark.circle") }
+                            ReceiptPaper(fields: record.current.fields, reviewed: ReceiptCompletion.isComplete(record),
+                                         taxedMarkers: record.original.paperTaxedMarkers, highlightedLineID: purchase.lineID)
+                        }
+                        .padding(.horizontal, 30)
+                        .padding(.vertical, 24)
+                    }
+                    .scrollClipDisabled()
+                    .scrollEdgeEffectStyle(.soft, for: .vertical)
+                    .accessibilityIdentifier("purchaseReceipt")
+                    .onAppear {
+                        guard !positioned else { return }
+                        positioned = true
+                        proxy.scrollTo(purchase.lineID, anchor: .center)
                     }
                 }
-            } else { ContentUnavailableView("Receipt unavailable", systemImage: "doc.questionmark") }
-        }.navigationTitle("Receipt").navigationBarTitleDisplayMode(.inline)
+                .background { AtmosphericBackground().ignoresSafeArea() }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink("Original") { PurchaseOriginalView(workspace: workspace, receiptID: record.id) }
+                            .accessibilityIdentifier("historyReceiptOriginal")
+                    }
+                    if let a = workspace.receipts.first(where: { $0.id == source.receiptID }),
+                       let left = a.current.fields.items.first(where: { $0.id == source.lineID }),
+                       let right = record.current.fields.items.first(where: { $0.id == purchase.lineID }),
+                       PurchasePriceComparison.setupBlocker(a, line: left, record, line: right) == nil {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Menu("More", systemImage: "ellipsis") {
+                                Button("Compare unit prices") { comparingPrices = true }
+                                    .accessibilityIdentifier("compareUnitPrices")
+                            }
+                        }
+                    }
+                }
+            } else {
+                ContentUnavailableView("Receipt unavailable", systemImage: "doc.questionmark")
+            }
+        }
+        .navigationTitle("Receipt")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $comparingPrices) {
+            PurchasePriceView(workspace: workspace, first: source, second: purchase)
+        }
     }
 }
 
@@ -231,13 +189,17 @@ struct PurchaseOriginalView: View {
             } else { ProgressView("Loading original") }
         }
         .navigationTitle("Original").navigationBarTitleDisplayMode(.inline)
-        .task(id: workspace.sessionID) {
-            image = nil; failed = false
-            do { image = try await workspace.purchaseOriginal(id: receiptID) }
-            catch is CancellationError { }
-            catch { failed = true }
+        .task(id: workspace.active && !workspace.privacyCovered ? workspace.sessionID : nil) {
+            image = nil
+            failed = false
+            guard workspace.active, !workspace.privacyCovered else { return }
+            do {
+                let original = try await workspace.purchaseOriginal(id: receiptID)
+                try Task.checkCancellation()
+                image = original
+            } catch is CancellationError { }
+            catch { if !Task.isCancelled { failed = true } }
         }
-        .onChange(of: workspace.privacyCovered) { _, covered in if covered { image = nil } }
         .onDisappear { image = nil }
     }
 }

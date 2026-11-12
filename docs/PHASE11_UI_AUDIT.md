@@ -107,3 +107,9 @@ The People form uses native swipe actions. Search, forms, pickers, menus, sheets
 ## P11-08 phone checkpoint · November 12, 2026
 
 The owner passed the receipt swipe and split walkthrough on the installed iPhone build at `ee768b6`. The next phone check is search return, repeat-purchase history and undo, and unit prices when an eligible pair is available. Record unavailable cases as skipped.
+
+## P11-08 purchase history follow-up · November 12, 2026
+
+The earlier history UI put a confirmation form between a purchase and its receipt. History now includes direct matches automatically and lists them by receipt date. Matching uses a store code or exact same-store description when a code is missing. Valid saved links remain visible and saved exclusions are honored. Prices are line totals. The history list opens each receipt at the highlighted item. Existing eligible unit-price comparisons remain available from the receipt menu.
+
+Line Details now leads with the item name, code when available and price, with optional quantity and unit price below. Viewing the original and editing are separate actions. Editing keeps the existing cancel and save-as-draft behavior.

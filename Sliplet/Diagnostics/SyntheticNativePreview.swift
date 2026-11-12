@@ -40,7 +40,15 @@ import CryptoKit
         }
         let merchant = mode == "purchase-history" ? "FICTIONAL HISTORY STORE" : ["SYNTHETIC CORNER", "SYNTHETIC MARKET", "SYNTHETIC STORE"][index % 3]
         let date = String(format: "2026-10-%02d", 7 - index % 3)
-        let names = (index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet") ? ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"] : ["TEST ITEM"]
+        let historyScrollFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--history-long-receipt")
+        let names: [String]
+        if historyScrollFixture && index == 1 {
+            names = (1...18).map { "TEST GROCERY \($0)" } + ["TEST ITEM"]
+        } else if index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet" {
+            names = ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"]
+        } else {
+            names = ["TEST ITEM"]
+        }
         let amount = ExactInput.format(Int64(names.count) * 1234)
         let priceFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--p1004-price-fixture")
         let content = [merchant, date + " CAD"] + names.map { $0 + (priceFixture ? " 2 each @6.17 12.34" : " 12.34") } + ["SUBTOTAL " + amount, "TOTAL " + amount]
@@ -55,6 +63,7 @@ import CryptoKit
         d.lines = names.map { name in
             var line = EditableReceiptLine(id: UUID(), kind: "purchase", name: name,
                 quantity: priceFixture ? "2" : "", amount: "12.34", sourceLineIDs: [])
+            if historyScrollFixture && name == "TEST ITEM" { line.sku = "123456" }
             if priceFixture { line.unitPriceText = "6.17"; line.unit = "each" }
             return line
         }

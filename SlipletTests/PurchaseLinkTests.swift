@@ -199,7 +199,7 @@ import XCTest
         try await store.close()
     }
 
-    func testHistoryLabelsArchiveDraftChangedAndRejectedPurchases() async throws {
+    func testAutomaticHistoryIncludesArchivedAndEditedMatchesButExcludesRejectedPurchases() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = try ReceiptStore(directory: directory, keyProvider: Key())
@@ -207,18 +207,19 @@ import XCTest
         let b = try await create(store, marker: 2)
         let c = try await create(store, marker: 3)
         let endpoint = PurchaseEndpoint(receiptID: a.id, lineID: a.current.fields.items[0].id)
+        let unlinked = PurchaseHistoryEntry.entries(for: endpoint, in: [a, b, c])
+        XCTAssertEqual(Set(unlinked.map(\.record.id)), Set([b.id, c.id]))
         let ab = try await save(store, a, b)
         let ac = try await save(store, ab[0], c, verdict: .differentProduct)
         let archived = try await store.organize(id: b.id, expectedRevision: b.current.id, action: .archive)
         let initial = PurchaseHistoryEntry.entries(for: endpoint, in: [ac[0], archived, ac[1]])
-        XCTAssertTrue(initial.contains { $0.record.isArchived && $0.status == .confirmed })
-        XCTAssertTrue(initial.contains { $0.record.id == c.id && $0.status == .different })
+        XCTAssertEqual(initial.map(\.record.id), [b.id])
+        XCTAssertTrue(initial.first?.record.isArchived == true)
         var fields = b.current.fields
         fields.purchaseDate = nil
         let edited = try await store.revise(id: b.id, expectedRevision: b.current.id, fields: fields)
         let changed = PurchaseHistoryEntry.entries(for: endpoint, in: [ac[0], edited, ac[1]])
         XCTAssertEqual(changed.last?.record.id, b.id)
-        XCTAssertEqual(changed.last?.status, .changed)
         XCTAssertEqual(changed.last?.record.current.review, .draft)
         try await store.delete(id: b.id)
         let surviving = try await store.receipts()
