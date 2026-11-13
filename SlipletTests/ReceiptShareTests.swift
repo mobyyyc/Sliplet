@@ -5,12 +5,17 @@ import XCTest
 
 @MainActor final class ReceiptShareTests: XCTestCase {
     func testExportUsesOpaqueRGBPNGAndScalesLongReceipts() throws {
+        XCTAssertNotNil(ReceiptShareRenderer.appIcon)
         let short = try ReceiptShareRenderer.render(SplitFixture.record(amounts: [499, 699]))
         let long = try ReceiptShareRenderer.render(SplitFixture.record(amounts: Array(repeating: 499, count: 500)))
         XCTAssertEqual(short.width, 1380)
         XCTAssertGreaterThan(long.height, short.height)
         XCTAssertGreaterThanOrEqual(long.width, 460)
         XCTAssertLessThanOrEqual(long.height, 32_000)
+        let sample = XCTAttachment(data: try ReceiptShareRenderer.pngData(short), uniformTypeIdentifier: UTType.png.identifier)
+        sample.name = "Sliplet receipt image"
+        sample.lifetime = .keepAlways
+        add(sample)
         for image in [short, long] {
             let bytes = try ReceiptShareRenderer.pngData(image)
             let source = try XCTUnwrap(CGImageSourceCreateWithData(bytes as CFData, nil))

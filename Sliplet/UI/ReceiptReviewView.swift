@@ -355,6 +355,7 @@ struct ReceiptPaper: View {
     var taxedMarkers: Set<String> = []
     var highlightedLineID: UUID? = nil
     var editLine: ((UUID) -> Void)?
+    var shareLayout = false
     @Environment(\.dynamicTypeSize) private var typeSize
     private let rowSpacing: CGFloat = 14
     private let detailSpacing: CGFloat = 5
@@ -393,13 +394,17 @@ struct ReceiptPaper: View {
         }
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                Text(fields.merchant ?? "Merchant missing").font(.title2.weight(.semibold)).accessibilityIdentifier("receiptPaperMerchant")
+                Text(fields.merchant ?? "Merchant missing")
+                    .font(shareLayout ? .system(size: 29, weight: .bold) : .title2.weight(.semibold))
+                    .fontDesign(shareLayout ? .default : .monospaced)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("receiptPaperMerchant")
                 Spacer(minLength: 0)
                 if reviewed { ReceiptReviewedMark() }
             }
             Text("\(ExactInput.dateText(fields.purchaseDate).nilIfEmpty ?? "Date missing") · \(fields.currency?.code ?? "Currency missing")").font(.subheadline).receiptPaperSecondaryInk()
             Divider()
-            Text("Items").font(.headline)
+            if !shareLayout { Text("Items").font(.headline) }
             VStack(alignment: .leading, spacing: rowSpacing) {
                 ForEach(fields.items) { item in
                     itemGroup(item, discounts: linked[item.id, default: []])
@@ -418,8 +423,16 @@ struct ReceiptPaper: View {
                 adjustmentRows(fields.adjustments.filter { $0.kind != .discount && $0.kind != .tax })
             }
             .font(.subheadline)
-            Divider()
-            amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
+            if shareLayout {
+                amountRow("Total", fields.total, raw: input?.total, lightInk: true)
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 13)
+                    .background(Color(red: 0.16, green: 0.13, blue: 0.11), in: RoundedRectangle(cornerRadius: 9))
+            } else {
+                Divider()
+                amountRow("Total", fields.total, raw: input?.total).font(.title3.weight(.semibold)).accessibilityIdentifier("receiptPaperTotal")
+            }
         }.fontDesign(.monospaced).padding(24).frame(maxWidth: .infinity, alignment: .leading)
     }
     private func itemGroup(_ item: ReceiptLine, discounts: [ReceiptAdjustment]) -> some View {
@@ -532,16 +545,19 @@ struct ReceiptPaper: View {
             row
         }
     }
-    private func amountRow(_ name: String, _ value: ReceiptMoney?, raw: String? = nil, secondary: Bool = false) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+    private func amountRow(_ name: String, _ value: ReceiptMoney?, raw: String? = nil, secondary: Bool = false, lightInk: Bool = false) -> some View {
+        let row = HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(name)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(money(value, raw: raw))
                 .monospacedDigit().lineLimit(1).minimumScaleFactor(0.45).layoutPriority(1)
         }
-        .receiptPaperSecondaryInk(secondary)
         .accessibilityElement(children: .combine)
+        return Group {
+            if lightInk { row.foregroundStyle(.white) }
+            else { row.receiptPaperSecondaryInk(secondary) }
+        }
     }
 }
 
