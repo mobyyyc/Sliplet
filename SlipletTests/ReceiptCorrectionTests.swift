@@ -34,7 +34,7 @@ final class ReceiptCorrectionTests: XCTestCase, @unchecked Sendable {
         XCTAssertTrue(date.isChecked(in: draft)); XCTAssertEqual(date.signature(in: draft), date.signature(in: draft))
         draft.merchant = "FICTIONAL CHANGED STORE"; XCTAssertTrue(date.isChecked(in: draft))
         draft.date = "2026-10-08"; XCTAssertFalse(date.isChecked(in: draft))
-        XCTAssertFalse(draft.canFinalize)
+        XCTAssertTrue(draft.canFinalize)
     }
     func testLineAndUnassignedChecksReopenAfterEvidenceOrAmountChange() throws {
         let original = try extraction("FICTIONAL STORE CAD\n2026-10-09\nCOUPON 1.00\nWRAPPED ROW\nTOTAL 1.00")
@@ -90,7 +90,7 @@ final class ReceiptCorrectionTests: XCTestCase, @unchecked Sendable {
         XCTAssertGreaterThan(focus.minY, 9000); XCTAssertLessThanOrEqual(focus.maxY, 10000)
         XCTAssertEqual(box.y, 0.02); XCTAssertNil(ReceiptSourceGeometry.focus(boxes: [], size: CGSize(width: 800, height: 10000)))
     }
-    @MainActor func testNormalAndLongFocusedAmountRepairThenExplicitReviewCanFinalize() throws {
+    @MainActor func testNormalAndLongFocusedAmountRepairCanFinalize() throws {
         for mode in ["correction-normal", "correction-long"] {
             let (bytes, extraction, draft) = try SyntheticCorrectionPreview.fixture(mode)
             let workspace = ReceiptWorkspace(); workspace.active = true; workspace.flow = .review
@@ -99,8 +99,7 @@ final class ReceiptCorrectionTests: XCTestCase, @unchecked Sendable {
             var corrected = draft; corrected.lines[corrected.lines.count - 1].amount = "1.00"
             workspace.applyFocusedCorrection(corrected, check: check)
             XCTAssertTrue(workspace.draft.reconciliation.issues.isEmpty)
-            XCTAssertFalse(workspace.draft.canFinalize)
-            workspace.showSource(); workspace.sourceVisible = false; workspace.draft.sourceChecked = true
+            XCTAssertFalse(workspace.draft.sourceChecked)
             XCTAssertTrue(workspace.draft.canFinalize)
         }
     }

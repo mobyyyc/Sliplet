@@ -100,7 +100,6 @@ import Vision
         let merchant = app.textFields["merchantField"]; reveal(merchant, app: app); merchant.tap(); merchant.typeText("SYNTHETIC CORNER")
         if app.buttons["keyboardDone"].exists { app.buttons["keyboardDone"].tap() }
         app.buttons["original"].tap(); XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); app.buttons["sourceDone"].tap()
-        let check = app.switches["sourceCheck"]; reveal(check, app: app); check.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         if !app.buttons["finishSave"].isEnabled {
             capture(app, "fictional-import-finish-gate")
             let tree = XCTAttachment(string: app.debugDescription); tree.name = "T07-fictional-import-review-tree"; tree.lifetime = .keepAlways; add(tree)
@@ -248,7 +247,7 @@ import Vision
         XCTAssertGreaterThanOrEqual(status.frame.minY, merchant.frame.minY - 2)
         XCTAssertLessThanOrEqual(status.frame.maxY, merchant.frame.maxY + 2,
                                 "The reviewed mark belongs inside the receipt header")
-        XCTAssertEqual(status.label, "Reviewed and saved")
+        XCTAssertEqual(status.label, "Finished and saved")
         XCTAssertFalse(app.staticTexts["Reviewed"].exists)
         capture(app, "large-dark-match-context")
         app.buttons["searchMatchDetails"].tap(); XCTAssertTrue(app.navigationBars["Match details"].waitForExistence(timeout: 10))

@@ -24,7 +24,7 @@ import XCTest
         let bytes = try envelope(); let r = try decode(bytes)
         XCTAssertNil(r.extraction.fields.currency); XCTAssertEqual(r.draft.currencyOrigin, .defaultCAD)
         XCTAssertEqual(r.draft.lines[0].amount, "2.50"); XCTAssertFalse(r.draft.sourceChecked)
-        XCTAssertFalse(r.draft.canFinalize); XCTAssertEqual(r.extraction.rawParserOutput, bytes)
+        XCTAssertTrue(r.draft.canFinalize); XCTAssertEqual(r.extraction.rawParserOutput, bytes)
         XCTAssertTrue(r.extraction.rawOCR.isEmpty); XCTAssertTrue(r.draft.lines[0].sourceLineIDs.isEmpty)
     }
     func testRepeatedRowsMissingAmountsAndNonAccountingArePreserved() throws {
@@ -211,7 +211,8 @@ import XCTest
         let saved = try XCTUnwrap(w.selected); w.open(saved)
         try await wait { w.image != nil }; w.edit()
         XCTAssertEqual(w.draft.lines[0].name, "MY EDIT"); XCTAssertEqual(w.extraction?.rawParserOutput, bytes)
-        XCTAssertFalse(w.draft.canFinalize)
+        XCTAssertTrue(w.draft.canFinalize)
+        XCTAssertFalse(ReceiptCompletion.isComplete(saved))
     }
     func testCancelledLateModelCannotReplaceNewDraft() async throws {
         let (w, dir) = try await workspace(); defer { w.suspend(); try? FileManager.default.removeItem(at: dir) }
@@ -220,7 +221,8 @@ import XCTest
             try? await Task.sleep(for: .milliseconds(400)); return bytes
         }
         w.startImport(modelReader: slow) { image }; try await wait { w.flow == .reading }
-        w.cancelImport(); w.startImport(modelReader: GeminiReceiptReader(model: "fictional") { _ in bytes }) { image }
+        w.cancelImport(); try await wait { w.flow == .wallet && !w.saving }
+        w.startImport(modelReader: GeminiReceiptReader(model: "fictional") { _ in bytes }) { image }
         try await wait { w.flow == .review }; w.updateDraft { $0.merchant = "NEW DRAFT" }
         try await Task.sleep(for: .milliseconds(500)); XCTAssertEqual(w.draft.merchant, "NEW DRAFT")
     }

@@ -110,7 +110,9 @@ struct ReceiptSearchIndex: Sendable {
         if searching && terms.isEmpty { return [] }
         return documents.compactMap { document in
             let record = document.record
-            guard (collection == "Archive" ? record.isArchived : collection == "Starred" ? record.isStarred && (includeArchived || !record.isArchived) : includeArchived || !record.isArchived),
+            guard collection == "Archive" ? record.isArchived : includeArchived || !record.isArchived,
+                  collection != "Starred" || record.isStarred,
+                  collection != "Needs review" || !ReceiptCompletion.isComplete(record),
                   merchant.accepts(record.current.fields.merchant), month.accepts(ReceiptHistory.monthKey(record)) else { return nil }
             if !searching { return Result(record: record, matches: []) }
             func matches(_ fields: [Field]) -> Bool {

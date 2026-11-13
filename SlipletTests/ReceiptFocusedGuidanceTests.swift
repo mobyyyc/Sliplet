@@ -60,6 +60,6 @@ final class ReceiptFocusedGuidanceTests: XCTestCase {
         XCTAssertEqual(w.draft, baseline, "Editing a local copy does not Apply")
         w.applyFocusedCorrection(working, check: check)
         XCTAssertEqual(w.draft.total, "1.00"); XCTAssertEqual(w.extraction, e)
-        XCTAssertFalse(w.draft.sourceChecked); XCTAssertFalse(w.draft.canFinalize)
+        XCTAssertFalse(w.draft.sourceChecked); XCTAssertTrue(w.draft.canFinalize)
     }
 }

@@ -337,11 +337,15 @@ struct ReceiptExtraction: Codable, Equatable, Sendable {
 }
 
 struct ReceiptRevision: Codable, Equatable, Sendable, Identifiable {
-    enum Review: String, Codable, Sendable { case draft, sourceReviewed }
+    enum Review: String, Codable, Sendable {
+        case draft, sourceReviewed, finished
+
+        var isFinished: Bool { self != .draft }
+    }
     let id: UUID
     let createdAt: Date
     let fields: ReceiptFields
-    /// This records a user's explicit source review; it is not arithmetic reconciliation.
+    /// Historical source reviews and explicit finishes are distinct persisted decisions.
     let review: Review
     /// Optional exact editable input, including amounts whose currency is not yet known.
     /// Older encrypted documents decode this missing optional field as nil.
@@ -386,10 +390,18 @@ struct ReceiptRecord: Codable, Equatable, Sendable, Identifiable {
         var previous = createdAt
         for revision in revisions {
             try revision.fields.validate()
+            if revision.review == .finished && revision.reviewInput == nil {
+                throw ReceiptValidationError.invalidEvidence
+            }
             if let input = revision.reviewInput {
                 guard input.count <= 2 * 1024 * 1024 else { throw ReceiptValidationError.invalidEvidence }
                 let draft = try JSONDecoder().decode(ReceiptReviewDraft.self, from: input)
                 try draft.validateAssistedReadings(assetSHA256: asset.sha256)
+                if revision.review == .finished {
+                    guard draft.fields == revision.fields, draft.canFinalize else {
+                        throw ReceiptValidationError.invalidEvidence
+                    }
+                }
             }
             let references = revision.fields.items.flatMap(\.sourceLineIDs) + revision.fields.adjustments.flatMap(\.sourceLineIDs)
             guard references.allSatisfy(sourceIDs.contains) else { throw ReceiptValidationError.invalidEvidence }

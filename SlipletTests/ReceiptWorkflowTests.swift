@@ -142,9 +142,9 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         var d = draft()
         XCTAssertTrue(d.reconciliation.issues.isEmpty); XCTAssertTrue(d.canFinalize)
         XCTAssertEqual(d.reconciliation.difference, 0)
-        d.sourceChecked = false; XCTAssertFalse(d.canFinalize)
-        d.sourceChecked = true; d.sourceOpened = false; XCTAssertFalse(d.canFinalize)
-        d.sourceOpened = true; d.total = "10.51"
+        d.sourceChecked = false; d.sourceOpened = false
+        XCTAssertTrue(d.canFinalize)
+        d.total = "10.51"
         XCTAssertEqual(d.reconciliation.difference, 1); XCTAssertFalse(d.canFinalize); XCTAssertTrue(d.canSaveDraft)
         d.total = "10.50"; d.subtotal = "9.50"; XCTAssertFalse(d.canFinalize)
         d.subtotal = ""; XCTAssertFalse(d.canFinalize)
@@ -243,8 +243,10 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(model.image?.bytes, bytes); XCTAssertEqual(model.importAdjustment, adjustment)
         XCTAssertEqual(model.importCovers, [cover]); XCTAssertEqual(model.importStep, 2)
         model.manualReview()
-        let input = draft()
-        model.updateDraft { $0 = input }
+        var input = draft()
+        input.sourceOpened = false; input.sourceChecked = false
+        let cleanInput = input
+        model.updateDraft { $0 = cleanInput }
         model.flushImportCheckpoint()
         let reopened = ReceiptWorkspace(directory: dir, keyProvider: Key())
         try await wait { model.hasPendingImport }
@@ -267,6 +269,18 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         XCTAssertEqual(reopened.image?.bytes, bytes)
         reopened.save(asDraft: true); try await wait { reopened.flow == .detail && !reopened.saving }
         XCTAssertFalse(reopened.hasPendingImport); XCTAssertEqual(reopened.receipts.count, 1)
+        let savedDraft = try XCTUnwrap(reopened.receipts.first)
+        XCTAssertFalse(ReceiptCompletion.isComplete(savedDraft))
+        reopened.open(savedDraft); try await wait { reopened.image != nil }
+        reopened.edit()
+        XCTAssertTrue(reopened.draft.canFinalize)
+        reopened.save(asDraft: false); try await wait { reopened.flow == .detail && !reopened.saving }
+        let finished = try XCTUnwrap(reopened.selected)
+        XCTAssertEqual(finished.id, savedDraft.id)
+        XCTAssertEqual(finished.current.review, .finished)
+        XCTAssertTrue(ReceiptCompletion.isComplete(finished))
+        let savedInput = try JSONDecoder().decode(ReceiptReviewDraft.self, from: XCTUnwrap(finished.current.reviewInput))
+        XCTAssertFalse(savedInput.sourceOpened); XCTAssertFalse(savedInput.sourceChecked)
         reopened.suspend()
         reopened.activate(protectedDataAvailable: true); try await wait { reopened.availability == .ready }
         XCTAssertFalse(reopened.hasPendingImport); XCTAssertEqual(reopened.receipts.count, 1)

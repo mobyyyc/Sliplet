@@ -535,12 +535,14 @@ final class ReceiptWorkspace {
         if readerRevisionID == selected.current.id, let readerInput { return readerInput }
         if let bytes = selected.current.reviewInput, let input = try? JSONDecoder().decode(ReceiptReviewDraft.self, from: bytes) { return input }
         var input = ReceiptReviewDraft(fields: selected.current.fields)
-        if selected.current.reviewInput == nil, ReceiptCompletion.isComplete(selected) {
+        if selected.current.reviewInput == nil, selected.current.review == .sourceReviewed, ReceiptCompletion.isComplete(selected) {
             input.subtotalNotPrinted = selected.current.fields.subtotal == nil
             input.sourceOpened = true; input.sourceChecked = true
         }
         return input
     }
+    var receiptReviewBlocker: String? { savedReviewDraft?.reconciliation.issues.first }
+
     func edit() {
         guard let input = savedReviewDraft, image != nil, !saving else { return }
         searchMatch = nil
@@ -583,13 +585,13 @@ final class ReceiptWorkspace {
         let draft = input ?? self.draft
         guard active, !saving, let image, let extraction,
               asDraft ? draft.canSaveDraft : draft.canFinalize else { return }
-        if !asDraft, selected?.current.review == .sourceReviewed, !hasUnsavedReviewChanges {
-            finishEditing() // Already reviewed: no duplicate revision or needless split invalidation.
+        if !asDraft, selected.map(ReceiptCompletion.isComplete) == true, !hasUnsavedReviewChanges {
+            finishEditing() // Preserve the existing revision and split.
             return
         }
         guard let store else { return }
         let fields = draft.fields
-        let review: ReceiptRevision.Review = asDraft ? .draft : .sourceReviewed
+        let review: ReceiptRevision.Review = asDraft ? .draft : .finished
         let session = sessionID, lease = permit, old = selected
         let inputFromDetail = input != nil
         let savedInput = draft

@@ -77,6 +77,15 @@ struct ReceiptPurchaseHistoryView: View {
         ScrollViewReader { proxy in
             List {
                 Section {
+                    if workspace.collection == "All receipts" && workspace.searchQuery.isEmpty
+                        && workspace.receipts.contains(where: { !$0.isArchived && !ReceiptCompletion.isComplete($0) }) {
+                        Button("Needs review", systemImage: "exclamationmark.circle") {
+                            workspace.collection = "Needs review"
+                            workspace.includeArchived = false
+                            workspace.merchantFilter = .all
+                            workspace.monthFilter = .all
+                        }.accessibilityIdentifier("openReceiptDrafts")
+                    }
                     Button {
                         workspace.searchFiltersExpanded.toggle()
                     } label: {
@@ -89,7 +98,10 @@ struct ReceiptPurchaseHistoryView: View {
                         .accessibilityValue(workspace.searchFiltersExpanded ? "Expanded" : "Collapsed")
                     if workspace.searchFiltersExpanded {
                         Picker("Collection", selection: $workspace.collection) {
-                            Text("All receipts").tag("All receipts"); Text("Starred").tag("Starred"); Text("Archive").tag("Archive")
+                            Text("All receipts").tag("All receipts")
+                            Text("Needs review").tag("Needs review")
+                            Text("Starred").tag("Starred")
+                            Text("Archive").tag("Archive")
                         }.accessibilityIdentifier("collectionPicker")
                         Picker("Store", selection: $workspace.merchantFilter) {
                             Text("All stores").tag(ReceiptHistoryChoice.all)

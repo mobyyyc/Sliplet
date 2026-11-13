@@ -82,6 +82,25 @@ import CryptoKit
         let reopened = try ReceiptStore(directory: destinationDirectory, keyProvider: ReceiptBackupTemporaryKey(bytes: Data(repeating: 0x72, count: 32)))
         let again = try await reopened.receipt(id: expected.id); XCTAssertEqual(again, expected); try await reopened.close()
     }
+    func testFinishedWithoutSourceConfirmationSurvivesBackupAndRemainsSplittable() async throws {
+        let source = try store(), target = try store(key: 0x71)
+        let fixture = SplitFixture.record(amounts: [125, 275])
+        var draft = ReceiptReviewDraft(fields: fixture.current.fields)
+        draft.subtotalNotPrinted = draft.subtotal.isEmpty
+        let bytes = try SyntheticFixture.imageData()
+        let record = try await source.create(extraction: fixture.original, originalImage: bytes, mediaType: "image/png",
+            correction: draft.fields, review: .finished, reviewInput: JSONEncoder().encode(draft))
+        let prepared = try await prepare(backup(source))
+        let preview = try await target.previewBackup(prepared, permit: ReceiptOperationPermit())
+        _ = try await target.mergeBackup(prepared, expected: preview, permit: ReceiptOperationPermit())
+        let fetched = try await target.receipt(id: record.id)
+        let restored = try XCTUnwrap(fetched)
+        XCTAssertEqual(restored, record)
+        XCTAssertTrue(ReceiptCompletion.isComplete(restored))
+        let plan = SplitFixture.plan(restored)
+        XCTAssertEqual(try ReceiptSplitEngine.compute(restored, plan: plan).total, 400)
+    }
+
     func testMergeIsIdempotentAndDivergentExistingEditsWin() async throws {
         let source = try store(), target = try store(key: 0x71), old = try await record(source)
         let prepared = try await prepare(backup(source))

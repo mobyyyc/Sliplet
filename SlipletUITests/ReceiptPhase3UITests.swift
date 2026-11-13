@@ -46,16 +46,14 @@ import XCTest
         // Check interaction; physical VoiceOver navigation is a separate acceptance step.
         XCTAssertFalse(app.staticTexts["receiptPaperMerchant"].isHittable, "The retained reader must not receive interaction beneath the edit form")
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'receipt-'")).count, 0)
-        let check = app.switches["sourceCheck"]; reveal(check, app: app)
         capture(app, "existing-reviewed-edit")
-        XCTAssertEqual(check.value as? String, "1", "Entering edit alone must preserve the saved source confirmation")
         XCTAssertTrue(app.buttons["finishSave"].isEnabled)
         app.buttons["back"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Discard changes"].exists)
         app.terminate()
     }
-    func testRealEditRequiresFreshConfirmationAndDiscardButNoExtraOriginalVisit() {
+    func testRealEditCanFinishAndStillConfirmsDiscard() {
         let app = launch("review", extra: ["--t05-reduce-motion"])
         XCTAssertTrue(app.buttons["finishSave"].waitForExistence(timeout: 30))
         let date = app.buttons["dateField"]; reveal(date, app: app); date.tap()
@@ -65,10 +63,8 @@ import XCTest
         let merchant = app.textFields["merchantField"]; reveal(merchant, app: app)
         merchant.tap(); merchant.typeText(" UPDATED")
         if app.buttons["keyboardDone"].exists { app.buttons["keyboardDone"].tap() }
-        let check = app.switches["sourceCheck"]; reveal(check, app: app)
-        XCTAssertEqual(check.value as? String, "0"); XCTAssertTrue(check.isEnabled)
-        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
-        capture(app, "edited-needs-reconfirmation")
+        XCTAssertTrue(app.buttons["finishSave"].isEnabled)
+        capture(app, "edited-can-finish")
         app.buttons["back"].tap(); XCTAssertTrue(app.buttons["Discard changes"].waitForExistence(timeout: 5))
         app.buttons["Discard changes"].tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 5))
         app.terminate()

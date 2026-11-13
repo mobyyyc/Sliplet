@@ -562,7 +562,7 @@ actor ReceiptStore {
                     throw ReceiptBackupError.limit
                 }
                 guard draft.fields == revision.fields, draft.canSaveDraft,
-                      revision.review != .sourceReviewed || draft.canFinalize else { throw ReceiptBackupError.invalidArchive }
+                      revision.review != .sourceReviewed || (draft.canFinalize && draft.sourceOpened && draft.sourceChecked) else { throw ReceiptBackupError.invalidArchive }
             }
         }
         if let plan = record.splitPlan, let finalized = plan.finalizedRevision {

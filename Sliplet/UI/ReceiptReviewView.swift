@@ -9,6 +9,7 @@ struct ReceiptReviewView: View {
     @State private var focusedCheck: ReceiptReviewGuidance?
     @State private var allChecks = false
     @State private var showChecked = false
+    private var reconciliationResult: ReceiptReconciliation { workspace.draft.reconciliation }
     private var checks: [ReceiptReviewGuidance] { ReceiptReviewGuidance.checks(draft: workspace.draft, extraction: workspace.extraction) }
 
     private func field(_ key: WritableKeyPath<ReceiptReviewDraft, String>) -> Binding<String> {
@@ -16,18 +17,17 @@ struct ReceiptReviewView: View {
     }
     @State private var openedEditor = false
     @State private var hasShownPaper = false
+    @State private var pendingTarget: ReceiptReviewSection?
 
     var body: some View {
         if !openedEditor, workspace.selected == nil, hasShownPaper || workspace.draft.reconciliation.issues.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Tap a line to edit, or compare with Original.").font(.subheadline)
-                        Spacer()
-                        Button("Edit") { openedEditor = true }
-                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("Edit receipt fields")
-                            .accessibilityIdentifier("editReviewFields")
+                    if reconciliationResult.firstTarget != nil {
+                        blocker { target in pendingTarget = target; openedEditor = true }
                     }
+                    Button("Edit receipt fields", systemImage: "pencil") { openedEditor = true }
+                        .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("editReviewFields")
                     ReceiptPaper(fields: workspace.draft.fields, input: workspace.draft, taxedMarkers: workspace.extraction?.paperTaxedMarkers ?? [], editLine: { id in
                         guard let line = workspace.draft.lines.first(where: { $0.id == id }) else { return }
                         focusedCheck = .forLine(line)
@@ -42,150 +42,169 @@ struct ReceiptReviewView: View {
             .onAppear { hasShownPaper = true }
             .sheet(item: $focusedCheck) { ReceiptFocusedCorrectionView(workspace: workspace, check: $0) }
             .accessibilityIdentifier("paperReview")
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    if let issue = workspace.draft.reconciliation.issues.first {
-                        Label(issue, systemImage: "exclamationmark.circle")
-                            .font(.footnote).accessibilityIdentifier("paperReviewIssue")
-                    }
-                    Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
-                    .tint(.green).disabled(!workspace.draft.sourceOpened || workspace.saving)
-                    .accessibilityIdentifier("sourceCheck")
-                }
-                    .padding(.horizontal, 20).padding(.vertical, 8)
-            }
         } else {
             editor.onAppear { openedEditor = true }
         }
     }
 
     private var editor: some View {
-        Form {
-            Section {
-                let pending = checks.filter { !$0.isChecked(in: workspace.draft) }
-                ForEach(Array(pending.prefix(allChecks ? pending.count : 3))) { check in
-                    checkButton(check)
-                }
-                if pending.count > 3 {
-                    Button(allChecks ? "Show fewer checks" : "Show all \(pending.count) checks") { allChecks.toggle() }
-                        .frame(minHeight: 44).accessibilityIdentifier("showAllChecks")
-                }
-                let checked = checks.filter { $0.isChecked(in: workspace.draft) }
-                if !checked.isEmpty {
-                    DisclosureGroup("\(checked.count) checked", isExpanded: $showChecked) {
-                        ForEach(checked) { check in checkButton(check) }
-                    }.accessibilityIdentifier("checkedGuidance")
-                }
-                if pending.isEmpty { Text("Review every field and purchase against the original.").font(.subheadline) }
-            } header: { Text("Check first").foregroundStyle(Color(uiColor: .label)) }
-            footer: { Text("These checks can miss errors. Matching totals alone do not establish accuracy.").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                LabeledContent("Merchant") { TextField("Required", text: field(\.merchant), axis: typeSize > .large ? .vertical : .horizontal).multilineTextAlignment(.trailing).focused(editing, equals: "merchant").accessibilityIdentifier("merchantField") }
-                Button {
-                    editing.wrappedValue = nil
-                    pendingDate = ReceiptDateSelection.date(workspace.draft.date) ?? Date()
-                    selectingDate = true
-                } label: {
-                    LabeledContent("Date") {
-                        if let date = ReceiptDateSelection.date(workspace.draft.date) {
-                            Text(date.formatted(date: .abbreviated, time: .omitted))
-                        } else { Label("Choose date", systemImage: "calendar") }
+        ScrollViewReader { proxy in
+            Form {
+                if reconciliationResult.firstTarget != nil {
+                    Section {
+                        blocker { target in
+                            editing.wrappedValue = nil
+                            proxy.scrollTo(target, anchor: .top)
+                        }
                     }
-                }.foregroundStyle(.primary).accessibilityIdentifier("dateField")
-                Picker("Currency", selection: field(\.currency)) {
-                    Text("Choose currency").tag("")
-                    ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
-                }.accessibilityIdentifier("currencyField")
-                if let context = workspace.draft.currencyContextMessage {
-                    Text(context).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("currencyContext")
                 }
-            } header: { Text("Receipt").foregroundStyle(Color(uiColor: .label)) }
-            footer: { Text("Use printed line amounts. Leave unknown quantities blank.").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                ForEach(workspace.draft.lines.filter { $0.kind == "purchase" }) { line in
-                    ReceiptLineEditor(workspace: workspace, id: line.id, editing: editing)
-                }
-                Button("Add purchase", systemImage: "plus") { workspace.updateDraft { $0.lines.append(.blank()) } }
-                    .frame(minHeight: 44).accessibilityIdentifier("addPurchase")
-            } header: { Text("Items").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                LabeledContent("Printed subtotal") {
-                    TextField("Missing", text: field(\.subtotal)).keyboardType(.numbersAndPunctuation)
-                        .multilineTextAlignment(.trailing).focused(editing, equals: "subtotal").accessibilityIdentifier("subtotalField")
-                }
-                if workspace.draft.subtotal.isEmpty {
-                    Toggle("Subtotal is not printed", isOn: Binding(get: { workspace.draft.subtotalNotPrinted }, set: { value in workspace.updateDraft { $0.subtotalNotPrinted = value } }))
-                        .tint(.green).accessibilityIdentifier("subtotalNotPrinted")
-                }
-            } header: { Text("Subtotal").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                ForEach(workspace.draft.lines.filter { $0.kind != "purchase" }) { line in
-                    ReceiptLineEditor(workspace: workspace, id: line.id, editing: editing)
-                }
-                Menu {
-                    ForEach(["discount", "tax", "deposit", "tip", "other"], id: \.self) { kind in
-                        Button(kind.capitalized) { workspace.updateDraft { $0.lines.append(.blank(kind: kind)) } }
+                Section {
+                    let pending = checks.filter { !$0.isChecked(in: workspace.draft) }
+                    ForEach(Array(pending.prefix(allChecks ? pending.count : 3))) { check in
+                        checkButton(check)
                     }
-                } label: { Label("Add adjustment", systemImage: "plus").frame(minHeight: 44) }.accessibilityIdentifier("addAdjustment")
-            } header: { Text("Adjustments").foregroundStyle(Color(uiColor: .label)) }
-            footer: { Text("Discounts are negative. Enter printed taxes and fees only.").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                LabeledContent("Printed total") {
-                    TextField("Required to finish", text: field(\.total)).keyboardType(.numbersAndPunctuation)
-                        .multilineTextAlignment(.trailing).focused(editing, equals: "total").accessibilityIdentifier("totalField")
+                    if pending.count > 3 {
+                        Button(allChecks ? "Show fewer checks" : "Show all \(pending.count) checks") { allChecks.toggle() }
+                            .frame(minHeight: 44).accessibilityIdentifier("showAllChecks")
+                    }
+                    let checked = checks.filter { $0.isChecked(in: workspace.draft) }
+                    if !checked.isEmpty {
+                        DisclosureGroup("\(checked.count) checked", isExpanded: $showChecked) {
+                            ForEach(checked) { check in checkButton(check) }
+                        }.accessibilityIdentifier("checkedGuidance")
+                    }
+                } header: { if !checks.isEmpty { Text("Suggested checks") } }
+                Section {
+                    LabeledContent("Merchant") { TextField("Required", text: field(\.merchant), axis: typeSize > .large ? .vertical : .horizontal).multilineTextAlignment(.trailing).focused(editing, equals: "merchant").accessibilityIdentifier("merchantField") }
+                    .id(ReceiptReviewSection.receipt)
+                    Button {
+                        editing.wrappedValue = nil
+                        pendingDate = ReceiptDateSelection.date(workspace.draft.date) ?? Date()
+                        selectingDate = true
+                    } label: {
+                        LabeledContent("Date") {
+                            if let date = ReceiptDateSelection.date(workspace.draft.date) {
+                                Text(date.formatted(date: .abbreviated, time: .omitted))
+                            } else { Label("Choose date", systemImage: "calendar") }
+                        }
+                    }.foregroundStyle(.primary).accessibilityIdentifier("dateField")
+                    Picker("Currency", selection: field(\.currency)) {
+                        Text("Choose currency").tag("")
+                        ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
+                    }.accessibilityIdentifier("currencyField")
+                    if let context = workspace.draft.currencyContextMessage {
+                        Text(context).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("currencyContext")
+                    }
+                } header: { Text("Receipt").foregroundStyle(Color(uiColor: .label)) }
+                Section {
+                    ForEach(workspace.draft.lines.filter { $0.kind == "purchase" }) { line in
+                        ReceiptLineEditor(workspace: workspace, id: line.id, editing: editing)
+                            .id(ReceiptReviewSection.line(line.id))
+                    }
+                    Button("Add purchase", systemImage: "plus") { workspace.updateDraft { $0.lines.append(.blank()) } }
+                        .frame(minHeight: 44).accessibilityIdentifier("addPurchase")
+                    .id(ReceiptReviewSection.items)
+                } header: { Text("Items").foregroundStyle(Color(uiColor: .label)) }
+                Section {
+                    LabeledContent("Printed subtotal") {
+                        TextField("Missing", text: field(\.subtotal)).keyboardType(.numbersAndPunctuation)
+                            .multilineTextAlignment(.trailing).focused(editing, equals: "subtotal").accessibilityIdentifier("subtotalField")
+                    }
+                    .id(ReceiptReviewSection.subtotal)
+                    if workspace.draft.subtotal.isEmpty {
+                        Toggle("Subtotal is not printed", isOn: Binding(get: { workspace.draft.subtotalNotPrinted }, set: { value in workspace.updateDraft { $0.subtotalNotPrinted = value } }))
+                            .tint(.green).accessibilityIdentifier("subtotalNotPrinted")
+                    }
+                } header: { Text("Subtotal").foregroundStyle(Color(uiColor: .label)) }
+                Section {
+                    ForEach(workspace.draft.lines.filter { $0.kind != "purchase" }) { line in
+                        ReceiptLineEditor(workspace: workspace, id: line.id, editing: editing)
+                            .id(ReceiptReviewSection.line(line.id))
+                    }
+                    Menu {
+                        ForEach(["discount", "tax", "deposit", "tip", "other"], id: \.self) { kind in
+                            Button(kind.capitalized) { workspace.updateDraft { $0.lines.append(.blank(kind: kind)) } }
+                        }
+                    } label: { Label("Add adjustment", systemImage: "plus").frame(minHeight: 44) }.accessibilityIdentifier("addAdjustment")
+                } header: { Text("Adjustments").foregroundStyle(Color(uiColor: .label)) }
+                footer: { Text("Discounts are negative. Enter printed taxes and fees only.").foregroundStyle(Color(uiColor: .label)) }
+                Section {
+                    LabeledContent("Printed total") {
+                        TextField("Required to finish", text: field(\.total)).keyboardType(.numbersAndPunctuation)
+                            .multilineTextAlignment(.trailing).focused(editing, equals: "total").accessibilityIdentifier("totalField")
+                    }
+                    .id(ReceiptReviewSection.total)
+                    reconciliation
+                } header: { Text("Total").foregroundStyle(Color(uiColor: .label)) }
+                Section {
+                    if let error = workspace.errorMessage { Label(error, systemImage: "exclamationmark.triangle").accessibilityIdentifier("saveError") }
+                    if workspace.saving { ProgressView("Saving locally") }
+                    if !workspace.draft.canSaveDraft {
+                        Text("Choose a valid purchase date and check typed quantities or amounts before saving a draft. Missing fields can remain blank.").font(.footnote)
+                    }
+                    Text("Saved on this device. Export an encrypted backup in Settings to keep a restorable copy.")
+                        .font(.footnote).foregroundStyle(.primary).accessibilityIdentifier("reviewStorageFooter")
                 }
-                reconciliation
-            } header: { Text("Total").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                Toggle("I checked the original", isOn: $workspace.draft.sourceChecked)
-                    .tint(.green).disabled(!workspace.draft.sourceOpened).accessibilityIdentifier("sourceCheck")
-                Text(workspace.draft.sourceOpened ? "Confirm every field and line. Changing receipt values requires confirmation again; the original remains available. Matching totals alone do not prove completeness." : "Open Original above and check every field and line, including anything recognition missed.")
-                    .font(.footnote).foregroundStyle(.primary)
-            } header: { Text("Source review").foregroundStyle(Color(uiColor: .label)) }
-            Section {
-                if let error = workspace.errorMessage { Label(error, systemImage: "exclamationmark.triangle").accessibilityIdentifier("saveError") }
-                if workspace.saving { ProgressView("Saving locally") }
-                if !workspace.draft.canSaveDraft {
-                    Text("Choose a valid purchase date and check typed quantities or amounts before saving a draft. Missing fields can remain blank.").font(.footnote)
-                }
-                Text("Saved on this device. Export an encrypted backup in Settings to keep a restorable copy.")
-                    .font(.footnote).foregroundStyle(.primary).accessibilityIdentifier("reviewStorageFooter")
-            }
 
-        }.listSectionSpacing(20).scrollDismissesKeyboard(.interactively)
-        .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
-        .contentMargins(.bottom, 28, for: .scrollContent)
-        .accessibilityIdentifier("reviewScreen")
-        .sheet(item: $focusedCheck) { check in
-            ReceiptFocusedCorrectionView(workspace: workspace, check: check)
-        }
-        .sheet(isPresented: $selectingDate) {
-            NavigationStack {
-                ScrollView {
-                    DatePicker("Purchase date", selection: $pendingDate, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
-                        .environment(\.calendar, ReceiptDateSelection.calendar())
-                        .accessibilityIdentifier("receiptDatePicker")
-                    if !workspace.draft.date.isEmpty {
-                        Button("Clear date", role: .destructive) {
-                            workspace.updateDraft { $0.date = "" }; selectingDate = false
-                        }.accessibilityIdentifier("clearReceiptDate")
-                    }
-                }.padding().navigationTitle("Purchase date").navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") { selectingDate = false }.accessibilityIdentifier("cancelReceiptDate")
+            }
+            .task(id: pendingTarget) {
+                guard let target = pendingTarget else { return }
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                proxy.scrollTo(target, anchor: .top)
+                pendingTarget = nil
+            }
+            .listSectionSpacing(20).scrollDismissesKeyboard(.interactively)
+            .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
+            .contentMargins(.bottom, 28, for: .scrollContent)
+            .accessibilityIdentifier("reviewScreen")
+            .sheet(item: $focusedCheck) { check in
+                ReceiptFocusedCorrectionView(workspace: workspace, check: check)
+            }
+            .sheet(isPresented: $selectingDate) {
+                NavigationStack {
+                    ScrollView {
+                        DatePicker("Purchase date", selection: $pendingDate, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
+                            .environment(\.calendar, ReceiptDateSelection.calendar())
+                            .accessibilityIdentifier("receiptDatePicker")
+                        if !workspace.draft.date.isEmpty {
+                            Button("Clear date", role: .destructive) {
+                                workspace.updateDraft { $0.date = "" }; selectingDate = false
+                            }.accessibilityIdentifier("clearReceiptDate")
                         }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                let date = ReceiptDateSelection.text(pendingDate)
-                                workspace.updateDraft { $0.date = date }; selectingDate = false
-                            }.accessibilityIdentifier("confirmReceiptDate")
+                    }.padding().navigationTitle("Purchase date").navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Cancel") { selectingDate = false }.accessibilityIdentifier("cancelReceiptDate")
+                            }
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") {
+                                    let date = ReceiptDateSelection.text(pendingDate)
+                                    workspace.updateDraft { $0.date = date }; selectingDate = false
+                                }.accessibilityIdentifier("confirmReceiptDate")
+                            }
                         }
-                    }
-            }.presentationDetents([.medium, .large])
+                }.presentationDetents([.medium, .large])
+            }
         }
     }
+
+    @ViewBuilder private func blocker(open: @escaping (ReceiptReviewSection) -> Void) -> some View {
+        if let target = reconciliationResult.firstTarget, let message = reconciliationResult.issues.first {
+            Button { open(target) } label: {
+                Label {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Before finishing").font(.subheadline.weight(.semibold))
+                        Text(message).font(.footnote)
+                    }
+                } icon: {
+                    Image(systemName: "exclamationmark.circle")
+                }
+            }.accessibilityIdentifier("reviewBlocker")
+        }
+    }
+
     private func checkButton(_ check: ReceiptReviewGuidance) -> some View {
         Button {
             editing.wrappedValue = nil
@@ -551,6 +570,6 @@ struct ReceiptReviewedMark: View {
     var body: some View {
         Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .medium))
             .foregroundStyle(.primary.opacity(0.65))
-            .accessibilityLabel("Reviewed and saved").accessibilityIdentifier("receiptReviewedMark")
+            .accessibilityLabel("Finished and saved").accessibilityIdentifier("receiptReviewedMark")
     }
 }

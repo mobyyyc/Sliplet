@@ -29,11 +29,11 @@ import CryptoKit
         model.finishEditing(); XCTAssertEqual(model.flow, .detail)
         model.edit(); XCTAssertTrue(model.draft.sourceChecked); XCTAssertFalse(model.hasUnsavedReviewChanges)
     }
-    func testRealAndTemporarilyMalformedEditsRequireConfirmationWithoutReopeningOriginal() throws {
+    func testValidEditsCanFinishAndMalformedValuesRemainBlocked() throws {
         let model = try editable(); model.edit()
         model.updateDraft { $0.merchant += " CHANGED" }
         XCTAssertFalse(model.draft.sourceChecked); XCTAssertTrue(model.draft.sourceOpened)
-        XCTAssertFalse(model.draft.canFinalize); XCTAssertTrue(model.hasUnsavedReviewChanges)
+        XCTAssertTrue(model.draft.canFinalize); XCTAssertTrue(model.hasUnsavedReviewChanges)
         model.draft.sourceChecked = true
         model.updateDraft { $0.total = "not a number" }
         XCTAssertFalse(model.draft.sourceChecked); XCTAssertFalse(model.draft.canSaveDraft)
@@ -44,7 +44,8 @@ import CryptoKit
         XCTAssertTrue(legacy.draft.sourceChecked); XCTAssertTrue(legacy.draft.canFinalize)
         for input in [true, false] {
             let draft = try editable(.draft, input: input); draft.edit()
-            XCTAssertFalse(draft.draft.sourceChecked); XCTAssertFalse(draft.draft.canFinalize)
+            XCTAssertFalse(draft.draft.sourceChecked); XCTAssertEqual(draft.draft.canFinalize, input)
+            XCTAssertFalse(try XCTUnwrap(draft.selected).current.review.isFinished)
         }
     }
     func testFinishingAnUnchangedReviewedReceiptKeepsRevisionAndFinalizedSplit() throws {

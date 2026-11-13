@@ -1,6 +1,6 @@
 import Foundation
 
-/// Presentation guidance only. Arithmetic and final source confirmation remain separate gates.
+/// Optional comparison and correction guidance alongside the finish requirements.
 struct ReceiptReviewGuidance: Identifiable, Equatable, Sendable {
     enum Target: Equatable, Sendable { case receipt, date, subtotal, total, line(UUID), source }
     let id: String

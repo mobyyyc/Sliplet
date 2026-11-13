@@ -15,6 +15,7 @@ struct ReceiptSplitView: View {
     @State private var unassignedOnly = false
     @State private var source = false
     @State private var discard = false
+    @State private var returnToReview = false
     @State private var copied = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var systemTypeSize
@@ -70,7 +71,10 @@ struct ReceiptSplitView: View {
                         if let total = record?.current.fields.total { LabeledContent("Receipt total") { Text(money(total.minorUnits)).foregroundStyle(Color(uiColor: .label)) } }
                         Text("\(assignedCount) of \(items.count) items assigned").font(.subheadline).foregroundStyle(.secondary)
                         if let record, !ReceiptCompletion.isComplete(record) {
-                            Label("Receipt needs review. Finish its corrections first.", systemImage: "exclamationmark.triangle")
+                            Label(workspace.receiptReviewBlocker ?? "Finish this receipt before finalizing a split.",
+                                  systemImage: "exclamationmark.triangle")
+                            Button("Continue review", action: continueReview)
+                                .accessibilityIdentifier("splitContinueReview")
                         }
                     }
                 }
@@ -211,7 +215,11 @@ struct ReceiptSplitView: View {
             }
             .sheet(isPresented: $source) { ReceiptSourceView(workspace: workspace) }
             .confirmationDialog("Discard unsaved split choices?", isPresented: $discard, titleVisibility: .visible) {
-                Button("Discard choices", role: .destructive) { dismiss() }
+                Button("Discard choices", role: .destructive) {
+                    if returnToReview { workspace.edit() }
+                    dismiss()
+                }
+                Button("Cancel", role: .cancel) { returnToReview = false }
             }
             .onChange(of: record?.splitPlan) { _, _ in
                 if let saved = record?.splitPlan { plan = saved; copied = false; undoPlan = nil; cancelBatch() }
@@ -242,7 +250,12 @@ struct ReceiptSplitView: View {
         selectedItems = []
         unassignedOnly = false
     }
+    private func continueReview() {
+        if pristine && !batchDirty { workspace.edit(); dismiss() }
+        else { returnToReview = true; discard = true }
+    }
     private func closeSplit() {
+        returnToReview = false
         if pristine && !batchDirty { dismiss() }
         else { discard = true }
     }

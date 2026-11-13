@@ -775,7 +775,7 @@ private struct ReceiptSwipePaper: View {
     private var summary: String {
         [record.current.fields.merchant ?? "Merchant missing", ExactInput.dateText(record.current.fields.purchaseDate),
          record.current.fields.total.map { "\($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" } ?? "Total missing",
-         record.isStarred ? "Starred" : "", ReceiptCompletion.isComplete(record) ? "Reviewed" : "Needs review"].filter { !$0.isEmpty }.joined(separator: ", ")
+         record.isStarred ? "Starred" : "", ReceiptCompletion.isComplete(record) ? "Finished" : "Needs review"].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 }
 

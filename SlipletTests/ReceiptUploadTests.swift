@@ -142,7 +142,7 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         let upload = try ReceiptUploadImage.prepare(original, redactions: [CGRect(x: 0, y: 0, width: 1, height: 0.2)])
         w.sendToAI(upload); w.sendToAI(upload); try await wait { w.flow == .review }
         XCTAssertEqual(calls, 1); XCTAssertEqual(w.image?.bytes, original.bytes)
-        XCTAssertFalse(w.draft.sourceChecked); XCTAssertFalse(w.draft.canFinalize)
+        XCTAssertFalse(w.draft.sourceChecked); XCTAssertTrue(w.draft.canFinalize)
         XCTAssertEqual(w.draft.currencyOrigin, .defaultCAD); XCTAssertNil(w.extraction?.fields.currency)
         w.save(asDraft: true); try await wait { w.flow == .detail && !w.saving }
         w.open(try XCTUnwrap(w.selected)); try await wait { w.image != nil }

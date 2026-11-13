@@ -26,7 +26,6 @@ import Vision
         XCTAssertTrue(importer.waitForExistence(timeout: 15), "Local test importer did not appear")
         importer.tap()
         XCTAssertTrue(app.descendants(matching: .any)["reviewScreen"].waitForExistence(timeout: 30), "Real import did not enter review")
-        XCTAssertFalse(app.buttons["finishSave"].isEnabled, "Unreviewed extraction cannot finish")
         let draft = app.buttons["saveDraft"]; draft.tap()
         XCTAssertTrue(app.descendants(matching: .any)["detailScreen"].waitForExistence(timeout: 15), "Draft save did not open details")
         app.terminate(); app.launch()
@@ -36,10 +35,8 @@ import Vision
         app.buttons["edit"].tap()
         let reference = app.buttons["debugReference"]
         reference.tap()
-        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
         app.buttons["original"].tap()
         XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); app.buttons["sourceDone"].tap()
-        let check = app.switches["sourceCheck"]; reveal(check, in: app); check.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         let finish = app.buttons["finishSave"]
         if !finish.isEnabled {
             XCTAssertFalse(finish.isEnabled, "Unresolved reference fields must remain a draft")
@@ -199,7 +196,7 @@ import Vision
                     let measured = self.pixelContrast(screenshot)
                     if let measured { detail["foreground"] = measured.foreground; detail["background"] = measured.background; detail["measuredRatio"] = measured.ratio }
                     let walletLabels = ["2026-10-07", "2026-10-06", "2026-10-05", "CAD 12.34"]
-                    let detailLabels = ["2026-10-07 · CAD", "12.34", "Qty unknown", "Reviewed and saved"]
+                    let detailLabels = ["2026-10-07 · CAD", "12.34", "Qty unknown", "Finished and saved"]
                     if element.elementType == .staticText, element.isEnabled,
                        (mode == "wallet" && walletLabels.contains(element.label) || mode == "detail" && detailLabels.contains(element.label) || mode == "library" && element.label == "2026-10-07"),
                        let measured, measured.foreground == "#000000", measured.ratio >= 7 {
@@ -320,10 +317,10 @@ import Vision
         if !receipt.isHittable { app.swipeUp() }
         receipt.tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 15))
         app.buttons["edit"].tap(); XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 15))
-        XCTAssertFalse(app.buttons["finishSave"].isEnabled)
+        XCTAssertTrue(app.buttons["finishSave"].isEnabled)
         let reviewShot = XCTAttachment(screenshot: app.screenshot()); reviewShot.name = "Phone-layout-large-review"; reviewShot.lifetime = .keepAlways; add(reviewShot)
         app.buttons["original"].tap(); XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 15)); app.buttons["sourceDone"].tap()
-        app.buttons["back"].tap(); app.buttons["Discard changes"].tap()
+        app.buttons["back"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 15))
         let detailShot = XCTAttachment(screenshot: app.screenshot()); detailShot.name = "Phone-layout-large-detail"; detailShot.lifetime = .keepAlways; add(detailShot)
         app.terminate()
@@ -730,7 +727,7 @@ import Vision
             app.terminate()
         }
     }
-    func testDarkReviewSwitchAndBottomContentRemainVisible() throws {
+    func testDarkReviewActionsAndBottomContentRemainVisible() throws {
         let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "review"]
         app.launch(); XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
         let save = app.buttons["saveDraft"]
@@ -739,29 +736,6 @@ import Vision
         XCTAssertGreaterThanOrEqual(app.frame.maxY - save.frame.maxY, 40, "Actions clear the home indicator comfortably")
         app.buttons["original"].tap()
         XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); app.buttons["sourceDone"].tap()
-        let check = app.switches["sourceCheck"]
-        for _ in 0..<12 {
-            if check.exists && check.isHittable && check.frame.maxY < save.frame.minY - 12 { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(check.isHittable)
-        if (check.value as? String) != "1" { check.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
-        XCTAssertEqual(check.value as? String, "1")
-        let image = try XCTUnwrap(check.screenshot().image.cgImage)
-        var bytes = [UInt8](repeating: 0, count: image.width * image.height * 4)
-        bytes.withUnsafeMutableBytes { buffer in
-            let context = CGContext(data: buffer.baseAddress, width: image.width, height: image.height,
-                bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
-        }
-        var coloredPixels = 0
-        for i in stride(from: 0, to: bytes.count, by: 4) {
-            let red = Double(bytes[i]), green = Double(bytes[i + 1]), blue = Double(bytes[i + 2])
-            if green > red * 1.25 && green > blue * 1.15 && green > 100 { coloredPixels += 1 }
-        }
-        XCTAssertGreaterThan(coloredPixels, 100, "The on track must contrast with the white switch thumb in dark appearance")
-        capture(app, "Phone-layout-dark-review-switch")
         let footer = app.staticTexts["reviewStorageFooter"]
         for _ in 0..<12 {
             if footer.exists && footer.isHittable && footer.frame.maxY < save.frame.minY - 12 { break }

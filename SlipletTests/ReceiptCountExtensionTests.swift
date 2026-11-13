@@ -47,10 +47,7 @@ import XCTest
         let extraction=try ReceiptParser.extraction(OCRResult(lines:observations,revision:3))
         var draft=ReceiptReviewDraft(parsed:ReceiptParser.parse(observations))
         draft.date="2026-10-07";draft.subtotalNotPrinted=true
-        XCTAssertTrue(draft.canSaveDraft);XCTAssertFalse(draft.canFinalize)
-        draft.sourceOpened=true;XCTAssertFalse(draft.canFinalize)
-        draft.sourceChecked=true;XCTAssertTrue(draft.canFinalize)
-        draft.sourceChecked=false
+        XCTAssertTrue(draft.canSaveDraft); XCTAssertTrue(draft.canFinalize)
         let directory=FileManager.default.temporaryDirectory.appendingPathComponent("P704-"+UUID().uuidString)
         defer { try? FileManager.default.removeItem(at:directory) }
         let store=try ReceiptStore(directory:directory,keyProvider:Key())

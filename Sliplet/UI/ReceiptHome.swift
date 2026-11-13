@@ -304,7 +304,8 @@ struct ReceiptHome: View {
     }
     private var editAction: some View {
         Button { workspace.edit() } label: {
-            Label("Edit receipt", systemImage: "pencil")
+            Label(workspace.selected.map(ReceiptCompletion.isComplete) == false ? "Continue review" : "Edit receipt",
+                  systemImage: "pencil")
         }.buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("edit")
             .disabled(workspace.saving || workspace.image == nil)
     }

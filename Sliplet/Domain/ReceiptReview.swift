@@ -115,20 +115,35 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     }
     var reconciliation: ReceiptReconciliation {
         var issues: [String] = []
+        var firstTarget: ReceiptReviewSection?
+        func issue(_ message: String, _ target: ReceiptReviewSection) {
+            issues.append(message)
+            if firstTarget == nil { firstTarget = target }
+        }
         let f = fields
-        if f.merchant == nil { issues.append("Merchant is missing.") }
-        if f.purchaseDate == nil { issues.append("Choose the printed purchase date.") }
-        if f.currency == nil { issues.append("Choose the currency printed on the receipt, or verify it with the store.") }
-        if f.items.isEmpty { issues.append("Add the missing purchases.") }
-        if lines.contains(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) { issues.append("Each line needs a description.") }
-        if lines.contains(where: { !$0.quantity.isEmpty && ExactInput.decimal($0.quantity) == nil }) { issues.append("Quantities must be positive decimals (for example 1 or 0.375).") }
+        if f.merchant == nil { issue("Merchant is missing.", .receipt) }
+        if f.purchaseDate == nil { issue("Choose the printed purchase date.", .receipt) }
+        if f.currency == nil { issue("Choose the currency printed on the receipt, or verify it with the store.", .receipt) }
+        if f.items.isEmpty { issue("Add the missing purchases.", .items) }
+        if let line = lines.first(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+            issue("Each line needs a description.", .line(line.id))
+        }
+        if let line = lines.first(where: { !$0.quantity.isEmpty && ExactInput.decimal($0.quantity) == nil }) {
+            issue("Quantities must be positive decimals (for example 1 or 0.375).", .line(line.id))
+        }
         let scale = f.currency?.minorUnitScale ?? 2
-        if lines.contains(where: { ExactInput.money($0.amount, scale: scale) == nil }) { issues.append("Every line needs a valid printed amount.") }
-        if lines.contains(where: { !$0.editableUnitPrice.isEmpty && ExactInput.money($0.editableUnitPrice, scale: scale) == nil }) { issues.append("Check unit prices for the selected currency. Values are kept unchanged; no rounding or exchange is applied.") }
-        if lines.contains(where: { $0.kind == "discount" && (ExactInput.money($0.amount, scale: scale) ?? 0) > 0 }) { issues.append("Enter discounts as negative amounts.") }
-        if f.total == nil { issues.append("The printed total is missing or invalid.") }
-        if !subtotal.isEmpty && f.subtotal == nil { issues.append("The subtotal is invalid.") }
-        if subtotal.isEmpty && !subtotalNotPrinted { issues.append("Enter the printed subtotal or confirm that it is not printed.") }
+        if let line = lines.first(where: { ExactInput.money($0.amount, scale: scale) == nil }) {
+            issue("Every line needs a valid printed amount.", .line(line.id))
+        }
+        if let line = lines.first(where: { !$0.editableUnitPrice.isEmpty && ExactInput.money($0.editableUnitPrice, scale: scale) == nil }) {
+            issue("Check unit prices for the selected currency.", .line(line.id))
+        }
+        if let line = lines.first(where: { $0.kind == "discount" && (ExactInput.money($0.amount, scale: scale) ?? 0) > 0 }) {
+            issue("Enter discounts as negative amounts.", .line(line.id))
+        }
+        if f.total == nil { issue("The printed total is missing or invalid.", .total) }
+        if !subtotal.isEmpty && f.subtotal == nil { issue("The subtotal is invalid.", .subtotal) }
+        if subtotal.isEmpty && !subtotalNotPrinted { issue("Enter the printed subtotal or confirm that it is not printed.", .subtotal) }
         var difference: Int64?
         var subtotalNote: String?
         do {
@@ -138,7 +153,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
                 let purchaseSum = try f.items.reduce(zero) { try $0.adding($1.amount!) }
                 let all = try f.adjustments.reduce(purchaseSum) { try $0.adding($1.amount!) }
                 difference = try total.subtracting(all).minorUnits
-                if difference != 0 { issues.append("Line amounts and adjustments do not match the printed total.") }
+                if difference != 0 { issue("Line amounts and adjustments do not match the printed total.", .total) }
                 if let subtotal = f.subtotal {
                     let discounted = try f.adjustments.filter { $0.kind == .discount }.reduce(purchaseSum) { try $0.adding($1.amount!) }
                     if subtotal == purchaseSum { subtotalNote = "Subtotal matches purchases before separate discounts." }
@@ -146,14 +161,15 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
                     else {
                         let nonTax = try f.adjustments.filter { $0.kind != .tax && $0.kind != .tip }.reduce(purchaseSum) { try $0.adding($1.amount!) }
                         if subtotal == nonTax { subtotalNote = "Subtotal matches purchases and all separate non-tax adjustments (excluding tips)." }
-                        else { issues.append("Subtotal does not match purchases before or after the printed non-tax adjustments. Check source lines and classifications.") }
+                        else { issue("Subtotal does not match purchases before or after the printed non-tax adjustments. Check source lines and classifications.", .subtotal) }
                     }
                 }
             }
-        } catch { issues.append("These values exceed supported arithmetic bounds or use inconsistent currencies.") }
-        return ReceiptReconciliation(issues: issues, difference: difference, subtotalNote: subtotalNote)
+        } catch { issue("These values exceed supported arithmetic bounds or use inconsistent currencies.", .total) }
+        if (try? validateAssistedReadings()) == nil { issue("Check the changes made using the original photo.", .receipt) }
+        return ReceiptReconciliation(issues: issues, difference: difference, subtotalNote: subtotalNote, firstTarget: firstTarget)
     }
-    var canFinalize: Bool { reconciliation.issues.isEmpty && sourceOpened && sourceChecked }
+    var canFinalize: Bool { reconciliation.issues.isEmpty }
     /// Drafts allow missing fields, never malformed typed values that would be silently discarded.
     var canSaveDraft: Bool {
         guard (try? validateAssistedReadings()) != nil else { return false }
@@ -169,22 +185,27 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
     }
 }
 
+enum ReceiptReviewSection: Hashable, Sendable {
+    case receipt, items, line(UUID), subtotal, total
+}
+
 struct ReceiptReconciliation: Equatable, Sendable {
     let issues: [String]
     let difference: Int64?
     let subtotalNote: String?
+    let firstTarget: ReceiptReviewSection?
 }
 
 extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
-/// This is the gate future splitting must use, in addition to complete participant assignment.
+/// A finished revision must still reconcile before it can be used for splitting.
 enum ReceiptCompletion {
     static func isComplete(_ record: ReceiptRecord) -> Bool {
+        guard record.current.review.isFinished else { return false }
         var draft = ReceiptReviewDraft(fields: record.current.fields)
         draft.subtotalNotPrinted = record.current.fields.subtotal == nil
-        draft.sourceOpened = true; draft.sourceChecked = record.current.review == .sourceReviewed
         return draft.canFinalize
     }
 }
