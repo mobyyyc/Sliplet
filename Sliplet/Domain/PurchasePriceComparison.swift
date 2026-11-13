@@ -109,6 +109,12 @@ enum PurchasePriceComparison {
               decision.verdict == .sameProduct, decision.pack == .same else {
             return PurchasePriceError.confirmProduct.localizedDescription
         }
+        return priceBlocker(a, line: first, b, line: second)
+    }
+
+    /// A candidate may open the comparison without granting product or pack approval.
+    static func priceBlocker(_ a: ReceiptRecord, line first: ReceiptLine,
+                             _ b: ReceiptRecord, line second: ReceiptLine) -> String? {
         guard ReceiptCompletion.isComplete(a), ReceiptCompletion.isComplete(b) else {
             return PurchasePriceError.reviewReceipts.localizedDescription
         }
@@ -125,6 +131,13 @@ enum PurchasePriceComparison {
             }
         }
         return nil
+    }
+
+    static func savedEvidence(_ a: ReceiptRecord, line first: UUID,
+                              _ b: ReceiptRecord, line second: UUID) -> PurchasePriceEvidence? {
+        guard let decision = PurchaseLinkEngine.decision(a, line: first, b, line: second),
+              let evidence = decision.priceEvidence else { return nil }
+        return decision.first.endpoint == PurchaseEndpoint(receiptID: a.id, lineID: first) ? evidence : evidence.reversed
     }
 
     static func compare(_ a: ReceiptRecord, line firstID: UUID,

@@ -19,7 +19,7 @@ struct PurchasePriceView: View {
                       let left = a.current.fields.items.first(where: { $0.id == first.lineID }),
                       let right = b.current.fields.items.first(where: { $0.id == second.lineID }) {
                 let decision = PurchaseLinkEngine.decision(a, line: left.id, b, line: right.id)
-                let saved = decision?.first.endpoint == first ? decision?.priceEvidence : decision?.priceEvidence?.reversed
+                let saved = PurchasePriceComparison.savedEvidence(a, line: left.id, b, line: right.id)
                 let comparison = Result { try PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: evidence) }
                 Form {
                     if let saved, let result = try? PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: saved) {
@@ -27,7 +27,24 @@ struct PurchasePriceView: View {
                             resultDetails(result, identifier: "savedUnitPriceResult")
                         }
                     }
-                    if saved != nil && !editingVerification {
+                    if let blocker = PurchasePriceComparison.priceBlocker(a, line: left, b, line: right) {
+                        Section { Text(blocker).accessibilityIdentifier("priceUnavailable") }
+                    } else if decision?.pack == .different || decision?.verdict == .differentProduct {
+                        Section { Text("These purchases are marked as different.").accessibilityIdentifier("priceUnavailable") }
+                    } else if decision?.pack != .same {
+                        Section {
+                            purchaseIdentity("This purchase", record: a, item: left)
+                            purchaseIdentity("Other purchase", record: b, item: right)
+                            NavigationLink("Original for this purchase") { PurchaseOriginalView(workspace: workspace, receiptID: a.id) }
+                            NavigationLink("Original for other purchase") { PurchaseOriginalView(workspace: workspace, receiptID: b.id) }
+                            Button("Confirm same product and pack size") { save(a, b, value: nil, confirmingPair: true) }
+                                .accessibilityIdentifier("confirmComparisonPair")
+                        } header: {
+                            Text("Same product and pack size?")
+                        } footer: {
+                            Text("Check both originals before comparing. Purchases appear in history automatically.")
+                        }
+                    } else if saved != nil && !editingVerification {
                         Section {
                             Button("Edit verification") { editingVerification = true }
                                 .accessibilityIdentifier("editPriceEvidence")
@@ -61,11 +78,21 @@ struct PurchasePriceView: View {
                         Section {
                             Picker("Both row prices", selection: $evidence.tax) {
                                 ForEach(PurchasePriceEvidence.Tax.allCases, id: \.self) { Text($0.title).tag($0) }
-                            }.accessibilityIdentifier("priceTaxBasis")
-                            Toggle("I checked both prices, units and tax basis against the originals", isOn: $checked)
-                                .tint(.green).accessibilityIdentifier("priceEvidenceChecked")
+                            }.pickerStyle(.menu).accessibilityIdentifier("priceTaxBasis")
+                            Button {
+                                checked.toggle()
+                            } label: {
+                                Label(checked ? "Price details confirmed" : "Confirm price details",
+                                      systemImage: checked ? "checkmark.circle.fill" : "circle")
+                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(checked ? .isSelected : [])
+                            .accessibilityHint("Confirms both prices, units and tax basis against the originals")
+                            .accessibilityIdentifier("priceEvidenceChecked")
                         } footer: {
-                            Text("Choose Each only when the quantities count identical packs. Choose a weight or volume unit only when the receipt supports it.")
+                            Text("Confirm both prices, units and tax basis against the originals. Choose Each for identical packs. Use a weight or volume unit when shown on the receipt.")
                         }
                         Section("Comparison") {
                             switch comparison {
@@ -115,6 +142,17 @@ struct PurchasePriceView: View {
                 .onChange(of: evidence) { _, _ in checked = false; message = nil }
             } else { ContentUnavailableView("Purchase unavailable", systemImage: "doc.questionmark") }
         }.navigationTitle("Compare unit prices").navigationBarTitleDisplayMode(.inline)
+            .labeledContentStyle(ReceiptAdaptiveLabeledContentStyle())
+    }
+
+    private func purchaseIdentity(_ title: String, record: ReceiptRecord, item: ReceiptLine) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(item.paperName).font(.headline)
+            Text([record.current.fields.merchant, PurchasePresentation.date(record.current.fields.purchaseDate)]
+                .compactMap { $0 }.joined(separator: " · "))
+                .font(.subheadline)
+        }
     }
 
     private func resultDetails(_ result: PurchasePriceComparison.Result, identifier: String) -> some View {
@@ -148,14 +186,14 @@ struct PurchasePriceView: View {
         "\(amount.currency.code) \(ExactInput.format(amount.minorUnits, scale: amount.currency.minorUnitScale))"
     }
 
-    private func save(_ a: ReceiptRecord, _ b: ReceiptRecord, value: PurchasePriceEvidence?) {
+    private func save(_ a: ReceiptRecord, _ b: ReceiptRecord, value: PurchasePriceEvidence?, confirmingPair: Bool = false) {
         Task {
             do {
                 try await workspace.savePurchaseDecision(first: a, line: first.lineID, second: b, line: second.lineID,
                     verdict: .sameProduct, pack: .same, priceEvidence: value)
                 checked = false
                 editingVerification = false
-                message = value == nil ? "Price verification cleared." : "Price verification saved."
+                message = confirmingPair ? nil : (value == nil ? "Price verification cleared." : "Price verification saved.")
             } catch is CancellationError { }
             catch { message = error.localizedDescription }
         }

@@ -71,14 +71,15 @@ import XCTest
         let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'purchaseHistoryEntry-'")).firstMatch
         XCTAssertTrue(match.waitForExistence(timeout: 10))
         capture(app, "P11-product-history")
-        match.tap()
-        capture(app, "P11-match-top")
-        reveal(app.buttons["compareUnitPrices"], in: app)
-        capture(app, "P11-match-actions")
-        app.buttons["compareUnitPrices"].tap()
+        let compare = app.buttons["compareUnitPrices"].firstMatch
+        reveal(compare, in: app); compare.tap()
         XCTAssertTrue(app.navigationBars["Compare unit prices"].waitForExistence(timeout: 10))
+        let confirm = app.buttons["confirmComparisonPair"]
+        XCTAssertTrue(confirm.exists)
+        XCTAssertFalse(app.staticTexts["unitPriceResult"].exists)
+        confirm.tap()
         capture(app, "P11-price-top")
-        app.swipeUp(); app.swipeUp()
+        reveal(app.descendants(matching: .any)["priceTaxBasis"].firstMatch, in: app)
         capture(app, "P11-price-bottom")
         app.terminate()
     }

@@ -17,6 +17,10 @@ struct PurchaseHistoryView: View {
                         PurchaseItemHeading(name: item.paperName, code: item.sku)
                             .listRowInsets(EdgeInsets(top: 12, leading: 4, bottom: 12, trailing: 4))
                             .listRowBackground(Color.clear)
+                        purchaseRow(record, line: item)
+                            .accessibilityIdentifier("currentHistoryPurchase")
+                    } header: {
+                        Text("This purchase")
                     }
                     if entries.isEmpty {
                         ContentUnavailableView("No other purchases found", systemImage: "clock",
@@ -26,16 +30,20 @@ struct PurchaseHistoryView: View {
                         Section {
                             ForEach(entries) { entry in
                                 NavigationLink {
-                                    PurchaseReceiptView(workspace: workspace, source: endpoint, purchase: entry.id)
+                                    PurchaseReceiptView(workspace: workspace, purchase: entry.id)
                                 } label: {
-                                    purchaseRow(entry)
+                                    purchaseRow(entry.record, line: entry.line)
                                 }
                                 .accessibilityIdentifier("purchaseHistoryEntry-" + entry.line.id.uuidString)
+                                if PurchasePriceComparison.priceBlocker(record, line: item, entry.record, line: entry.line) == nil,
+                                   PurchaseLinkEngine.decision(record, line: item.id, entry.record, line: entry.line.id)?.pack != .different {
+                                    comparisonRow(record, entry: entry)
+                                }
                             }
                         } header: {
                             Text("Other purchases")
                         } footer: {
-                            Text("Prices are receipt line totals.")
+                            Text("Line totals and recorded unit prices come from each receipt. Comparisons use confirmed purchase details.")
                         }
                     }
                 }
@@ -50,26 +58,56 @@ struct PurchaseHistoryView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func purchaseRow(_ entry: PurchaseHistoryEntry) -> some View {
+    private func purchaseRow(_ record: ReceiptRecord, line: ReceiptLine) -> some View {
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
         return layout {
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.record.current.fields.merchant ?? "Unknown merchant").font(.body.weight(.medium))
-                Text(PurchasePresentation.date(entry.record.current.fields.purchaseDate))
+                Text(record.current.fields.merchant ?? "Unknown merchant").font(.body.weight(.medium))
+                Text(PurchasePresentation.date(record.current.fields.purchaseDate))
                     .font(.subheadline).foregroundStyle(.secondary)
-                if !ReceiptCompletion.isComplete(entry.record) {
+                if !ReceiptCompletion.isComplete(record) {
                     Text("Needs review").font(.caption).foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Text(entry.line.amount.map(PurchasePresentation.price) ?? "Price unavailable")
-                .font(.body.weight(.semibold).monospacedDigit())
+            VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
+                Text(line.amount.map(PurchasePresentation.price) ?? "Price unavailable")
+                    .font(.body.weight(.semibold).monospacedDigit())
+                    .accessibilityLabel(line.amount.map { "Line total, " + PurchasePresentation.price($0) } ?? "Line total unavailable")
+                if let rate = PurchasePresentation.recordedUnitPrice(line) {
+                    Text(rate).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("historyRecordedUnitPrice")
+                }
+            }
         }
         .foregroundStyle(.primary)
         .padding(.vertical, 5)
         .frame(minHeight: 44)
+    }
+
+    private func comparisonRow(_ record: ReceiptRecord, entry: PurchaseHistoryEntry) -> some View {
+        let saved = PurchasePriceComparison.savedEvidence(record, line: endpoint.lineID, entry.record, line: entry.line.id)
+        let result = saved.flatMap {
+            try? PurchasePriceComparison.compare(record, line: endpoint.lineID, entry.record, line: entry.line.id, evidence: $0)
+        }
+        return NavigationLink {
+            PurchasePriceView(workspace: workspace, first: endpoint, second: entry.id)
+        } label: {
+            if let result {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(result.summary, systemImage: "checkmark.circle").font(.subheadline.weight(.semibold))
+                    Text("This purchase: " + result.first.formatted)
+                    Text("Other purchase: " + result.second.formatted)
+                    Text(result.tax.title).foregroundStyle(.secondary)
+                }.font(.footnote.monospacedDigit())
+            } else {
+                Label("Compare unit prices", systemImage: "arrow.left.arrow.right").font(.subheadline)
+            }
+        }
+        .frame(minHeight: 44)
+        .accessibilityIdentifier(result == nil ? "compareUnitPrices" : "historySavedComparison")
     }
 }
 
@@ -98,6 +136,12 @@ enum PurchasePresentation {
         return date.formatted(.dateTime.year().month(.abbreviated).day())
     }
 
+    static func recordedUnitPrice(_ line: ReceiptLine) -> String? {
+        guard let value = line.unitPrice else { return nil }
+        let unit = line.unit?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        return unit == nil ? "Unit price " + price(value) : price(value) + " / " + line.paperPriceUnit
+    }
+
     static func price(_ value: ReceiptMoney) -> String {
         let amount = Decimal(value.minorUnits) / pow(Decimal(10), Int(value.currency.minorUnitScale))
         return amount.formatted(.currency(code: value.currency.code).presentation(.isoCode)
@@ -107,10 +151,8 @@ enum PurchasePresentation {
 
 private struct PurchaseReceiptView: View {
     @Bindable var workspace: ReceiptWorkspace
-    let source: PurchaseEndpoint
     let purchase: PurchaseEndpoint
     @State private var positioned = false
-    @State private var comparingPrices = false
 
     var body: some View {
         Group {
@@ -143,17 +185,6 @@ private struct PurchaseReceiptView: View {
                         NavigationLink("Original") { PurchaseOriginalView(workspace: workspace, receiptID: record.id) }
                             .accessibilityIdentifier("historyReceiptOriginal")
                     }
-                    if let a = workspace.receipts.first(where: { $0.id == source.receiptID }),
-                       let left = a.current.fields.items.first(where: { $0.id == source.lineID }),
-                       let right = record.current.fields.items.first(where: { $0.id == purchase.lineID }),
-                       PurchasePriceComparison.setupBlocker(a, line: left, record, line: right) == nil {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Menu("More", systemImage: "ellipsis") {
-                                Button("Compare unit prices") { comparingPrices = true }
-                                    .accessibilityIdentifier("compareUnitPrices")
-                            }
-                        }
-                    }
                 }
             } else {
                 ContentUnavailableView("Receipt unavailable", systemImage: "doc.questionmark")
@@ -161,9 +192,6 @@ private struct PurchaseReceiptView: View {
         }
         .navigationTitle("Receipt")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(isPresented: $comparingPrices) {
-            PurchasePriceView(workspace: workspace, first: source, second: purchase)
-        }
     }
 }
 

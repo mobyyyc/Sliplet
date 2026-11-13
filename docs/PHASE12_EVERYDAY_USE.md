@@ -59,7 +59,7 @@ Verify first-time setup, model switching, key replacement, enable and disable, o
 
 During the pilot, use the next five real receipts as they arise. Record capture-to-save time and time spent correcting if convenient. At minimum, note the reading method, whether an interruption cost work, which corrections were needed, and whether the receipt was easy to find again. Include at least one on-device attempt and one interruption scenario if practical. A five-receipt pilot informs workflow decisions. It cannot establish recognition accuracy across stores.
 
-P12-01, P12-02, P12-06 and P12-03 are complete. The next implementation task is P12-04. Each remaining task is approved separately in the order above.
+P12-01, P12-02, P12-06, P12-03 and P12-04 are complete. The next task is to choose the scope of P12-05. Each remaining task is approved separately in the order above.
 
 ### P12-02 delivery
 
@@ -82,3 +82,10 @@ Automated provider checks use fictional images and simulated responses. Live Gem
 Tap **Finish** once required fields and amounts reconcile. **Original** and suggested checks are available during review. A new finished revision records the explicit finish, while legacy source-reviewed revisions and drafts retain their existing status. A finished receipt becomes eligible for splitting subject to assignment and split validation.
 
 The **Needs review** collection is available from All receipts. A draft opens with a **Continue review** action. The first blocking issue links to the relevant field or section, and Split offers a way back to the receipt editor. Photo preparation and recognition-method selection remain as designed in P12-02 pending the pilot.
+
+
+### P12-04 delivery
+
+Purchase History shows the current purchase, each matching receipt's line total, and its recorded unit price when available. An unrecorded unit stays unspecified. Comparable candidates can open price comparison directly from the matching entry. Confirming identity and pack size applies to price comparison. Purchase History continues to discover candidates automatically. Saved comparisons appear with both rates and the confirmed tax basis, and the existing revision checks keep stale decisions out of history.
+
+The draft-to-Split handoff was rechecked with a fictional mismatch. The Split action returns to review and its first blocker points to the printed total.
