@@ -229,7 +229,7 @@ final class ReceiptWorkspace {
         guard active, flow == .reading else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil; flow = .failed
-        errorMessage = aiUploadStarted ? "Stopped waiting. Google may have received the image; stopping cannot recall the upload." : "On-device reading stopped."
+        errorMessage = aiUploadStarted ? "Reading stopped. If Google already received the image, it can’t be recalled." : "On-device reading stopped."
     }
     /// Opt-in integration boundary. Existing imports continue to use local Vision.
     /// No in-flight response may overwrite edits, a new import, or a locked session.

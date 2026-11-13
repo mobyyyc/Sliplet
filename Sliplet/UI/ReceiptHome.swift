@@ -287,57 +287,40 @@ struct ReceiptHome: View {
             }
         case .preparingUpload: ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
         case .loading, .reading:
-            VStack(spacing: 28) {
-                Spacer(minLength: 12)
-                VStack(spacing: 18) {
-                    ProgressView().controlSize(.large)
-                    VStack(spacing: 6) {
-                        Text(workspace.flow == .loading ? "Opening photo" : "Reading receipt").font(.title2.bold())
-                        Text(workspace.aiUploadStarted ? "Gemini is reading your photo" : "On your iPhone")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                }
-                Text("Keep Sliplet open. Your receipt will appear here when it’s ready.")
-                    .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    .frame(maxWidth: 290)
-                Spacer(minLength: 12)
-            }.padding(.horizontal, 28).frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityElement(children: .contain).accessibilityIdentifier("processing")
-                .safeAreaBar(edge: .bottom, spacing: 0) {
-                    VStack(spacing: 10) {
-                        if workspace.aiUploadStarted {
-                            Text("Stopping won’t recall an image already sent.")
-                                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        }
-                        Button(workspace.flow == .loading ? "Cancel import" : "Stop reading", role: .cancel) {
-                            if workspace.flow == .reading { workspace.stopReading() } else { workspace.cancelImport() }
-                        }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("cancelImport")
-                    }.modifier(ReceiptActionBarLayout())
-                }
+            ReceiptReadingView(openingPhoto: workspace.flow == .loading,
+                               usingAI: workspace.flow == .reading && workspace.aiUploadStarted) {
+                if workspace.flow == .reading { workspace.stopReading() }
+                else { workspace.cancelImport() }
+            }
+            #if DEBUG
+            .dynamicTypeSize(ReceiptUploadFixture.enabled
+                             && ProcessInfo.processInfo.arguments.contains("--p1201-large-reading")
+                             ? .accessibility5 : typeSize)
+            #endif
 
         case .failed:
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Your photo is still available",
+                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Continue with your photo",
                           systemImage: workspace.image == nil ? "photo" : "doc.viewfinder")
                         .font(.title2.weight(.semibold))
+                        .accessibilityAddTraits(.isHeader)
                     if let message = workspace.errorMessage { Text(message).foregroundStyle(.secondary) }
-                    if workspace.aiUploadStarted {
-                        Text("Try on-device reading, or review the image again before another AI upload.")
-                            .font(.subheadline)
-                    }
                     if workspace.image != nil {
-                        Button(workspace.aiUploadStarted ? "Review upload again" : "Recognition options",
-                               action: workspace.chooseRecognition)
-                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("recoverPreview")
-                        if workspace.aiUploadStarted {
-                            Button("Enter manually", action: workspace.manualReview)
-                                .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("manual")
+                        VStack(alignment: .leading, spacing: 14) {
+                            Button(workspace.aiUploadStarted ? "Review upload again" : "Reading options",
+                                   systemImage: workspace.aiUploadStarted ? "eye" : "doc.viewfinder",
+                                   action: workspace.chooseRecognition)
+                                .accessibilityIdentifier("recoverPreview")
+                            if workspace.aiUploadStarted {
+                                Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
+                                    .accessibilityIdentifier("manual")
+                            }
+                            anchoredImportChoices {
+                                Button("Choose another image", systemImage: "photo") { importChoices = true }
+                            }
                         }
-                        anchoredImportChoices {
-                            Button("Choose another image", systemImage: "photo") { importChoices = true }
-                                .buttonStyle(ReceiptSecondaryStyle())
-                        }
+                        .buttonStyle(ReceiptSecondaryStyle())
                     }
                 }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
             }

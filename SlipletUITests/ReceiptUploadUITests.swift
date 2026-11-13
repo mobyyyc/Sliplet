@@ -84,10 +84,10 @@ import XCTest
 }
 
 extension ReceiptUploadUITests {
-    private func sendAuditFixture(_ scenario: String) -> XCUIApplication {
+    private func sendAuditFixture(_ scenario: String, flags: [String] = ["--t05-light"]) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", scenario, "--t05-light"]
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", scenario] + flags
         app.launch()
         for id in ["uploadFixture", "adjustPhotoContinue", "previewAI", "readingMethodContinue", "reviewUpload"] {
             let button = app.buttons[id]
@@ -99,6 +99,7 @@ extension ReceiptUploadUITests {
         consent.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
         let send = app.buttons["sendReceiptAI"]
         reveal(send, in: app)
+        XCTAssertTrue(send.isEnabled)
         send.tap()
         return app
     }
@@ -383,13 +384,29 @@ extension ReceiptUploadUITests {
     func testReadingStatusVisibleAndCanStop() {
         let app = sendAuditFixture("--import-loading-fixture")
         XCTAssertTrue(app.buttons["cancelImport"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.staticTexts["Reading receipt"].exists)
-        XCTAssertTrue(app.staticTexts["Gemini is reading your photo"].exists)
-        XCTAssertFalse(app.buttons["Details"].exists)
+        XCTAssertTrue(app.staticTexts["Reading your receipt"].exists)
+        XCTAssertTrue(app.staticTexts["Using Gemini"].exists)
+        XCTAssertTrue(app.buttons["cancelImport"].isHittable)
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Reading status"; shot.lifetime = .keepAlways; add(shot)
         app.buttons["cancelImport"].tap()
         XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Continue with your photo"].exists)
+        XCTAssertTrue(app.buttons["recoverPreview"].exists)
     }
+
+    func testLongWaitWithReduceMotionKeepsStopReachable() {
+        let app = sendAuditFixture("--import-loading-fixture", flags: ["--t05-reduce-motion", "--p1201-large-reading"])
+        XCTAssertTrue(app.staticTexts["Still reading your receipt"].waitForExistence(timeout: 12))
+        let stop = app.buttons["cancelImport"]
+        XCTAssertTrue(stop.isHittable)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Reading status with Reduce Motion and large text"
+        shot.lifetime = .keepAlways
+        add(shot)
+        stop.tap()
+        XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+    }
+
 }
 
 extension ReceiptUploadUITests {
