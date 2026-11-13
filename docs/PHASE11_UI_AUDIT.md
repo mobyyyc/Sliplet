@@ -117,3 +117,7 @@ Line Details now leads with the item name, code when available and price, with o
 ## P11-08 search and history phone checkpoint · November 12, 2026
 
 The owner passed search query and result-position restoration, automatic purchase history, opening the highlighted purchase row, and displaying recorded unit prices in Line Details on iPhone 15 Pro build `12cd43d`. The remaining acceptance checks cover long receipts and wallets, lock and return after interruptions, and accessibility in light and dark appearances.
+
+## P11-08 final phone acceptance · November 12, 2026
+
+The owner reported that the final walkthrough passed on iPhone 15 Pro build `12cd43d`. It covered reaching the total and controls on a long receipt, returning to the wallet stack, Face ID after the lock timeout, and reading a receipt and opening an item with larger text, Reduce Motion, and VoiceOver in light and dark mode. This closes Phase 11. The result is manual device feedback. Hardware frame timing was not measured.
