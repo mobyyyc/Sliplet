@@ -156,6 +156,23 @@ private struct AITester: ReceiptAIConnectionTesting {
             XCTAssertFalse(c.statusText.contains(first))
         }
     }
+    func testTransientRetestFailureKeepsVerifiedModelEnabled() async throws {
+        let keys = AIKeys(), defaults = defaults()
+        let connection = ReceiptAIConnection(keys: keys, tester: AITester { _ in }, defaults: defaults)
+        try await connect(connection, key: first)
+        connection.setPrivacyConfirmed(true); connection.setEnabled(true)
+        for error in [ReceiptAIError.offline, .timedOut, .rateOrQuotaLimit, .serviceUnavailable] {
+            let failing = ReceiptAIConnection(keys: keys, tester: AITester { _ in throw error }, defaults: defaults)
+            failing.verify()
+            try await wait { !failing.checking }
+            XCTAssertEqual(failing.status, .verified)
+            XCTAssertTrue(failing.canUseAI)
+            XCTAssertEqual(failing.preferences.checkedAt, connection.preferences.checkedAt)
+            XCTAssertNil(failing.preferences.lastFailure)
+            XCTAssertNotNil(failing.message)
+        }
+    }
+
     func testSpontaneousCancellationEndsChecking() async throws {
         let c = ReceiptAIConnection(keys: AIKeys(), tester: AITester { _ in throw CancellationError() }, defaults: defaults())
         try await connect(c, key: first)

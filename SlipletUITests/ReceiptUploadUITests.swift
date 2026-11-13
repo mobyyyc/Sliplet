@@ -94,6 +94,43 @@ import XCTest
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["finishSave"].isEnabled)
     }
+    func testAISettingsFromImportKeepsPreparedPhotoAndCover() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture", "--t05-light"]
+        app.launch()
+        let start = app.buttons["uploadFixture"]
+        XCTAssertTrue(start.waitForExistence(timeout: 20)); start.tap()
+        app.buttons["rotateImportPhoto"].tap()
+        let photoContinue = app.buttons["adjustPhotoContinue"]
+        reveal(photoContinue, in: app); photoContinue.tap()
+        let ai = app.buttons["previewAI"]
+        XCTAssertTrue(ai.waitForExistence(timeout: 10)); ai.tap()
+        let methodContinue = app.buttons["readingMethodContinue"]
+        methodContinue.tap()
+        let review = app.buttons["reviewUpload"]
+        XCTAssertTrue(review.waitForExistence(timeout: 10))
+        let image = app.images["uploadImage"]
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        let imageFrame = image.frame
+        app.buttons["drawCovers"].tap()
+        image.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2)).press(forDuration: 0.1,
+            thenDragTo: image.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.4)))
+        XCTAssertTrue(app.buttons["Undo"].isEnabled)
+        app.buttons["back"].tap()
+        let settings = app.buttons["importAISettings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5)); settings.tap()
+        XCTAssertTrue(app.switches["enableAIRecognition"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+        XCTAssertTrue(methodContinue.waitForExistence(timeout: 5)); methodContinue.tap()
+        XCTAssertTrue(image.waitForExistence(timeout: 10))
+        XCTAssertEqual(image.frame.size, imageFrame.size)
+        XCTAssertTrue(app.buttons["Undo"].isEnabled)
+        review.tap()
+        XCTAssertTrue(app.buttons["finalUploadPreview"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["sendReceiptAI"].isEnabled)
+    }
+
     func testLightPreviewSurvivesOriginalSheet() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -354,6 +391,10 @@ extension ReceiptUploadUITests {
     func testOfflineRecoveryPreviewsAgainBeforeSending() {
         let app = sendAuditFixture("--p904-offline")
         XCTAssertTrue(app.buttons["recoverLocal"].waitForExistence(timeout: 10))
+        app.buttons["recoverAISettings"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["aiCurrentModel"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.switches["enableAIRecognition"].exists)
+        app.buttons["Done"].tap()
         app.buttons["recoverPreview"].tap()
         let review = app.buttons["reviewUpload"]
         XCTAssertTrue(review.waitForExistence(timeout: 10))
@@ -374,7 +415,7 @@ extension ReceiptUploadUITests {
         let aiSettings = app.buttons["recoverAISettings"]
         XCTAssertTrue(aiSettings.isHittable)
         aiSettings.tap()
-        XCTAssertTrue(app.buttons["aiModelName"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["aiCurrentModel"].waitForExistence(timeout: 5))
         app.buttons["Done"].tap()
         manual.tap()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))

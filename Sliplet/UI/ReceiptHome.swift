@@ -350,18 +350,29 @@ struct ReceiptHome: View {
                     if let message = workspace.errorMessage { Text(message).foregroundStyle(.secondary) }
                     if workspace.image != nil {
                         VStack(alignment: .leading, spacing: 14) {
-                            Button(workspace.aiUploadStarted ? "Review upload again" : "Reading options",
-                                   systemImage: workspace.aiUploadStarted ? "eye" : "doc.viewfinder",
-                                   action: workspace.chooseRecognition)
-                                .accessibilityIdentifier("recoverPreview")
                             if workspace.aiUploadStarted {
+                                if workspace.lastAIReadFailure == .rateOrQuotaLimit || workspace.lastAIReadFailure == .billingRequired {
+                                    Link(destination: URL(string: "https://aistudio.google.com/usage")!) {
+                                        Label("Check Google usage", systemImage: "chart.bar")
+                                    }
+                                }
+                                if workspace.aiConnection.canUseAI {
+                                    Button("Review and retry upload", systemImage: "eye", action: workspace.chooseRecognition)
+                                        .accessibilityIdentifier("recoverPreview")
+                                }
                                 Button("AI settings", systemImage: "gear") { recoveryAISettings = true }
                                     .accessibilityIdentifier("recoverAISettings")
                                 Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
                                     .accessibilityIdentifier("manual")
-                            }
-                            anchoredImportChoices {
-                                Button("Choose another image", systemImage: "photo") { importChoices = true }
+                                anchoredImportChoices {
+                                    Button("Choose another image", systemImage: "photo") { importChoices = true }
+                                }
+                            } else {
+                                Button("Reading options", systemImage: "doc.viewfinder", action: workspace.chooseRecognition)
+                                    .accessibilityIdentifier("recoverPreview")
+                                anchoredImportChoices {
+                                    Button("Choose another image", systemImage: "photo") { importChoices = true }
+                                }
                             }
                         }
                         .buttonStyle(ReceiptSecondaryStyle())

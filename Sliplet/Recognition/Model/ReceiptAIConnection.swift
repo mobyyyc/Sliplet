@@ -15,6 +15,13 @@ enum ReceiptAIModel: String, Codable, CaseIterable, Identifiable, Sendable {
 }
 enum ReceiptAIError: String, Error, Codable, Sendable, Equatable {
     case invalidKey, accessDenied, modelUnavailable, rateOrQuotaLimit, billingRequired, offline, serviceUnavailable, timedOut, invalidResponse, secureStorage
+    var invalidatesConnection: Bool {
+        switch self {
+        case .invalidKey, .accessDenied, .modelUnavailable, .billingRequired, .secureStorage: true
+        case .rateOrQuotaLimit, .offline, .serviceUnavailable, .timedOut, .invalidResponse: false
+        }
+    }
+
     var message: String {
         switch self {
         case .invalidKey: "The key was rejected. Check or replace it in Google AI Studio."
@@ -66,7 +73,8 @@ protocol ReceiptAIConnectionTesting: Sendable {
         switch status {
         case .disconnected: "Not connected"
         case .checking: "Checking…"
-        case .failed, .unverified: "Needs attention"
+        case .unverified: "Model needs verification"
+        case .failed: "Needs attention"
         case .verified: canUseAI ? "Ready" : "Off"
         }
     }
@@ -99,9 +107,27 @@ protocol ReceiptAIConnectionTesting: Sendable {
             hasKey = true
             if preferences.credentialID != credential.id { preferences = Preferences(model: preferences.model); persist() }
             // Last success is historical; do not infer present provider availability.
-            status = preferences.lastFailure.map(Status.failed) ?? (preferences.checkedAt == nil ? .unverified : .verified)
+            status = savedStatus
         } catch { status = .failed(.secureStorage); preferences.enabled = false; persist() }
     }
+    private var savedStatus: Status {
+        if let failure = preferences.lastFailure { return .failed(failure) }
+        if !hasKey { return .disconnected }
+        return preferences.checkedAt == nil ? .unverified : .verified
+    }
+
+    var settingsActionTitle: String {
+        if !hasKey && status != .failed(.secureStorage) { return "Connect Gemini" }
+        if status == .verified { return canUseAI ? "Manage" : "Turn on AI" }
+        return "AI settings"
+    }
+
+    func clearReplacementFeedback() {
+        if replacementError != nil && !hasKey { status = .disconnected }
+        replacementError = nil
+        message = nil
+    }
+
     /// Re-read Keychain at explicit send time, never cache a developer or old key.
     func uploadCredential() throws -> ReceiptAICredential {
         guard canUseAI else { throw ReceiptAIError.secureStorage }
@@ -117,7 +143,7 @@ protocol ReceiptAIConnectionTesting: Sendable {
     }
     func recordUploadFailure(_ error: ReceiptAIError, credentialID: UUID) {
         guard preferences.credentialID == credentialID else { return }
-        if [.invalidKey, .accessDenied, .modelUnavailable, .billingRequired].contains(error) {
+        if error.invalidatesConnection {
             preferences.lastFailure = error; preferences.enabled = false; status = .failed(error); persist()
         }
     }
@@ -144,7 +170,7 @@ protocol ReceiptAIConnectionTesting: Sendable {
     }
     func cancel() {
         operation = UUID(); job?.cancel(); job = nil
-        if checking { status = preferences.lastFailure.map(Status.failed) ?? (hasKey && preferences.checkedAt != nil ? .verified : (hasKey ? .unverified : .disconnected)) }
+        if checking { status = savedStatus }
     }
     func disconnect() {
         cancel(); replacementError = nil; message = nil
@@ -191,6 +217,13 @@ protocol ReceiptAIConnectionTesting: Sendable {
                 if replacing && self.hasKey {
                     self.status = previousStatus; self.replacementError = safe
                     self.message = "The replacement was not saved. Your existing connection is unchanged."
+                } else if !replacing && previousStatus == .verified && !safe.invalidatesConnection,
+                          self.preferences.credentialID == credential.id {
+                    self.status = .verified
+                    self.message = safe.message + " Your last verified connection is still saved."
+                } else if replacing {
+                    self.status = .failed(safe)
+                    self.replacementError = safe
                 } else {
                     self.status = .failed(safe); self.preferences.lastFailure = safe; self.preferences.enabled = false; self.persist()
                 }

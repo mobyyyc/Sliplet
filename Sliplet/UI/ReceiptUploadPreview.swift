@@ -84,6 +84,7 @@ struct ReceiptUploadPreview: View {
         }
         .onChange(of: redactions) { _, _ in acknowledged = false; upload = nil; preview = nil }
         .onChange(of: workspace.aiConnection.preferences.credentialID) { _, _ in acknowledged = false }
+        .onChange(of: workspace.aiConnection.preferences.model) { _, _ in acknowledged = false }
         .onChange(of: workspace.aiConnection.canUseAI) { _, _ in acknowledged = false }
         .onChange(of: workspace.privacyCovered) { _, covered in
             if covered { acknowledged = false; cancelPreparation() }
@@ -187,11 +188,12 @@ struct ReceiptUploadPreview: View {
             methodCard("AI reading", subtitle: "Gemini · uploads your prepared image", icon: "sparkles", ai: true)
                 .accessibilityIdentifier("previewAI")
             HStack {
-                Label(workspace.aiConnection.canUseAI ? "AI connected" : "AI setup needed",
-                      systemImage: workspace.aiConnection.canUseAI ? "checkmark.circle" : "key")
+                Label(workspace.aiConnection.settingsSummary,
+                      systemImage: workspace.aiConnection.canUseAI ? "checkmark.circle" : "gear")
                     .font(.footnote).foregroundStyle(.secondary)
                 Spacer()
-                Button(workspace.aiConnection.canUseAI ? "Manage" : "Connect") { settings = true }
+                Button(workspace.aiConnection.settingsActionTitle) { settings = true }
+                    .accessibilityIdentifier("importAISettings")
             }.padding(.horizontal, 4)
             guidance("About reading methods", text: "On-device uses Apple Vision offline. AI uses your connected provider and API allowance. You’ll hide sensitive details and check the image before uploading.")
                 .padding(.top, 10)
@@ -279,6 +281,11 @@ struct ReceiptUploadPreview: View {
                 .tint(.green).accessibilityIdentifier("uploadConsent")
             Button("Edit hidden areas") { go(2) }
                 .buttonStyle(ReceiptSecondaryStyle()).frame(maxWidth: .infinity)
+            if !workspace.aiConnection.canUseAI {
+                Button(workspace.aiConnection.settingsActionTitle) { settings = true }
+                    .buttonStyle(ReceiptSecondaryStyle())
+                    .accessibilityIdentifier("importAISettings")
+            }
         }
     }
     private var actionTitle: String {

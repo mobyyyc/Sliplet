@@ -16,30 +16,45 @@ import XCTest
         XCTAssertTrue(settings.waitForExistence(timeout: 20)); settings.tap()
         let ai = app.buttons["aiRecognitionSettings"]
         XCTAssertTrue(ai.waitForExistence(timeout: 5)); ai.tap()
+        let connect = app.buttons["connectGemini"]
+        XCTAssertTrue(connect.waitForExistence(timeout: 5))
         let field = app.secureTextFields["geminiAPIKey"]
+        XCTAssertFalse(field.exists)
+        connect.tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5))
+        let verify = app.buttons["verifyAIConnection"]
+        XCTAssertFalse(verify.isEnabled)
         field.tap(); field.typeText("FICTIONAL_UI_TEST_KEY_NOT_REAL\n")
-        app.swipeUp()
-        let ack = app.switches["aiTestAcknowledgement"]; reveal(ack, in: app); ack.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
-        XCTAssertEqual(ack.value as? String, "1")
-        let verify = app.buttons["verifyAIConnection"]; reveal(verify, in: app)
-        XCTAssertTrue(verify.isEnabled); verify.tap()
-        let privacy = app.switches["aiPrivacyConfirmation"]
-        XCTAssertTrue(privacy.waitForExistence(timeout: 10)); reveal(privacy, in: app)
+        reveal(verify, in: app); verify.tap()
+
+        let turnOn = app.buttons["turnOnAIRecognition"]
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 10))
+        let management = app.buttons["manageAIConnection"].firstMatch
+        XCTAssertTrue(management.exists)
+        XCTAssertFalse(app.buttons["disconnectAI"].exists)
+        turnOn.tap()
+        let agree = app.buttons["agreeAndEnableAI"]
+        XCTAssertTrue(agree.waitForExistence(timeout: 5)); agree.tap()
         let enable = app.switches["enableAIRecognition"]
-        XCTAssertFalse(enable.isEnabled); privacy.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap(); reveal(enable, in: app)
-        XCTAssertTrue(enable.isEnabled); enable.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        XCTAssertTrue(enable.waitForExistence(timeout: 5))
         XCTAssertEqual(enable.value as? String, "1")
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Fictional AI Settings"; shot.lifetime = .keepAlways; add(shot)
-        try app.screenshot().pngRepresentation.write(to: URL(fileURLWithPath: "/tmp/sliplet-p804-settings.png"))
-        let retest = app.buttons["Test connection"].firstMatch
-        reveal(retest, in: app); retest.tap()
-        reveal(verify, in: app); XCTAssertTrue(verify.isEnabled)
+
+        management.tap()
+        let model = app.buttons["aiModelName"]
+        XCTAssertTrue(model.waitForExistence(timeout: 5))
+        reveal(model, in: app); model.tap()
+        app.buttons["Gemini 3.6 Flash"].firstMatch.tap()
+        XCTAssertTrue(verify.waitForExistence(timeout: 5))
+        XCTAssertFalse(enable.exists); XCTAssertFalse(field.exists)
         verify.tap()
-        XCTAssertTrue(privacy.waitForExistence(timeout: 10))
-        reveal(enable, in: app); XCTAssertEqual(enable.value as? String, "1")
+        XCTAssertTrue(turnOn.waitForExistence(timeout: 10)); turnOn.tap()
+        XCTAssertTrue(enable.waitForExistence(timeout: 5))
+        XCTAssertFalse(agree.exists)
+
+        management.tap()
         let disconnect = app.buttons["disconnectAI"]; reveal(disconnect, in: app); disconnect.tap()
-        app.buttons["Remove key from this device"].tap()
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        app.buttons["Remove key from this device"].firstMatch.tap()
+        XCTAssertTrue(connect.waitForExistence(timeout: 5))
     }
 }

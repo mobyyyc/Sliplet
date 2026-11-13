@@ -59,10 +59,19 @@ Verify first-time setup, model switching, key replacement, enable and disable, o
 
 During the pilot, use the next five real receipts as they arise. Record capture-to-save time and time spent correcting if convenient. At minimum, note the reading method, whether an interruption cost work, which corrections were needed, and whether the receipt was easy to find again. Include at least one on-device attempt and one interruption scenario if practical. A five-receipt pilot informs workflow decisions. It cannot establish recognition accuracy across stores.
 
-P12-01 and P12-02 are complete. The next implementation task is P12-06. Each remaining task is approved separately in the order above.
+P12-01, P12-02 and P12-06 are complete. The next implementation task is P12-03. Each remaining task is approved separately in the order above.
 
 ### P12-02 delivery
 
 The wallet now offers **Continue import** and **Discard** for one encrypted, local import. The checkpoint keeps the original, applied crop and rotation, privacy covers, completed recognition and applied review edits. An unfinished crop or an unapplied edit sheet reopens at the last applied state. AI resumes at the privacy step and requires fresh upload consent. Saving the receipt clears its pending import in the same database transaction. Pending imports stay on this device and are excluded from receipt backup exports.
 
 Simulator checks use fictional receipts. Device-level file protection and Face ID remain to be checked on a physical iPhone.
+
+
+### P12-06 delivery
+
+AI Recognition shows the current Gemini model and the next action for its connection state. First-time setup verifies a fictional image before saving the key. Enabling recognition presents Google's data-use terms, and receipt uploads still require separate approval. Model changes reuse the saved key and require an explicit model check before AI can be turned back on. Key replacement, connection testing and disconnect are grouped under **Manage connection**.
+
+Temporary connection-test and receipt-read failures preserve existing verification. Rejected keys, account access, model availability and billing errors provide specific recovery actions. Settings from an active import preserve the photo adjustments and covers. Retrying an upload returns to its preview and asks for fresh approval.
+
+Automated provider checks use fictional images and simulated responses. Live Gemini behavior and the physical iPhone remain separate verification steps.

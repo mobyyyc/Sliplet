@@ -60,6 +60,7 @@ final class ReceiptWorkspace {
     var importStep = 0
     var importAdjustment = ReceiptPhotoAdjustment()
     var aiUploadStarted = false
+    private(set) var lastAIReadFailure: ReceiptAIError?
     var importUsesAI = false
     var importCovers: [CGRect] = [] {
         didSet {
@@ -186,7 +187,7 @@ final class ReceiptWorkspace {
         let lastCheckpoint = checkpointWrite; checkpointWrite = nil
         pendingImportID = nil; hasPendingImport = false; importCheckpointError = nil
         importCovers = []; importUsesAI = false; importAdjustment = ReceiptPhotoAdjustment()
-        active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; retryCovers = nil
+        active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil
         aiConnection.cancel()
         permit.revoke(); cancelBackup(); task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil
@@ -348,7 +349,7 @@ final class ReceiptWorkspace {
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         importStep = retryCovers == nil ? 0 : 2
         if let retryCovers { importUsesAI = true; importCovers = retryCovers.regions }
-        aiUploadStarted = false; errorMessage = nil; flow = .preparingUpload
+        aiUploadStarted = false; lastAIReadFailure = nil; errorMessage = nil; flow = .preparingUpload
         checkpointImport()
     }
     /// Called only by the exact-payload preview's explicit send button.
@@ -367,7 +368,7 @@ final class ReceiptWorkspace {
             importStep = 2
             checkpointImport()
             aiUploadStarted = true
-            readModelImage(using: reader, credentialID: credential.id)
+            readModelImage(using: reader, credentialID: credential.id, model: model)
         } catch { errorMessage = "AI is not ready. Check your connection in Settings or use on-device reading." }
     }
     func stopReading() {
@@ -378,11 +379,11 @@ final class ReceiptWorkspace {
     }
     /// Opt-in integration boundary. Existing imports continue to use local Vision.
     /// No in-flight response may overwrite edits, a new import, or a locked session.
-    private func readModelImage(using reader: any ReceiptModelReader, credentialID: UUID? = nil) {
+    private func readModelImage(using reader: any ReceiptModelReader, credentialID: UUID? = nil, model: ReceiptAIModel? = nil) {
         guard let image, active, !saving, selected == nil else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel(); recognition = nil
         draft = ReceiptReviewDraft(); extraction = nil; sourceVisible = false
-        flow = .reading; errorMessage = nil
+        flow = .reading; errorMessage = nil; lastAIReadFailure = nil
         let session = sessionID
         let work = Task.detached(priority: .userInitiated) { try await reader.read(image: image) }
         task = Task { [weak self] in
@@ -390,7 +391,8 @@ final class ReceiptWorkspace {
                 let reading = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 try Task.checkCancellation()
                 guard let self, self.isCurrent(session), self.flow == .reading else { return }
-                if let credentialID, (try? self.aiConnection.uploadCredential().id) != credentialID {
+                if let credentialID, self.aiConnection.preferences.model != model ||
+                    (try? self.aiConnection.uploadCredential().id) != credentialID {
                     self.errorMessage = "The AI connection changed while reading. This result was not applied. Your original is preserved."
                     self.flow = .failed; return
                 }
@@ -405,12 +407,15 @@ final class ReceiptWorkspace {
             catch {
                 guard !Task.isCancelled, let self, self.isCurrent(session), self.flow == .reading else { return }
                 if let error = error as? ReceiptAIError, let credentialID {
-                    self.aiConnection.recordUploadFailure(error, credentialID: credentialID)
+                    self.lastAIReadFailure = error
+                    if self.aiConnection.preferences.model == model {
+                        self.aiConnection.recordUploadFailure(error, credentialID: credentialID)
+                    }
                 }
                 let message: String
                 switch error as? ReceiptAIError {
                 case .timedOut: message = "\(self.aiConnection.preferences.model.title) didn’t respond in time."
-                case .serviceUnavailable: message = "Google couldn’t complete the request. You can read on device or try another model in AI settings."
+                case .serviceUnavailable: message = "Google couldn’t complete the request. Try again later."
                 case .invalidResponse: message = "Google returned an incomplete or unreadable result."
                 case .some(let safe): message = safe.message
                 case .none: message = "The model returned an incomplete or unsupported receipt."
@@ -422,7 +427,7 @@ final class ReceiptWorkspace {
     }
     func readImage() {
         guard let image, active, !saving else { return }
-        aiUploadStarted = false; retryCovers = nil
+        aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil
         importUsesAI = false; importCovers = []; importStep = min(importStep, 1)
         checkpointImport()
         task?.cancel(); worker?.cancel(); recognition?.cancel()
@@ -487,7 +492,7 @@ final class ReceiptWorkspace {
         pendingImportID = nil
         importCovers = []; importUsesAI = false
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
-        aiUploadStarted = false; retryCovers = nil
+        aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
         readerInput = nil; readerRevisionID = nil
         reviewBaseline = nil
