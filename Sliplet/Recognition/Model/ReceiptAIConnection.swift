@@ -39,7 +39,7 @@ protocol ReceiptAIConnectionTesting: Sendable {
 @MainActor @Observable final class ReceiptAIConnection {
     struct Preferences: Codable {
         var credentialID: UUID?
-        var model: ReceiptAIModel = .flash
+        var model: ReceiptAIModel = .flashLite
         var checkedAt: Date?
         var lastFailure: ReceiptAIError?
         var privacyVersion: Int?
@@ -82,6 +82,11 @@ protocol ReceiptAIConnectionTesting: Sendable {
     init(keys: any ReceiptAIKeyStore = ReceiptAIKeychain(), tester: any ReceiptAIConnectionTesting = GeminiConnectionTest(), defaults: UserDefaults = .standard) {
         self.keys = keys; self.tester = tester; self.defaults = defaults
         if let data = defaults.data(forKey: preferencesKey), let saved = try? JSONDecoder().decode(Preferences.self, from: data) { preferences = saved }
+        let defaultMigrationKey = "ai.gemini.didAdoptFlashLiteDefault"
+        if !defaults.bool(forKey: defaultMigrationKey) {
+            changeModel(.flashLite)
+            defaults.set(true, forKey: defaultMigrationKey)
+        }
         reload()
     }
     private func persist() { if let data = try? JSONEncoder().encode(preferences) { defaults.set(data, forKey: preferencesKey) } }

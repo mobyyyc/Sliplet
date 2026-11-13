@@ -36,6 +36,7 @@ private struct AITester: ReceiptAIConnectionTesting {
         let keys = AIKeys(), defaults = defaults(), tester = AITester { _ in }
         let c = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
         XCTAssertEqual(c.status, .disconnected)
+        XCTAssertEqual(c.preferences.model, .flashLite)
         XCTAssertEqual(c.settingsSummary, "Not connected")
         try await connect(c, key: first)
         XCTAssertEqual(c.status, .verified); XCTAssertFalse(c.enabled); XCTAssertFalse(c.privacyConfirmed)
@@ -58,17 +59,39 @@ private struct AITester: ReceiptAIConnectionTesting {
         connection.setPrivacyConfirmed(true)
         connection.setEnabled(true)
         let credential = try keys.load()
-        connection.changeModel(.flashLite)
+        connection.changeModel(.flash)
         XCTAssertFalse(connection.canUseAI)
         XCTAssertEqual(connection.status, .unverified)
         XCTAssertEqual(try keys.load()?.id, credential?.id)
         let reopened = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
-        XCTAssertEqual(reopened.preferences.model, .flashLite)
+        XCTAssertEqual(reopened.preferences.model, .flash)
         reopened.verify()
         try await wait { !reopened.checking }
         reopened.setEnabled(true)
         XCTAssertTrue(reopened.canUseAI)
         XCTAssertEqual(try reopened.uploadCredential().id, credential?.id)
+    }
+
+    func testUpgradeMigratesPreviouslyVerifiedFlashAndKeepsItsKey() throws {
+        let keys = AIKeys()
+        let defaults = defaults()
+        let credential = ReceiptAICredential(id: UUID(), key: first)
+        try keys.save(credential)
+        let legacy = ReceiptAIConnection.Preferences(credentialID: credential.id, model: .flash,
+                                                      checkedAt: Date(), privacyVersion: ReceiptAIConnection.privacyVersion,
+                                                      enabled: true)
+        defaults.set(try JSONEncoder().encode(legacy), forKey: "ai.gemini.connection.v1")
+
+        let upgraded = ReceiptAIConnection(keys: keys, tester: AITester { _ in }, defaults: defaults)
+        XCTAssertEqual(upgraded.preferences.model, .flashLite)
+        XCTAssertEqual(upgraded.status, .unverified)
+        XCTAssertFalse(upgraded.canUseAI)
+        XCTAssertTrue(upgraded.privacyConfirmed)
+        XCTAssertEqual(try keys.load()?.id, credential.id)
+
+        upgraded.changeModel(.flash)
+        let reopened = ReceiptAIConnection(keys: keys, tester: AITester { _ in }, defaults: defaults)
+        XCTAssertEqual(reopened.preferences.model, .flash)
     }
 
     func testFailedReplacementPreservesWorkingKeyAndConsent() async throws {
