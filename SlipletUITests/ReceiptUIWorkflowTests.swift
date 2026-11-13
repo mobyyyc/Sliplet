@@ -72,22 +72,36 @@ import Vision
         XCTAssertTrue(element.isHittable, "Required synthetic control is unreachable")
     }
     override func setUp() { continueAfterFailure = false }
-    func testCancellationMalformedImageAndBackgroundClear() throws {
+    func testCancellationMalformedImageAndBackgroundRecovery() throws {
         let app = XCUIApplication(); app.launchArguments = ["--t05-local-test", "--t05-slot", "5", "--t05-synthetic-input"]; app.launch()
+        let resume = app.buttons["resumePendingImport"]
+        let importButton = app.buttons["import"]
+        XCTAssertTrue(app.buttons["debugMalformed"].waitForExistence(timeout: 15))
+        if resume.exists {
+            app.buttons["discardPendingImport"].tap()
+            app.buttons["discardPendingImportConfirm"].firstMatch.tap()
+            XCTAssertTrue(importButton.waitForExistence(timeout: 10))
+        }
         let malformed = app.buttons["debugMalformed"]
-        XCTAssertTrue(malformed.waitForExistence(timeout: 15)); app.swipeUp(); malformed.tap()
-        XCTAssertTrue(app.staticTexts["Reading needs attention"].waitForExistence(timeout: 10))
-        app.buttons["Return to wallet"].tap()
-        app.swipeUp(); app.buttons["debugImport"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["reviewScreen"].waitForExistence(timeout: 20))
-        app.buttons["back"].tap(); app.buttons["Discard changes"].tap()
-        XCTAssertTrue(app.buttons["import"].waitForExistence(timeout: 10))
-        app.swipeUp(); app.buttons["debugImport"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["reviewScreen"].waitForExistence(timeout: 20))
+        reveal(malformed, in: app); malformed.tap()
+        XCTAssertTrue(app.staticTexts["Couldn’t open the photo"].waitForExistence(timeout: 10))
+        app.buttons["back"].tap()
+        let synthetic = app.buttons["debugSynthetic"]
+        reveal(synthetic, in: app); synthetic.tap()
+        let review = app.descendants(matching: .any)["reviewScreen"]
+        XCTAssertTrue(review.waitForExistence(timeout: 20))
+        app.buttons["back"].tap(); app.buttons["Discard changes"].firstMatch.tap()
+        XCTAssertTrue(importButton.waitForExistence(timeout: 10))
+        reveal(synthetic, in: app); synthetic.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 20))
         XCUIDevice.shared.press(.home)
         app.activate()
-        XCTAssertTrue(app.buttons["import"].waitForExistence(timeout: 15), "Unsaved private work must be dropped across background")
-        XCTAssertFalse(app.descendants(matching: .any)["reviewScreen"].exists)
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        XCTAssertFalse(review.exists)
+        resume.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 15))
+        app.buttons["back"].tap(); app.buttons["Discard changes"].firstMatch.tap()
+        XCTAssertTrue(importButton.waitForExistence(timeout: 10))
     }
     func testPhotoPickerImportAndEditableControls() throws {
         let app = XCUIApplication(); app.launchArguments = ["--t05-local-test", "--t05-slot", "5", "--t05-synthetic-input"]; app.launch()

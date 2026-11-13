@@ -73,13 +73,20 @@ import XCTest
         app.terminate()
     }
     func testImmediateReturnLocksAndHidesReceiptContent() {
-        let app = launch("settings"); enableLock(app)
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--app-lock-fixture=settings", "--p805-upload-fixture"]
+        app.launch(); enableLock(app)
         app.buttons["appLockDelay"].tap(); app.buttons["Immediately"].tap()
         app.buttons["Done"].tap()
+        let start = app.buttons["uploadFixture"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10)); start.tap()
+        XCTAssertTrue(app.buttons["adjustPhotoContinue"].waitForExistence(timeout: 10))
         XCUIDevice.shared.press(.home); app.activate()
         XCTAssertTrue(app.buttons["unlockApp"].waitForExistence(timeout: 15))
         XCTAssertFalse(app.buttons["import"].exists)
         XCTAssertFalse(app.buttons["receipt-0"].exists)
+        XCTAssertFalse(app.buttons["resumePendingImport"].exists)
+        XCTAssertFalse(app.images["photoCheckCanvas"].exists)
         app.terminate()
     }
 

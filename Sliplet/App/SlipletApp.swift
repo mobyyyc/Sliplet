@@ -15,8 +15,10 @@ struct ReceiptSessionView: View {
         #if DEBUG
         if SyntheticNativePreview.enabled {
             let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            return ReceiptWorkspace(directory: base.appendingPathComponent("T05SyntheticPreviewStore"),
+            let workspace = ReceiptWorkspace(directory: base.appendingPathComponent("T05SyntheticPreviewStore"),
                 keyProvider: KeychainReceiptStoreKey(service: "com.mobyyyc.RcpLens.T05-synthetic-preview", account: "v1"))
+            workspace.resetFictionalImportOnNextOpen = SyntheticNativePreview.mode != "resume"
+            return workspace
         }
         if WorkflowTestInput.enabled {
             let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -66,6 +68,7 @@ struct ReceiptSessionView: View {
                     // Transient Face ID inactivity never starts another prompt.
                 case .inactive:
                     ReceiptPrivacyCover.show()
+                    workspace.flushImportCheckpoint()
                     workspace.privacyCovered = true // Unsaved data is retained through transient picker inactivity.
                 @unknown default: workspace.suspend()
                 }

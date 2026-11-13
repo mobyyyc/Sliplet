@@ -3,7 +3,7 @@ import UIKit
 import ImageIO
 
 /// Crop is normalized in the oriented, rotated image. The source bytes remain untouched.
-struct ReceiptPhotoAdjustment: Equatable, Sendable {
+struct ReceiptPhotoAdjustment: Codable, Equatable, Sendable {
     var turns = 0
     var crop = CGRect(x: 0, y: 0, width: 1, height: 1)
     var isIdentity: Bool { turns == 0 && crop == CGRect(x: 0, y: 0, width: 1, height: 1) }

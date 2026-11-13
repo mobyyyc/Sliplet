@@ -11,6 +11,53 @@ import XCTest
             app.swipeUp()
         }
     }
+    func testInterruptedImportCanResumeAfterAppSwitchAndRelaunch() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--p805-upload-fixture"]
+        app.launch()
+        // The fixture lives in a separate store from production and may retain a prior failed run.
+        let resume = app.buttons["resumePendingImport"]
+        let start = app.buttons["uploadFixture"]
+        XCTAssertTrue(start.waitForExistence(timeout: 20))
+        if resume.exists {
+            app.buttons["discardPendingImport"].tap()
+            app.buttons["discardPendingImportConfirm"].firstMatch.tap()
+            XCTAssertTrue(resume.waitForNonExistence(timeout: 10))
+        }
+        for id in ["uploadFixture", "adjustPhotoContinue", "previewAI", "readingMethodContinue", "reviewUpload"] {
+            let button = app.buttons[id]
+            XCTAssertTrue(button.waitForExistence(timeout: 15))
+            button.tap()
+        }
+        let consent = app.switches["uploadConsent"]
+        reveal(consent, in: app)
+        consent.coordinate(withNormalizedOffset: CGVector(dx: 0.93, dy: 0.5)).tap()
+        let send = app.buttons["sendReceiptAI"]
+        XCTAssertTrue(send.isEnabled)
+
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        resume.tap()
+        let review = app.buttons["reviewUpload"]
+        XCTAssertTrue(review.waitForExistence(timeout: 15))
+        XCTAssertTrue(app.images["uploadImage"].waitForExistence(timeout: 15))
+
+        app.terminate(); app.launch()
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        resume.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 15))
+        review.tap()
+        XCTAssertTrue(send.waitForExistence(timeout: 10))
+        XCTAssertFalse(send.isEnabled)
+        XCTAssertTrue(app.buttons["finalUploadPreview"].exists)
+        app.terminate(); app.launch()
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        app.buttons["discardPendingImport"].tap()
+        app.buttons["discardPendingImportConfirm"].firstMatch.tap()
+        XCTAssertTrue(resume.waitForNonExistence(timeout: 10))
+    }
+
     func testPreviewRedactionConsentAndFictionalSend() throws {
         continueAfterFailure = false
         let app = XCUIApplication()

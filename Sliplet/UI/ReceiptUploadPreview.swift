@@ -6,7 +6,6 @@ struct ReceiptUploadPreview: View {
     var retake: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var useAI = false
     @State private var drawing = false
     private var cropEditing: Bool {
         get { workspace.importCropping }
@@ -14,7 +13,11 @@ struct ReceiptUploadPreview: View {
     }
     @State private var crop: [CGRect] = [CGRect(x: 0, y: 0, width: 1, height: 1)]
     @State private var cropSelection: Int? = 0
-    @State private var redactions: [CGRect] = []
+    private var useAI: Bool { workspace.importUsesAI }
+    private var redactions: [CGRect] {
+        get { workspace.importCovers }
+        nonmutating set { workspace.importCovers = newValue }
+    }
     @State private var coverUndo: [[CGRect]] = []
     @State private var selection: Int?
     @State private var photo: UIImage?
@@ -75,6 +78,7 @@ struct ReceiptUploadPreview: View {
             acknowledged = false; drawing = false; failure = nil
             if new < old { cancelPreparation() }
         }
+        .onChange(of: workspace.importAdjustment) { _, _ in workspace.checkpointImport() }
         .onChange(of: cropEditing) { _, editing in
             if !editing { crop = [workspace.importAdjustment.crop] }
         }
@@ -87,12 +91,6 @@ struct ReceiptUploadPreview: View {
         .task {
             guard !initialized else { return }; initialized = true
             crop = [workspace.importAdjustment.crop]
-            if let covers = workspace.retryCovers {
-                useAI = true; redactions = covers.drawn
-                // Retain covers from an interrupted older session, without offering percentage tools.
-                if covers.top { redactions.append(CGRect(x: 0, y: 0, width: 1, height: 0.15)) }
-                if covers.bottom { redactions.append(CGRect(x: 0, y: 0.85, width: 1, height: 0.15)) }
-            }
             loadPhoto()
         }
         .onDisappear { acknowledged = false; cancelPreparation() }
@@ -207,7 +205,10 @@ struct ReceiptUploadPreview: View {
     }
 
     private func methodCard(_ title: String, subtitle: String, icon: String, ai: Bool) -> some View {
-        Button { useAI = ai } label: {
+        Button {
+            workspace.importUsesAI = ai
+            workspace.checkpointImport()
+        } label: {
             HStack(spacing: 14) {
                 Image(systemName: icon).font(.title2).frame(width: 30)
                 VStack(alignment: .leading, spacing: 6) {
@@ -226,7 +227,7 @@ struct ReceiptUploadPreview: View {
         ReceiptImportPageLayout(availableHeight: height) {
             Group {
                 if let preparedPhoto {
-                    ReceiptImportCanvas(image: preparedPhoto, drawing: drawing, onEditBegan: rememberCovers, regions: $redactions, selected: $selection)
+                    ReceiptImportCanvas(image: preparedPhoto, drawing: drawing, onEditBegan: rememberCovers, regions: Binding(get: { redactions }, set: { redactions = $0 }), selected: $selection)
                 } else { ProgressView("Preparing photo") }
             }
             guidance(drawing ? "Draw to hide" : "Privacy tips", text: drawing
@@ -293,27 +294,35 @@ struct ReceiptUploadPreview: View {
         coverUndo.append(redactions)
         if coverUndo.count > 30 { coverUndo.removeFirst() }
     }
-    private func go(_ target: Int) { workspace.importForward = target > step; workspace.importStep = target }
+    private func go(_ target: Int) {
+        workspace.importForward = target > step
+        workspace.importStep = target
+        workspace.checkpointImport()
+    }
     private func cancelPreparation() { task?.cancel(); task = nil; generation = UUID(); preparing = false }
     private func loadPhoto() {
         guard let original = workspace.image else { return }
         cancelPreparation(); preparing = true
-        let adjustment = ReceiptPhotoAdjustment(turns: workspace.importAdjustment.turns)
+        let adjustment = workspace.importAdjustment
         let token = generation
         task = Task {
             do {
                 let work = Task.detached(priority: .userInitiated) {
-                    let result = try adjustment.prepare(original)
-                    return (result, try ReceiptPhotoAdjustment.displayImage(result))
+                    let rotated = try ReceiptPhotoAdjustment(turns: adjustment.turns).prepare(original)
+                    let display = try ReceiptPhotoAdjustment.displayImage(rotated)
+                    guard adjustment.crop != CGRect(x: 0, y: 0, width: 1, height: 1) else {
+                        return (display, rotated, display)
+                    }
+                    let prepared = try adjustment.prepare(original)
+                    return (display, prepared, try ReceiptPhotoAdjustment.displayImage(prepared))
                 }
                 let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard !Task.isCancelled, generation == token, !workspace.privacyCovered else { return }
-                photo = result.1; preparing = false
-                if step == 2 { prepareImage(next: 2) }
+                photo = result.0; prepared = result.1; preparedPhoto = result.2; preparing = false
             } catch { if !Task.isCancelled && generation == token { preparing = false; failure = "Couldn’t prepare this photo. Try resetting it." } }
         }
     }
-    private func prepareImage(next target: Int) {
+    private func prepareCrop() {
         guard let original = workspace.image else { return }
         cancelPreparation(); preparing = true
         let adjustment = workspace.importAdjustment, token = generation
@@ -325,7 +334,7 @@ struct ReceiptUploadPreview: View {
                 }
                 let result = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard !Task.isCancelled, generation == token, !workspace.privacyCovered else { return }
-                prepared = result.0; preparedPhoto = result.1; preparing = false; go(target)
+                prepared = result.0; preparedPhoto = result.1; preparing = false
             } catch { if !Task.isCancelled && generation == token { preparing = false; failure = "Couldn’t prepare this photo. Try resetting it." } }
         }
     }
@@ -334,10 +343,13 @@ struct ReceiptUploadPreview: View {
         case 0:
             let value = crop.first ?? CGRect(x: 0, y: 0, width: 1, height: 1)
             if value != workspace.importAdjustment.crop { redactions = []; coverUndo = []; workspace.importAdjustment.crop = value }
-            if cropEditing { cropEditing = false; prepareImage(next: 0) }
-            else { prepareImage(next: 1) }
+            if cropEditing { cropEditing = false; workspace.checkpointImport(); prepareCrop() }
+            else { go(1) }
         case 1:
-            if useAI { go(2) } else { workspace.readImage() }
+            if useAI {
+                go(2)
+                if prepared == nil { loadPhoto() }
+            } else { workspace.readImage() }
         case 2:
             guard let prepared else { return }; cancelPreparation(); preparing = true
             let covers = redactions, token = generation

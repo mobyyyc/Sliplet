@@ -249,7 +249,7 @@ actor ReceiptStore {
     @discardableResult
     func create(extraction: ReceiptExtraction, originalImage: Data, mediaType: String,
                 now: Date = Date(), correction: ReceiptFields? = nil,
-                review: ReceiptRevision.Review = .draft, reviewInput: Data? = nil, permit: ReceiptOperationPermit? = nil) throws -> ReceiptRecord {
+                review: ReceiptRevision.Review = .draft, reviewInput: Data? = nil, permit: ReceiptOperationPermit? = nil, pendingImportID: UUID? = nil) throws -> ReceiptRecord {
         try permit?.check()
         guard !originalImage.isEmpty, ["image/png", "image/jpeg", "image/heic", "image/heif"].contains(mediaType) else {
             throw ReceiptStoreError.invalidAsset
@@ -273,12 +273,67 @@ actor ReceiptStore {
             #endif
             try database.run("INSERT INTO assets (id, receipt_id, payload) VALUES (?, ?, ?)",
                              [.text(assetID.uuidString), .text(id.uuidString), .blob(image)])
+            if let pendingImportID, try pendingImportCheckpoint()?.id == pendingImportID {
+                try removePendingImport()
+            }
             #if DEBUG
             try fault?(.beforeCommit)
             #endif
             try permit?.check()
         }
         return record
+    }
+
+    private static let pendingImportContext = "Sliplet/pending-import/v1"
+    private static let pendingImportPhotoContext = "Sliplet/pending-import-photo/v1/"
+
+    func hasPendingImport() throws -> Bool {
+        try database.integer("SELECT count(*) FROM metadata WHERE name = 'pending-import'") > 0
+    }
+
+    func writePendingImport(_ checkpoint: ReceiptImportCheckpoint, original: Data? = nil) throws {
+        let encoded = try JSONEncoder().encode(checkpoint)
+        guard encoded.count <= Self.maximumRecordBytes else { throw ReceiptStoreError.sizeLimit }
+        let sealed = try cipher.seal(encoded, context: Self.pendingImportContext)
+        if let original {
+            guard !original.isEmpty, original.count <= Self.maximumAssetBytes else { throw ReceiptStoreError.invalidAsset }
+            let photo = try cipher.seal(original, context: Self.pendingImportPhotoContext + checkpoint.id.uuidString)
+            try database.transaction {
+                try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import-photo', ?)", [.blob(photo)])
+                try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import', ?)", [.blob(sealed)])
+            }
+        } else {
+            try database.transaction {
+                guard try pendingImportCheckpoint()?.id == checkpoint.id else { throw ReceiptStoreError.editConflict }
+                try database.run("UPDATE metadata SET value = ? WHERE name = 'pending-import'", [.blob(sealed)])
+            }
+        }
+    }
+
+    private func pendingImportCheckpoint() throws -> ReceiptImportCheckpoint? {
+        let rows = try database.run("SELECT value FROM metadata WHERE name = 'pending-import'")
+        guard let row = rows.first else { return nil }
+        guard case .blob(let payload) = row[0] else { throw ReceiptStoreError.corruptStore }
+        let checkpoint = try JSONDecoder().decode(ReceiptImportCheckpoint.self,
+            from: cipher.open(payload, context: Self.pendingImportContext))
+        try checkpoint.validate()
+        return checkpoint
+    }
+
+    func readPendingImport() throws -> (ReceiptImportCheckpoint, ReceiptImage) {
+        guard let checkpoint = try pendingImportCheckpoint(),
+              let photo = try database.run("SELECT value FROM metadata WHERE name = 'pending-import-photo'").first,
+              case .blob(let payload) = photo[0] else { throw ReceiptStoreError.corruptStore }
+        let bytes = try cipher.open(payload, context: Self.pendingImportPhotoContext + checkpoint.id.uuidString)
+        return (checkpoint, try ReceiptImage.decode(bytes))
+    }
+
+    func discardPendingImport(permit: ReceiptOperationPermit) throws {
+        try database.transaction(permit: permit) { try removePendingImport() }
+    }
+
+    private func removePendingImport() throws {
+        try database.run("DELETE FROM metadata WHERE name IN ('pending-import', 'pending-import-photo')")
     }
 
     /// Append-only corrections. expectedRevision rejects stale editors instead of overwriting work.

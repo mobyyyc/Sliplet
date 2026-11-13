@@ -10,6 +10,7 @@ struct ReceiptHome: View {
     @State private var cameraResult: ReceiptCameraResult?
     @State private var files = false
     @State private var discard = false
+    @State private var discardPending = false
     @State private var delete = false
     @State private var deleteTarget: ReceiptRecord?
     @State private var settings = false
@@ -60,9 +61,12 @@ struct ReceiptHome: View {
                         ToolbarItem(placement: .topBarLeading) {
                             Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
                                 if workspace.flow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
-                                else if workspace.flow == .preparingUpload && workspace.importStep > 0 { workspace.importForward = false; workspace.importStep -= 1 }
+                                else if workspace.flow == .preparingUpload && workspace.importStep > 0 {
+                                    workspace.importForward = false; workspace.importStep -= 1
+                                    workspace.checkpointImport()
+                                }
                                 else if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
-                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload { editing = nil; discard = true }
+                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload || (workspace.flow == .failed && workspace.image != nil) { editing = nil; discard = true }
                                 else { workspace.backToWallet() }
                             }.disabled(workspace.saving).accessibilityIdentifier("back")
                         }
@@ -76,9 +80,11 @@ struct ReceiptHome: View {
                     if workspace.flow == .wallet {
                         if workspace.library {
                             ToolbarItem(placement: .topBarTrailing) {
-                                anchoredImportChoices {
-                                    Button("Import receipt", systemImage: "plus") { importChoices = true }
-                                        .accessibilityIdentifier("import")
+                                if !workspace.hasPendingImport {
+                                    anchoredImportChoices {
+                                        Button("Import receipt", systemImage: "plus") { importChoices = true }
+                                            .accessibilityIdentifier("import")
+                                    }
                                 }
                             }
                             ToolbarItem(placement: .topBarLeading) {
@@ -152,7 +158,7 @@ struct ReceiptHome: View {
                 }
             }
             .safeAreaBar(edge: .bottom, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) && !(workspace.flow == .wallet && workspace.library) {
+                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) && !(workspace.flow == .wallet && workspace.library && !workspace.hasPendingImport) {
                     bottomActions.modifier(ReceiptActionBarLayout())
                 }
             }
@@ -188,6 +194,10 @@ struct ReceiptHome: View {
             .confirmationDialog("Discard unsaved changes?", isPresented: $discard, titleVisibility: .visible) {
                 Button("Discard changes", role: .destructive) { workspace.finishEditing() }
             } message: { Text("Only receipts you explicitly saved are kept.") }
+            .confirmationDialog("Discard unfinished import?", isPresented: $discardPending, titleVisibility: .visible) {
+                Button("Discard import", role: .destructive, action: workspace.discardPendingImport)
+                    .accessibilityIdentifier("discardPendingImportConfirm")
+            } message: { Text("This removes the photo and progress for this import from Sliplet.") }
             .alert("Delete this receipt?", isPresented: $delete) {
                 Button("Delete receipt and original", role: .destructive) { if let deleteTarget { workspace.deleteReceipt(deleteTarget) }; deleteTarget = nil }
                 Button("Cancel", role: .cancel) { deleteTarget = nil }
@@ -211,6 +221,12 @@ struct ReceiptHome: View {
             }
             .disabled(workspace.saving)
         }
+        .alert("Import progress unavailable", isPresented: Binding(
+            get: { workspace.flow != .wallet && workspace.importCheckpointError != nil },
+            set: { if !$0 { workspace.dismissCheckpointError() } }
+        )) {
+            Button("OK", role: .cancel) { workspace.dismissCheckpointError() }
+        } message: { Text(workspace.importCheckpointError ?? "") }
         .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
             if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopReading() }
         }
@@ -220,15 +236,30 @@ struct ReceiptHome: View {
     @ViewBuilder private var bottomActions: some View {
         switch workspace.flow {
         case .wallet:
-            HStack {
-                Spacer()
-                anchoredImportChoices {
-                    Button { importChoices = true } label: {
-                        Image(systemName: "plus").font(.title.weight(.bold))
-                    }.buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 64))
-                        .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
+            if workspace.hasPendingImport {
+                VStack(spacing: 8) {
+                    if let message = workspace.importCheckpointError {
+                        Text(message).font(.footnote).foregroundStyle(.secondary)
+                    }
+                    ReceiptPairedActions {
+                        Button("Discard") { discardPending = true }
+                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("discardPendingImport")
+                    } primary: {
+                        Button("Continue import", systemImage: "doc.viewfinder", action: workspace.resumePendingImport)
+                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("resumePendingImport")
+                    }
+                }.frame(maxWidth: .infinity)
+            } else {
+                HStack {
+                    Spacer()
+                    anchoredImportChoices {
+                        Button { importChoices = true } label: {
+                            Image(systemName: "plus").font(.title.weight(.bold))
+                        }.buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 64))
+                            .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
+                    }
+                    Spacer()
                 }
-                Spacer()
             }
         case .detail:
             if typeSize.isAccessibilitySize {

@@ -14,7 +14,7 @@ Proposed November 12, 2026, after Phase 11 iPhone acceptance. The product goal i
 | Know what I paid before | Search shows an item's line amount. Purchase History shows prior line totals, and eligible unit-price comparison sits in the opened receipt's menu. | Put comparable unit prices beside the corresponding purchases where evidence supports it. Keep line total and unit price clearly labeled. Preserve different-pack, currency, quantity and tax safeguards. |
 | Split my receipt after correcting one line | Saving a changed line creates a draft, and finalizing a split requires a reviewed receipt. The receipt can still open Split while it needs review. | Show the concrete blocker and give the user one route back to review. Check whether reviewing allocation row by row is actually onerous before adding any bulk confirmation. |
 
-The background and review findings come from current app behavior in source. Their frequency in real use is still unknown. Phase 11 established that core phone journeys work and included no measurement of how often a person abandons an import or revisits a draft.
+The background and review findings describe the app at the start of Phase 12. Their frequency in real use is still unknown. Phase 11 established that core phone journeys work and included no measurement of how often a person abandons an import or revisits a draft.
 
 Three focused iPhone 15 Pro Simulator checks passed with fictional inputs. They covered waiting and Stop, offline recovery with renewed upload review, and saving a receipt with a total mismatch as a draft. The background finding is from source and the existing lifecycle contract. This audit did not measure real provider latency or conduct a new phone walkthrough.
 
@@ -59,4 +59,10 @@ Verify first-time setup, model switching, key replacement, enable and disable, o
 
 During the pilot, use the next five real receipts as they arise. Record capture-to-save time and time spent correcting if convenient. At minimum, note the reading method, whether an interruption cost work, which corrections were needed, and whether the receipt was easy to find again. Include at least one on-device attempt and one interruption scenario if practical. A five-receipt pilot informs workflow decisions. It cannot establish recognition accuracy across stores.
 
-P12-01 is complete. The next implementation task is P12-02. Each remaining task is approved separately in the order above.
+P12-01 and P12-02 are complete. The next implementation task is P12-06. Each remaining task is approved separately in the order above.
+
+### P12-02 delivery
+
+The wallet now offers **Continue import** and **Discard** for one encrypted, local import. The checkpoint keeps the original, applied crop and rotation, privacy covers, completed recognition and applied review edits. An unfinished crop or an unapplied edit sheet reopens at the last applied state. AI resumes at the privacy step and requires fresh upload consent. Saving the receipt clears its pending import in the same database transaction. Pending imports stay on this device and are excluded from receipt backup exports.
+
+Simulator checks use fictional receipts. Device-level file protection and Face ID remain to be checked on a physical iPhone.

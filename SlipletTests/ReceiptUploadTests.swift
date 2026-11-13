@@ -196,6 +196,13 @@ private struct UploadTester: ReceiptAIConnectionTesting {
         w.suspend(); try await Task.sleep(for: .milliseconds(100))
         XCTAssertEqual(w.flow, .wallet); XCTAssertNil(w.image); XCTAssertNil(w.extraction)
         XCTAssertTrue(w.privacyCovered); XCTAssertEqual(calls, 1)
+        w.activate(protectedDataAvailable: true); try await wait { w.availability == .ready }
+        XCTAssertTrue(w.hasPendingImport); XCTAssertNil(w.image)
+        w.resumePendingImport(); try await wait { w.flow == .preparingUpload }
+        XCTAssertTrue(w.importUsesAI); XCTAssertEqual(w.importStep, 2)
+        XCTAssertEqual(w.image?.bytes, source.bytes)
+        XCTAssertFalse(w.aiUploadStarted); XCTAssertEqual(calls, 1)
+        w.suspend()
     }
     func testDisabledConnectionCannotApplyCompletedResult() async throws {
         reset(bytes: try ReceiptModelTests().envelope())

@@ -28,7 +28,12 @@ final class ReceiptWorkspace {
     var includeArchived = false
     var searchMatch: ReceiptSearchIndex.Match?
     var selected: ReceiptRecord?
-    var draft = ReceiptReviewDraft()
+    var draft = ReceiptReviewDraft() {
+        didSet {
+            guard flow == .review, selected == nil, pendingImportID != nil, draft != oldValue else { return }
+            scheduleCheckpoint()
+        }
+    }
     @ObservationIgnored private var reviewBaseline: ReceiptReviewDraft?
     var hasUnsavedReviewChanges: Bool {
         guard selected != nil, var baseline = reviewBaseline else { return true }
@@ -40,6 +45,13 @@ final class ReceiptWorkspace {
         var drawn: [CGRect] = []
         var top = false
         var bottom = false
+
+        var regions: [CGRect] {
+            var regions = drawn
+            if top { regions.append(CGRect(x: 0, y: 0, width: 1, height: 0.15)) }
+            if bottom { regions.append(CGRect(x: 0, y: 0.85, width: 1, height: 0.15)) }
+            return regions
+        }
     }
     private(set) var retryCovers: UploadCovers?
     var importCropping = false
@@ -48,6 +60,17 @@ final class ReceiptWorkspace {
     var importStep = 0
     var importAdjustment = ReceiptPhotoAdjustment()
     var aiUploadStarted = false
+    var importUsesAI = false
+    var importCovers: [CGRect] = [] {
+        didSet {
+            if flow == .preparingUpload, importCovers != oldValue { scheduleCheckpoint() }
+        }
+    }
+    private(set) var hasPendingImport = false
+    private(set) var importCheckpointError: String?
+    @ObservationIgnored private var pendingImportID: UUID?
+    @ObservationIgnored private var checkpointWrite: Task<Void, Never>?
+    @ObservationIgnored private var checkpointDelay: Task<Void, Never>?
     var image: ReceiptImage?
     private(set) var readerInput: ReceiptReviewDraft?
     private(set) var readerRevisionID: UUID?
@@ -98,6 +121,7 @@ final class ReceiptWorkspace {
     @ObservationIgnored private var permit = ReceiptOperationPermit()
     @ObservationIgnored private var shutdown: Task<Void, Never>?
     #if DEBUG
+    @ObservationIgnored var resetFictionalImportOnNextOpen = false
     @ObservationIgnored var failNextListRefresh = false // XCTest-only failure boundary; no UI or launch switch.
     #endif
     @ObservationIgnored private let directory: URL?
@@ -136,11 +160,20 @@ final class ReceiptWorkspace {
                 self.store = opened
                 let records = try await opened.receipts()
                 let settings = try await opened.walletSettings()
+                #if DEBUG
+                if self.resetFictionalImportOnNextOpen {
+                    try await opened.discardPendingImport(permit: lease)
+                    guard self.isCurrent(session) else { return }
+                    self.resetFictionalImportOnNextOpen = false
+                }
+                #endif
+                let pending = try await opened.hasPendingImport()
                 let indexing = Task.detached(priority: .userInitiated) { ReceiptSearchIndex(records) }
                 let index = await withTaskCancellationHandler { await indexing.value } onCancel: { indexing.cancel() }
                 try lease.check()
                 guard self.isCurrent(session) else { return }
                 self.preparedSearchIndex = index
+                self.hasPendingImport = pending
                 self.receipts = records; self.walletSettings = settings; self.availability = .ready
             } catch is CancellationError { }
             catch { if self.isCurrent(session) { self.availability = .failed(Self.storageMessage(error)) } }
@@ -148,13 +181,22 @@ final class ReceiptWorkspace {
     }
     /// Synchronous revocation precedes any actor hop. Queued writes fail or roll back before commit.
     func suspend() {
+        flushImportCheckpoint()
+        checkpointDelay?.cancel(); checkpointDelay = nil
+        let lastCheckpoint = checkpointWrite; checkpointWrite = nil
+        pendingImportID = nil; hasPendingImport = false; importCheckpointError = nil
+        importCovers = []; importUsesAI = false; importAdjustment = ReceiptPhotoAdjustment()
         active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; retryCovers = nil
         aiConnection.cancel()
         permit.revoke(); cancelBackup(); task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil
         let closing = store; store = nil
         let previous = shutdown
-        shutdown = Task { await previous?.value; try? await closing?.close() }
+        shutdown = Task {
+            await previous?.value
+            await lastCheckpoint?.value
+            try? await closing?.close()
+        }
         preparedSearchIndex = nil; receipts = []; selected = nil; image = nil; extraction = nil
         readerInput = nil; readerRevisionID = nil
         draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; detailLine = nil; splitVisible = false; sourceLineIDs = []
@@ -167,8 +209,11 @@ final class ReceiptWorkspace {
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
     func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false, fromCamera: Bool = false, _ load: @escaping @Sendable () async throws -> Data) {
-        guard active, availability == .ready, !saving else { return }
-        cancelImport(showNotice: false)
+        guard active, !privacyCovered, availability == .ready, !saving, let store,
+              flow != .wallet || !hasPendingImport else { return }
+        resetImport()
+        importCheckpointError = nil
+        importUsesAI = false; importCovers = []
         importFromCamera = fromCamera
         flow = .loading; errorMessage = nil; notice = nil
         let session = sessionID
@@ -185,6 +230,9 @@ final class ReceiptWorkspace {
                 self.importStep = 0
                 self.importCropping = false
                 self.importAdjustment = ReceiptPhotoAdjustment()
+                let id = UUID()
+                self.pendingImportID = id
+                self.enqueueImportCheckpoint(store: store, checkpoint: self.importCheckpoint(id: id, step: 0), original: image.bytes)
                 if let modelReader { self.readModelImage(using: modelReader) }
                 else if chooseRecognition { self.flow = .preparingUpload }
                 else { self.readImage() }
@@ -195,6 +243,97 @@ final class ReceiptWorkspace {
             }
         }
     }
+    private func importCheckpoint(id: UUID, step: Int? = nil) -> ReceiptImportCheckpoint {
+        let review = flow == .review ? extraction.map { ReceiptImportCheckpoint.Review(extraction: $0, draft: draft) } : nil
+        let bounds = CGRect(x: 0, y: 0, width: 1, height: 1)
+        let covers = importCovers.map { $0.intersection(bounds) }.filter { !$0.isEmpty }
+        return ReceiptImportCheckpoint(id: id, fromCamera: importFromCamera, adjustment: importAdjustment,
+            step: step ?? min(importStep, 2), useAI: importUsesAI, covers: covers, review: review)
+    }
+
+    private func scheduleCheckpoint() {
+        checkpointDelay?.cancel()
+        checkpointDelay = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            self?.checkpointImport()
+        }
+    }
+
+    func dismissCheckpointError() { importCheckpointError = nil }
+
+    func flushImportCheckpoint() {
+        if checkpointDelay != nil, !saving { checkpointImport() }
+    }
+
+    func checkpointImport() {
+        checkpointDelay?.cancel(); checkpointDelay = nil
+        guard active, !saving, selected == nil, let id = pendingImportID, let store else { return }
+        enqueueImportCheckpoint(store: store, checkpoint: importCheckpoint(id: id))
+    }
+
+    private func enqueueImportCheckpoint(store: ReceiptStore, checkpoint: ReceiptImportCheckpoint, original: Data? = nil) {
+        let previous = checkpointWrite, session = sessionID
+        checkpointWrite = Task { [weak self] in
+            await previous?.value
+            // These snapshots were captured while authorized. Drain them before closing the
+            // encrypted store, even when backgrounding has revoked the interactive session.
+            do {
+                try await store.writePendingImport(checkpoint, original: original)
+                guard let self, self.isCurrent(session), self.pendingImportID == checkpoint.id else { return }
+                self.hasPendingImport = true; self.importCheckpointError = nil
+            } catch {
+                guard let self, self.isCurrent(session), self.pendingImportID == checkpoint.id else { return }
+                self.importCheckpointError = "Couldn’t save import progress. You can keep working while Sliplet is open."
+            }
+        }
+    }
+
+    func resumePendingImport() {
+        guard active, !privacyCovered, flow == .wallet, !saving, hasPendingImport, let store else { return }
+        let session = sessionID
+        flow = .loading; notice = nil
+        task = Task { [weak self] in
+            do {
+                let (checkpoint, image) = try await store.readPendingImport()
+                guard let self, self.isCurrent(session), self.flow == .loading else { return }
+                self.pendingImportID = checkpoint.id; self.image = image
+                self.importAdjustment = checkpoint.adjustment; self.importFromCamera = checkpoint.fromCamera
+                self.importStep = checkpoint.step; self.importForward = true; self.importCropping = false
+                self.importUsesAI = checkpoint.useAI; self.importCovers = checkpoint.covers
+                if let review = checkpoint.review {
+                    self.draft = review.draft; self.extraction = review.extraction; self.flow = .review
+                } else { self.flow = .preparingUpload }
+            } catch {
+                guard let self, self.isCurrent(session), self.flow == .loading else { return }
+                self.flow = .wallet
+                self.importCheckpointError = "Couldn’t resume this import. Try again or discard it."
+            }
+        }
+    }
+
+    func discardPendingImport() {
+        guard active, !privacyCovered, !saving, let store else { return }
+        task?.cancel(); worker?.cancel(); recognition?.cancel()
+        checkpointDelay?.cancel(); checkpointDelay = nil
+        let session = sessionID, lease = permit, previous = checkpointWrite
+        saving = true
+        task = Task { [weak self] in
+            await previous?.value
+            do {
+                try await store.discardPendingImport(permit: lease)
+                guard let self, self.isCurrent(session) else { return }
+                self.hasPendingImport = false; self.pendingImportID = nil; self.importCheckpointError = nil
+                self.saving = false; self.resetImport()
+                self.notice = "Unsaved receipt discarded."
+            } catch {
+                guard let self, self.isCurrent(session) else { return }
+                self.saving = false
+                let message = "Couldn’t discard the import. Try again."
+                if self.flow == .wallet { self.importCheckpointError = message } else { self.errorMessage = message }
+            }
+        }
+    }
+
     func importFile(_ url: URL, chooseRecognition: Bool = false) {
         startImport(chooseRecognition: chooseRecognition) {
             let access = url.startAccessingSecurityScopedResource()
@@ -208,7 +347,9 @@ final class ReceiptWorkspace {
         guard active, image != nil, selected == nil, !saving else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         importStep = retryCovers == nil ? 0 : 2
+        if let retryCovers { importUsesAI = true; importCovers = retryCovers.regions }
         aiUploadStarted = false; errorMessage = nil; flow = .preparingUpload
+        checkpointImport()
     }
     /// Called only by the exact-payload preview's explicit send button.
     func sendToAI(_ upload: ReceiptUploadImage, covers: UploadCovers = UploadCovers()) {
@@ -221,6 +362,10 @@ final class ReceiptWorkspace {
                 try await transport.read(upload: upload, key: credential.key, model: model)
             }
             retryCovers = covers
+            importUsesAI = true
+            importCovers = covers.regions
+            importStep = 2
+            checkpointImport()
             aiUploadStarted = true
             readModelImage(using: reader, credentialID: credential.id)
         } catch { errorMessage = "AI is not ready. Check your connection in Settings or use on-device reading." }
@@ -249,7 +394,7 @@ final class ReceiptWorkspace {
                     self.errorMessage = "The AI connection changed while reading. This result was not applied. Your original is preserved."
                     self.flow = .failed; return
                 }
-                self.retryCovers = nil; self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review
+                self.retryCovers = nil; self.extraction = reading.extraction; self.draft = reading.draft; self.flow = .review; self.checkpointImport()
             } catch is CancellationError {
                 // A transport can cancel independently of the user/task. Never leave
                 // the active import spinning, and never touch a newer/locked session.
@@ -278,6 +423,8 @@ final class ReceiptWorkspace {
     func readImage() {
         guard let image, active, !saving else { return }
         aiUploadStarted = false; retryCovers = nil
+        importUsesAI = false; importCovers = []; importStep = min(importStep, 1)
+        checkpointImport()
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         draft = ReceiptReviewDraft(); extraction = nil; selected = nil; sourceVisible = false
         flow = .reading; errorMessage = nil
@@ -301,7 +448,7 @@ final class ReceiptWorkspace {
                 self.draft = ReceiptReviewDraft(parsed: try JSONDecoder().decode(ParsedReceipt.self, from: extraction.rawParserOutput), useDefaultCurrency: true)
                 self.worker = nil; self.recognition = nil
                 if extraction.rawOCR.isEmpty { self.flow = .failed; self.errorMessage = ImportFailure.noText.message }
-                else { self.flow = .review }
+                else { self.flow = .review; self.checkpointImport() }
             } catch is CancellationError { }
             catch {
                 guard let self, self.isCurrent(session), self.recognition === job else { return }
@@ -326,16 +473,25 @@ final class ReceiptWorkspace {
             extraction = try? ReceiptParser.extraction(result)
         }
         retryCovers = nil; draft = ReceiptReviewDraft(); draft.applyDefaultCurrency(); flow = .review; sourceVisible = false
+        checkpointImport()
     }
-    func cancelImport(showNotice: Bool = true) {
+    func cancelImport() {
         guard !saving else { return }
+        if pendingImportID != nil { discardPendingImport() }
+        else { resetImport(); notice = "Import canceled." }
+    }
+
+    private func resetImport() {
+        flow = .wallet
+        checkpointDelay?.cancel(); checkpointDelay = nil
+        pendingImportID = nil
+        importCovers = []; importUsesAI = false
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
         aiUploadStarted = false; retryCovers = nil
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
         readerInput = nil; readerRevisionID = nil
         reviewBaseline = nil
-        sourceVisible = false; sourceLineIDs = []; searchMatch = nil; errorMessage = nil; flow = .wallet
-        if showNotice { notice = "Unsaved receipt discarded." }
+        sourceVisible = false; sourceLineIDs = []; searchMatch = nil; errorMessage = nil
     }
     func showSource(ids: [UUID] = []) {
         guard image != nil else { return }
@@ -389,8 +545,8 @@ final class ReceiptWorkspace {
     }
     func finishEditing() {
         guard !saving else { return }
-        draft = ReceiptReviewDraft(); reviewBaseline = nil; errorMessage = nil
-        if selected != nil { flow = .detail } else { cancelImport() }
+        if selected != nil { flow = .detail; draft = ReceiptReviewDraft(); reviewBaseline = nil; errorMessage = nil }
+        else { cancelImport() }
     }
     func updateDraft(_ change: (inout ReceiptReviewDraft) -> Void) {
         guard !saving else { return }
@@ -435,21 +591,29 @@ final class ReceiptWorkspace {
         let encodedInput: Data
         do { encodedInput = try JSONEncoder().encode(draft); try fields.validate() }
         catch { errorMessage = "Check the entered values before saving."; return }
+        let importID = pendingImportID
+        if old == nil { checkpointImport() }
+        let previous = checkpointWrite
         saving = true; errorMessage = nil
         task = Task { [weak self] in
             do {
+                try lease.check()
+                await previous?.value
                 try lease.check()
                 let saved: ReceiptRecord
                 if let old {
                     saved = try await store.revise(id: old.id, expectedRevision: old.current.id, fields: fields, review: review, reviewInput: encodedInput, permit: lease)
                 } else {
                     saved = try await store.create(extraction: extraction, originalImage: image.bytes, mediaType: image.mediaType,
-                        correction: fields, review: review, reviewInput: encodedInput, permit: lease)
+                        correction: fields, review: review, reviewInput: encodedInput, permit: lease, pendingImportID: importID)
                 }
                 try lease.check()
                 guard let self, self.isCurrent(session) else { return }
                 // Reflect the committed identity before refreshing. A failed list must not allow duplicate creation on retry.
                 if inputFromDetail { self.detailLine = nil; self.searchMatch = nil }
+                if old == nil, importID != nil {
+                    self.pendingImportID = nil; self.hasPendingImport = false; self.importCheckpointError = nil
+                }
                 self.selected = saved; self.readerInput = savedInput; self.readerRevisionID = saved.current.id
                 self.draft = ReceiptReviewDraft(); self.flow = .detail
                 if let index = self.receipts.firstIndex(where: { $0.id == saved.id }) { self.receipts[index] = saved }
@@ -687,7 +851,10 @@ final class ReceiptWorkspace {
         (error as? ReceiptBackupError)?.errorDescription ?? "The backup action could not finish safely. Existing receipts have not been replaced. Try again with an available file after unlocking."
     }
 
-    func backToWallet() { cancelImport(showNotice: false) }
+    func backToWallet() {
+        guard !saving else { return }
+        resetImport()
+    }
     static func storageMessage(_ error: Error) -> String {
         guard let error = error as? ReceiptStoreError else { return "Local storage could not complete this action. Your stored data has not been reset. Try again after unlocking." }
         switch error {

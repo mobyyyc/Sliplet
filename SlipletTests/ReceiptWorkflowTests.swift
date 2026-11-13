@@ -225,6 +225,72 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         model.activate(protectedDataAvailable: false); XCTAssertEqual(model.availability, .closed)
         model.suspend()
     }
+    @MainActor func testPendingImportReopensOriginalAndAppliedReviewInFreshWorkspace() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let bytes = try SyntheticFixture.imageData()
+        let model = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        model.startImport(chooseRecognition: true) { bytes }
+        try await wait { model.flow == .preparingUpload }
+        let adjustment = ReceiptPhotoAdjustment(turns: 1, crop: CGRect(x: 0.1, y: 0.2, width: 0.6, height: 0.7))
+        let cover = CGRect(x: 0.1, y: 0.12, width: 0.5, height: 0.1)
+        model.importAdjustment = adjustment
+        model.importUsesAI = true; model.importStep = 3; model.importCovers = [cover]
+        model.suspend()
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        XCTAssertTrue(model.hasPendingImport); XCTAssertNil(model.image)
+        model.resumePendingImport(); try await wait { model.flow == .preparingUpload }
+        XCTAssertEqual(model.image?.bytes, bytes); XCTAssertEqual(model.importAdjustment, adjustment)
+        XCTAssertEqual(model.importCovers, [cover]); XCTAssertEqual(model.importStep, 2)
+        model.manualReview()
+        let input = draft()
+        model.updateDraft { $0 = input }
+        model.flushImportCheckpoint()
+        let reopened = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        try await wait { model.hasPendingImport }
+        // Read the persisted edit from another session, without sharing workspace state.
+        let store = try ReceiptStore(directory: dir, keyProvider: Key())
+        var persisted: ReceiptReviewDraft?
+        for _ in 0..<100 {
+            let snapshot = try await store.readPendingImport().0
+            persisted = snapshot.review?.draft
+            if persisted?.merchant == input.merchant { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(persisted?.fields, input.fields)
+        try await store.close()
+        model.suspend()
+        reopened.activate(protectedDataAvailable: true); try await wait { reopened.availability == .ready }
+        XCTAssertTrue(reopened.hasPendingImport); XCTAssertNil(reopened.image)
+        reopened.resumePendingImport(); try await wait { reopened.flow == .review }
+        XCTAssertEqual(reopened.draft.fields, input.fields)
+        XCTAssertEqual(reopened.image?.bytes, bytes)
+        reopened.save(asDraft: true); try await wait { reopened.flow == .detail && !reopened.saving }
+        XCTAssertFalse(reopened.hasPendingImport); XCTAssertEqual(reopened.receipts.count, 1)
+        reopened.suspend()
+        reopened.activate(protectedDataAvailable: true); try await wait { reopened.availability == .ready }
+        XCTAssertFalse(reopened.hasPendingImport); XCTAssertEqual(reopened.receipts.count, 1)
+        reopened.suspend()
+    }
+
+    @MainActor func testDiscardClearsPendingImportAcrossSession() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let model = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        model.startImport(chooseRecognition: true) { try SyntheticFixture.imageData() }
+        try await wait { model.flow == .preparingUpload }
+        model.suspend()
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        XCTAssertTrue(model.hasPendingImport)
+        model.discardPendingImport()
+        try await wait { !model.saving }
+        XCTAssertFalse(model.hasPendingImport); XCTAssertNil(model.image)
+        model.suspend()
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        XCTAssertFalse(model.hasPendingImport); XCTAssertTrue(model.receipts.isEmpty)
+        model.suspend()
+    }
+
     @MainActor func testCancelledImportCannotRepopulateNewSessionAndEditsResetReview() async throws {
         let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let model = ReceiptWorkspace(directory: dir, keyProvider: Key())
