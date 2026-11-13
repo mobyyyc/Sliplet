@@ -16,6 +16,8 @@ struct ReceiptShareImage: Transferable {
 @MainActor enum ReceiptShareRenderer {
     enum Failure: Error { case imageTooTall, renderingFailed }
 
+    private static let background = CGColor(srgbRed: 1, green: 0.95, blue: 0.82, alpha: 1)
+
     static func render(_ receipt: ReceiptRecord) throws -> CGImage {
         let revision = receipt.current
         let isComplete = ReceiptCompletion.isComplete(receipt)
@@ -33,19 +35,19 @@ struct ReceiptShareImage: Transferable {
                     .padding(.top, 24)
             }
             ReceiptPaper(fields: revision.fields, input: input, showsSurface: false,
-                         taxedMarkers: receipt.original.paperTaxedMarkers, shareLayout: true)
+                         taxedMarkers: receipt.original.paperTaxedMarkers)
             signature
         }
         .background {
-            ReceiptPaperEdge().fill(Color(red: 1, green: 0.995, blue: 0.985))
-                .overlay { ReceiptPaperEdge().stroke(Color(red: 0.81, green: 0.76, blue: 0.70), lineWidth: 0.7) }
+            ReceiptPaperEdge().fill(.white)
+                .overlay { ReceiptPaperEdge().stroke(.black.opacity(0.12), lineWidth: 0.6) }
                 .shadow(color: .black.opacity(0.10), radius: 7, y: 4)
         }
         .padding(24)
         .frame(width: 460)
         .fixedSize(horizontal: false, vertical: true)
         .foregroundStyle(Color(white: 0.10))
-        .background(Color(red: 0.92, green: 0.88, blue: 0.83))
+        .background(Color(cgColor: background))
         .environment(\.colorScheme, .light)
         .environment(\.dynamicTypeSize, .large)
         .environment(\.receiptPaperAppearance, .alwaysWhite)
@@ -63,7 +65,7 @@ struct ReceiptShareImage: Transferable {
                     height: Int(ceil(size.height * scale)), bitsPerComponent: 8, bytesPerRow: 0,
                     space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
             else { return }
-            context.setFillColor(red: 0.92, green: 0.88, blue: 0.83, alpha: 1)
+            context.setFillColor(background)
             context.fill(CGRect(x: 0, y: 0, width: context.width, height: context.height))
             context.scaleBy(x: scale, y: scale)
             draw(context)
@@ -73,27 +75,16 @@ struct ReceiptShareImage: Transferable {
     }
 
     private static var signature: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Canvas { context, size in
-                let rule = Path { path in
-                    path.move(to: CGPoint(x: 0, y: 0.5))
-                    path.addLine(to: CGPoint(x: size.width, y: 0.5))
-                }
-                context.stroke(rule, with: .color(Color(red: 0.73, green: 0.66, blue: 0.57)),
-                               style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+        HStack(spacing: 8) {
+            if let icon = appIcon {
+                Image(uiImage: icon)
+                    .resizable()
+                    .frame(width: 30, height: 30)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
             }
-            .frame(height: 1)
-            HStack(spacing: 10) {
-                if let icon = appIcon {
-                    Image(uiImage: icon)
-                        .resizable()
-                        .frame(width: 34, height: 34)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                Text("Sliplet")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.28, green: 0.20, blue: 0.14))
-            }
+            Text("Sliplet")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color(white: 0.25))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 24)

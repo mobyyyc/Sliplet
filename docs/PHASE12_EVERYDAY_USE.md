@@ -93,4 +93,4 @@ The draft-to-Split handoff was rechecked with a fictional mismatch. The Split ac
 
 ### P12-05 delivery
 
-**Share receipt image** opens a zoomable preview of the current saved receipt. The export uses warm white paper, a sand-colored margin, monospaced item text, and a dark total panel. A dashed rule separates the receipt from the Sliplet app icon and wordmark. The image uses light paper in both app appearances. Drafts retain a visible status. It contains the digital receipt and uses an opaque RGB PNG with no original photo embedded.
+**Share receipt image** opens a zoomable preview of the current saved receipt. The export uses Sliplet’s standard receipt layout on white paper with a solid cream-yellow background. The Sliplet app icon and wordmark sit at the lower left. The image uses light paper in both app appearances. Drafts retain a visible status. It contains the digital receipt and uses an opaque RGB PNG with no original photo embedded.
