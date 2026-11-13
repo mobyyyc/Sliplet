@@ -55,11 +55,11 @@ Verify first-time setup, model switching, key replacement, enable and disable, o
 3. **P12-06 · Simplify AI Recognition.** Implement the connection and recovery flow above after import resume, so opening Settings or recovering from a failure preserves the prepared work.
 4. **P12-03 · Save now, review later.** Remove “I checked the original” from both review layouts and allow Finish without opening the photo when validation and exact reconciliation pass. Update completion and split eligibility to use the new finish semantics, with legacy reviewed receipts and drafts retaining their existing status. Review any copy and indicators that imply photo verification. Improve the review entry point, show the first blocker and make drafts easy to find and finish. Verify one-tap Finish on a clean read, optional Original access, blocked Finish for missing required fields or mismatched amounts, and split eligibility after Finish. Use pilot observations to decide whether to shorten the photo and method steps.
 5. **P12-04 · Find and compare a purchase.** Make recorded unit prices and eligible comparisons easier to reach from Purchase History. Check the handoff from receipt review to Split and fix demonstrated friction.
-6. **P12-05 · Add one feature based on actual use.** Favor a single-receipt share action if users need proof for a return or reimbursement. Offer Original and Digital as explicit choices with a preview of what will leave the app. If repeated imports are the bigger issue, prioritize a warning for an identical photo with an option to keep both. Keep reminders, budgets and collaborative splitting in the backlog until there's a concrete use case.
+6. **P12-05 · Share a receipt image.** Render the current digital receipt as a single opaque PNG with a small Sliplet signature. Provide an image preview and the iOS share sheet.
 
 During the pilot, use the next five real receipts as they arise. Record capture-to-save time and time spent correcting if convenient. At minimum, note the reading method, whether an interruption cost work, which corrections were needed, and whether the receipt was easy to find again. Include at least one on-device attempt and one interruption scenario if practical. A five-receipt pilot informs workflow decisions. It cannot establish recognition accuracy across stores.
 
-P12-01, P12-02, P12-06, P12-03 and P12-04 are complete. The next task is to choose the scope of P12-05. Each remaining task is approved separately in the order above.
+P12-01, P12-02, P12-06, P12-03 and P12-04 are complete. P12-05 completes the Phase 12 implementation.
 
 ### P12-02 delivery
 
@@ -89,3 +89,8 @@ The **Needs review** collection is available from All receipts. A draft opens wi
 Purchase History shows the current purchase, each matching receipt's line total, and its recorded unit price when available. An unrecorded unit stays unspecified. Comparable candidates can open price comparison directly from the matching entry. Confirming identity and pack size applies to price comparison. Purchase History continues to discover candidates automatically. Saved comparisons appear with both rates and the confirmed tax basis, and the existing revision checks keep stale decisions out of history.
 
 The draft-to-Split handoff was rechecked with a fictional mismatch. The Split action returns to review and its first blocker points to the printed total.
+
+
+### P12-05 delivery
+
+**Share receipt image** opens a zoomable preview of the current saved receipt. The export uses white paper, dark monospaced text, a soft gray margin and a Sliplet signature on the lower right. The image uses light paper in both app appearances. Drafts retain a visible status. It contains the digital receipt and uses an opaque RGB PNG with no original photo embedded.

@@ -54,6 +54,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
     let zoomTarget: UUID
     let rasterID: String
     var selection: Binding<ReceiptOCRBox>? = nil
+    var isSharePreview = false
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> UIScrollView {
         let view = ReceiptZoomScrollView()
@@ -70,9 +71,10 @@ struct ZoomReceiptImage: UIViewRepresentable {
         view.addGestureRecognizer(draw); coordinator.selectionGesture = draw
         let imageView = coordinator.imageView
         imageView.contentMode = .scaleAspectFit
-        imageView.accessibilityLabel = "Original receipt image"
+        imageView.accessibilityLabel = isSharePreview ? "Receipt image preview" : "Original receipt image"
         imageView.accessibilityIdentifier = rasterID
-        imageView.accessibilityHint = "Pinch, double tap, or use the zoom buttons. Printed text provides an OCR alternative."
+        imageView.accessibilityHint = isSharePreview ? "Pinch, double tap, or use the zoom buttons."
+            : "Pinch, double tap, or use the zoom buttons. Printed text provides an OCR alternative."
         view.addSubview(imageView)
         coordinator.spinner.hidesWhenStopped = true
         coordinator.spinner.translatesAutoresizingMaskIntoConstraints = false

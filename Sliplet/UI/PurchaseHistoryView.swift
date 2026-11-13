@@ -153,6 +153,7 @@ private struct PurchaseReceiptView: View {
     @Bindable var workspace: ReceiptWorkspace
     let purchase: PurchaseEndpoint
     @State private var positioned = false
+    @State private var sharingReceipt = false
 
     var body: some View {
         Group {
@@ -184,7 +185,12 @@ private struct PurchaseReceiptView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink("Original") { PurchaseOriginalView(workspace: workspace, receiptID: record.id) }
                             .accessibilityIdentifier("historyReceiptOriginal")
+                        Button("Share receipt image", systemImage: "square.and.arrow.up") { sharingReceipt = true }
+                            .accessibilityIdentifier("openReceiptShare")
                     }
+                }
+                .sheet(isPresented: $sharingReceipt) {
+                    ReceiptShareView(workspace: workspace, receiptID: purchase.receiptID)
                 }
             } else {
                 ContentUnavailableView("Receipt unavailable", systemImage: "doc.questionmark")

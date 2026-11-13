@@ -13,6 +13,7 @@ struct ReceiptHome: View {
     @State private var discardPending = false
     @State private var delete = false
     @State private var deleteTarget: ReceiptRecord?
+    @State private var sharingReceipt = false
     @State private var settings = false
     @State private var recoveryAISettings = false
     @State private var walletInformation = false
@@ -108,6 +109,8 @@ struct ReceiptHome: View {
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
                                 if let record = workspace.selected {
+                                    Button("Share receipt image", systemImage: "square.and.arrow.up") { sharingReceipt = true }
+                                        .accessibilityIdentifier("openReceiptShare")
                                     Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
                                     Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
                                 }
@@ -204,6 +207,9 @@ struct ReceiptHome: View {
             } message: { Text("This removes all revisions and the original from this app. Copies in Photos or Files remain there.") }
             .sheet(item: $workspace.detailLine) { line in
                 ReceiptFocusedCorrectionView(workspace: workspace, check: line.check, detailLine: line)
+            }
+            .sheet(isPresented: $sharingReceipt) {
+                if let id = workspace.selected?.id { ReceiptShareView(workspace: workspace, receiptID: id) }
             }
             .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
