@@ -5,6 +5,7 @@ struct ReceiptAISettingsView: View {
     let privacyCovered: Bool
     @State private var key = ""
     @State private var replacing = false
+    @State private var choosingModel = false
     @State private var confirmDisconnect = false
     @State private var testAcknowledged = false
     @FocusState private var keyFocused: Bool
@@ -17,15 +18,22 @@ struct ReceiptAISettingsView: View {
                     Label(connection.statusText, systemImage: connection.checking ? "hourglass" : (connection.status == .verified ? "checkmark.circle" : "network"))
                         .accessibilityIdentifier("aiConnectionStatus")
                     LabeledContent("Provider", value: "Google Gemini")
-                    // Only one verified model is supported; a picker implies a choice that does not exist.
-                    LabeledContent("Model") {
-                        Text(connection.preferences.model.title).accessibilityIdentifier("aiModelName")
+                    Button {
+                        choosingModel = true
+                    } label: {
+                        LabeledContent("Model") {
+                            Label(connection.preferences.model.title, systemImage: "chevron.up.chevron.down")
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
+                    .accessibilityValue(connection.preferences.model.title)
+                    .accessibilityIdentifier("aiModelName")
+                    .disabled(connection.checking || replacing)
                     if let date = connection.preferences.checkedAt {
                         LabeledContent("Last successful check") { Text(date, format: .dateTime.month().day().hour().minute()) }
                     }
                 } header: { Text("Connection") } footer: {
-                    Text("Last checked status; availability and allowance can change.")
+                    Text("Changing models requires a new connection test. You can reuse your saved API key.")
                 }
                 if !connection.hasKey || replacing {
                     Section {
@@ -76,6 +84,11 @@ struct ReceiptAISettingsView: View {
         .navigationTitle("AI recognition").navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Disconnect Gemini?", isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Remove key from this device", role: .destructive) { clearEntry(); connection.disconnect(); replacing = false }
+        }
+        .confirmationDialog("Choose a Gemini model", isPresented: $choosingModel, titleVisibility: .visible) {
+            ForEach(ReceiptAIModel.allCases) { model in
+                Button(model.title) { connection.changeModel(model) }
+            }
         }
         .onAppear { connection.reload() }
         .onDisappear { clearEntry(); connection.cancel() }

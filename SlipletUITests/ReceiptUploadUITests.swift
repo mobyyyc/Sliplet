@@ -324,6 +324,11 @@ extension ReceiptUploadUITests {
         failure.name = "Read recovery"; failure.lifetime = .keepAlways; add(failure)
         app.buttons["original"].tap()
         app.buttons["sourceDone"].tap()
+        let aiSettings = app.buttons["recoverAISettings"]
+        XCTAssertTrue(aiSettings.isHittable)
+        aiSettings.tap()
+        XCTAssertTrue(app.buttons["aiModelName"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
         manual.tap()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10))
     }

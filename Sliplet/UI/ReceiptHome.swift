@@ -13,6 +13,7 @@ struct ReceiptHome: View {
     @State private var delete = false
     @State private var deleteTarget: ReceiptRecord?
     @State private var settings = false
+    @State private var recoveryAISettings = false
     @State private var walletInformation = false
     @FocusState private var editing: String?
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -198,6 +199,16 @@ struct ReceiptHome: View {
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
+            .sheet(isPresented: $recoveryAISettings) {
+                NavigationStack {
+                    ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Done") { recoveryAISettings = false }
+                            }
+                        }
+                }
+            }
             .disabled(workspace.saving)
         }
         .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
@@ -313,6 +324,8 @@ struct ReceiptHome: View {
                                    action: workspace.chooseRecognition)
                                 .accessibilityIdentifier("recoverPreview")
                             if workspace.aiUploadStarted {
+                                Button("AI settings", systemImage: "gear") { recoveryAISettings = true }
+                                    .accessibilityIdentifier("recoverAISettings")
                                 Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
                                     .accessibilityIdentifier("manual")
                             }

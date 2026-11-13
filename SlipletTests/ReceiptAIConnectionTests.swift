@@ -49,6 +49,28 @@ private struct AITester: ReceiptAIConnectionTesting {
         XCTAssertFalse(String(describing: values).contains(first))
         c.setEnabled(false); XCTAssertNotNil(try keys.load()); XCTAssertFalse(c.enabled)
     }
+    func testModelSwitchRequiresVerificationAndKeepsSavedKey() async throws {
+        let keys = AIKeys()
+        let defaults = defaults()
+        let tester = AITester { _ in }
+        let connection = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
+        try await connect(connection, key: first)
+        connection.setPrivacyConfirmed(true)
+        connection.setEnabled(true)
+        let credential = try keys.load()
+        connection.changeModel(.flashLite)
+        XCTAssertFalse(connection.canUseAI)
+        XCTAssertEqual(connection.status, .unverified)
+        XCTAssertEqual(try keys.load()?.id, credential?.id)
+        let reopened = ReceiptAIConnection(keys: keys, tester: tester, defaults: defaults)
+        XCTAssertEqual(reopened.preferences.model, .flashLite)
+        reopened.verify()
+        try await wait { !reopened.checking }
+        reopened.setEnabled(true)
+        XCTAssertTrue(reopened.canUseAI)
+        XCTAssertEqual(try reopened.uploadCredential().id, credential?.id)
+    }
+
     func testFailedReplacementPreservesWorkingKeyAndConsent() async throws {
         let cKeys = AIKeys(), d = defaults()
         let c = ReceiptAIConnection(keys: cKeys, tester: AITester { if $0.contains("SECOND") { throw ReceiptAIError.invalidKey } }, defaults: d)

@@ -229,7 +229,7 @@ final class ReceiptWorkspace {
         guard active, flow == .reading else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         task = nil; worker = nil; recognition = nil; flow = .failed
-        errorMessage = aiUploadStarted ? "Reading stopped. If Google already received the image, it can’t be recalled." : "On-device reading stopped."
+        errorMessage = aiUploadStarted ? "Reading stopped. Sliplet cannot recall an image already sent to Google." : "On-device reading stopped."
     }
     /// Opt-in integration boundary. Existing imports continue to use local Vision.
     /// No in-flight response may overwrite edits, a new import, or a locked session.
@@ -264,7 +264,8 @@ final class ReceiptWorkspace {
                 }
                 let message: String
                 switch error as? ReceiptAIError {
-                case .timedOut: message = "Reading timed out. No automatic retry was sent."
+                case .timedOut: message = "\(self.aiConnection.preferences.model.title) didn’t respond in time."
+                case .serviceUnavailable: message = "Google couldn’t complete the request. You can read on device or try another model in AI settings."
                 case .invalidResponse: message = "Google returned an incomplete or unreadable result."
                 case .some(let safe): message = safe.message
                 case .none: message = "The model returned an incomplete or unsupported receipt."

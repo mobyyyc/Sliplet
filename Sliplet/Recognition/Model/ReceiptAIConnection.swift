@@ -3,8 +3,15 @@ import Observation
 
 enum ReceiptAIModel: String, Codable, CaseIterable, Identifiable, Sendable {
     case flash = "gemini-3.6-flash"
+    case flashLite = "gemini-3.5-flash-lite"
+
     var id: String { rawValue }
-    var title: String { "Gemini 3.6 Flash" }
+    var title: String {
+        switch self {
+        case .flash: "Gemini 3.6 Flash"
+        case .flashLite: "Gemini 3.5 Flash-Lite"
+        }
+    }
 }
 enum ReceiptAIError: String, Error, Codable, Sendable, Equatable {
     case invalidKey, accessDenied, modelUnavailable, rateOrQuotaLimit, billingRequired, offline, serviceUnavailable, timedOut, invalidResponse, secureStorage
@@ -82,10 +89,10 @@ protocol ReceiptAIConnectionTesting: Sendable {
         guard !checking else { return }
         do {
             guard let credential = try keys.load() else {
-                hasKey = false; preferences = Preferences(); persist(); status = .disconnected; return
+                hasKey = false; preferences = Preferences(model: preferences.model); persist(); status = .disconnected; return
             }
             hasKey = true
-            if preferences.credentialID != credential.id { preferences = Preferences(); persist() }
+            if preferences.credentialID != credential.id { preferences = Preferences(model: preferences.model); persist() }
             // Last success is historical; do not infer present provider availability.
             status = preferences.lastFailure.map(Status.failed) ?? (preferences.checkedAt == nil ? .unverified : .verified)
         } catch { status = .failed(.secureStorage); preferences.enabled = false; persist() }
@@ -121,7 +128,13 @@ protocol ReceiptAIConnectionTesting: Sendable {
     }
     func changeModel(_ model: ReceiptAIModel) {
         guard model != preferences.model else { return }
-        cancel(); preferences.model = model; preferences.checkedAt = nil; preferences.enabled = false
+        cancel()
+        preferences.model = model
+        preferences.checkedAt = nil
+        preferences.lastFailure = nil
+        preferences.enabled = false
+        replacementError = nil
+        message = nil
         status = hasKey ? .unverified : .disconnected; persist()
     }
     func cancel() {

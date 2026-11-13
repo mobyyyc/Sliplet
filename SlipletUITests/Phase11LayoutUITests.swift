@@ -16,14 +16,18 @@ import XCTest
             app.swipeUp()
         }
         XCTAssertTrue(ai.isHittable); ai.tap()
-        let model = app.staticTexts["aiModelName"]
+        let model = app.buttons["aiModelName"]
         XCTAssertTrue(model.waitForExistence(timeout: 10))
-        XCTAssertTrue(model.label.contains("Gemini 3.6 Flash"))
+        XCTAssertEqual(model.value as? String, "Gemini 3.6 Flash")
         XCTAssertTrue(model.isHittable)
         XCTAssertGreaterThanOrEqual(model.frame.minX, app.frame.minX + 16)
         XCTAssertLessThanOrEqual(model.frame.maxX, app.frame.maxX - 16)
         let shot = XCTAttachment(screenshot: app.screenshot())
         shot.name = "Readable AI model identity"; shot.lifetime = .keepAlways; add(shot)
+        model.tap()
+        app.buttons["Gemini 3.5 Flash-Lite"].tap()
+        let changed = expectation(for: NSPredicate(format: "value == %@", "Gemini 3.5 Flash-Lite"), evaluatedWith: model)
+        wait(for: [changed], timeout: 5)
         app.terminate()
     }
 }
