@@ -131,6 +131,33 @@ import XCTest
         XCTAssertFalse(app.buttons["sendReceiptAI"].isEnabled)
     }
 
+    func testDisconnectedAIOffersSetupAndKeepsOnDeviceAvailable() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture",
+                               "--import-ai-disconnected-fixture", "--t05-light"]
+        app.launch()
+        let start = app.buttons["uploadFixture"]
+        XCTAssertTrue(start.waitForExistence(timeout: 20)); start.tap()
+        let photoNext = app.buttons["adjustPhotoContinue"]
+        XCTAssertTrue(photoNext.waitForExistence(timeout: 10)); photoNext.tap()
+        let setup = app.buttons["importAISettings"]
+        let next = app.buttons["readingMethodContinue"]
+        XCTAssertTrue(setup.waitForExistence(timeout: 5))
+        XCTAssertTrue(setup.label.contains("Connect Gemini"))
+        XCTAssertFalse(app.buttons["previewAI"].exists)
+        XCTAssertTrue(next.isEnabled)
+        setup.tap()
+        XCTAssertTrue(app.buttons["connectGemini"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertEqual(next.label, "Read on device")
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "AI setup beside on-device reading"; shot.lifetime = .keepAlways; add(shot)
+        next.tap()
+        XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
+    }
+
     func testLightPreviewSurvivesOriginalSheet() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -420,6 +447,12 @@ extension ReceiptUploadUITests {
         let app = sendAuditFixture("--p901-failed-read")
         let manual = app.buttons["manual"]
         XCTAssertTrue(manual.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["AI reading timed out"].exists)
+        let local = app.buttons["recoverLocal"]
+        let retry = app.buttons["recoverPreview"]
+        XCTAssertTrue(local.isHittable)
+        XCTAssertTrue(retry.isHittable)
+        XCTAssertGreaterThan(retry.frame.midY, local.frame.midY)
         let failure = XCTAttachment(screenshot: app.screenshot())
         failure.name = "Read recovery"; failure.lifetime = .keepAlways; add(failure)
         app.buttons["original"].tap()

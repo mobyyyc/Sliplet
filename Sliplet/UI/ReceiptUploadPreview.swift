@@ -14,6 +14,8 @@ struct ReceiptUploadPreview: View {
     @State private var crop: [CGRect] = [CGRect(x: 0, y: 0, width: 1, height: 1)]
     @State private var cropSelection: Int? = 0
     private var useAI: Bool { workspace.importUsesAI }
+    private var aiSelectedForReading: Bool { useAI && workspace.aiConnection.canUseAI }
+    private var showsAIProgress: Bool { step < 2 ? aiSelectedForReading : useAI }
     private var redactions: [CGRect] {
         get { workspace.importCovers }
         nonmutating set { workspace.importCovers = newValue }
@@ -38,40 +40,9 @@ struct ReceiptUploadPreview: View {
     private var titles: [String] { [cropEditing ? "Crop photo" : "Check photo", "Choose reading method", "Hide sensitive details", "Confirm upload"] }
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    switch step {
-                    case 0: photoStep(height: geometry.size.height - 24)
-                    case 1: methodStep
-                    case 2: privacyStep(height: geometry.size.height - 24)
-                    default: confirmationStep
-                    }
-                    if let failure { Label(failure, systemImage: "exclamationmark.circle").font(.callout) }
-                    if let message = workspace.errorMessage { Text(message).font(.callout) }
-                }.padding(.horizontal, 20).padding(.vertical, 12)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollClipDisabled()
-            .scrollEdgeEffectStyle(.soft, for: .vertical)
-            .accessibilityIdentifier("importStepContent")
-            .id(step)
-            .transition(reduceMotion ? .opacity : .asymmetric(
-                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
-        }
-        .safeAreaBar(edge: .top, spacing: 0) { header }
-        .safeAreaBar(edge: .bottom, spacing: 0) {
-            VStack(spacing: 12) {
-                if step == 0 { photoControls }
-                if step == 2 { coverControls }
-                if preparing { ProgressView("Preparing photo").font(.caption) }
-                Button(action: next) {
-                    Text(actionTitle).frame(maxWidth: .infinity)
-                }.buttonStyle(ReceiptProminentStyle())
-                    .disabled(preparing || !canContinue)
-                    .accessibilityIdentifier(actionID)
-            }.modifier(ReceiptActionBarLayout())
+        GeometryReader { window in
+            let sideBySide = window.size.width >= 560 && window.size.width > window.size.height && !typeSize.isAccessibilitySize
+            importPage(sideBySide: sideBySide)
         }
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .smooth(duration: 0.3), value: step)
         .onChange(of: step) { old, new in
@@ -85,7 +56,10 @@ struct ReceiptUploadPreview: View {
         .onChange(of: redactions) { _, _ in acknowledged = false; upload = nil; preview = nil }
         .onChange(of: workspace.aiConnection.preferences.credentialID) { _, _ in acknowledged = false }
         .onChange(of: workspace.aiConnection.preferences.model) { _, _ in acknowledged = false }
-        .onChange(of: workspace.aiConnection.canUseAI) { _, _ in acknowledged = false }
+        .onChange(of: workspace.aiConnection.canUseAI) { _, available in
+            acknowledged = false
+            if !available && step == 1 && useAI { selectReadingMethod(ai: false) }
+        }
         .onChange(of: workspace.privacyCovered) { _, covered in
             if covered { acknowledged = false; cancelPreparation() }
         }
@@ -111,10 +85,56 @@ struct ReceiptUploadPreview: View {
             }
         }
     }
+
+    private func importPage(sideBySide: Bool) -> some View {
+        let inlinePhotoControls = step == 0 && sideBySide
+        return GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    switch step {
+                    case 0: photoStep(height: geometry.size.height - 24, sideBySide: inlinePhotoControls)
+                    case 1: methodStep
+                    case 2: privacyStep(height: geometry.size.height - 24)
+                    default: confirmationStep
+                    }
+                    if let failure { Label(failure, systemImage: "exclamationmark.circle").font(.callout) }
+                    if let message = workspace.errorMessage { Text(message).font(.callout) }
+                }.padding(.horizontal, 20).padding(.vertical, 12)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollClipDisabled()
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
+            .accessibilityIdentifier("importStepContent")
+            .id(step)
+            .transition(reduceMotion ? .opacity : .asymmetric(
+                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                removal: .move(edge: forward ? .leading : .trailing).combined(with: .opacity)))
+        }
+        .safeAreaBar(edge: .top, spacing: 0) { header }
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+            if !inlinePhotoControls {
+                VStack(spacing: 12) {
+                    if step == 0 { photoControls }
+                    if step == 2 { coverControls }
+                    if preparing { ProgressView("Preparing photo").font(.caption) }
+                    primaryAction
+                }.modifier(ReceiptActionBarLayout())
+            }
+        }
+    }
+
+    private var primaryAction: some View {
+        Button(action: next) {
+            Text(actionTitle).frame(maxWidth: .infinity)
+        }.buttonStyle(ReceiptProminentStyle())
+            .disabled(preparing || !canContinue)
+            .accessibilityIdentifier(actionID)
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 6) {
-                ForEach(0..<(useAI ? 4 : 2), id: \.self) { index in
+                ForEach(0..<(showsAIProgress ? 4 : 2), id: \.self) { index in
                     VStack(spacing: 7) {
                         Capsule().fill(index <= step ? Color.primary : Color.primary.opacity(0.12)).frame(height: 4)
                         if !typeSize.isAccessibilitySize {
@@ -127,33 +147,58 @@ struct ReceiptUploadPreview: View {
                 }
             }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1): \(titles[step])")
             if typeSize.isAccessibilitySize {
-                Text(useAI ? "Photo · Method · Privacy · Upload" : "Photo · Method")
+                Text(showsAIProgress ? "Photo · Method · Privacy · Upload" : "Photo · Method")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Text(titles[step]).font(typeSize.isAccessibilitySize ? .headline : .title2.bold()).accessibilityAddTraits(.isHeader)
         }.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 10)
-            .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: useAI)
+            .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: showsAIProgress)
     }
-    private func photoStep(height: CGFloat) -> some View {
-        ReceiptImportPageLayout(availableHeight: height) {
-            Group {
-                if let photo {
-                    if cropEditing {
-                        ReceiptImportCanvas(image: photo, cropMode: true, regions: $crop, selected: $cropSelection)
-                            .accessibilityIdentifier("photoAdjustmentCanvas")
-                    } else {
-                        ReceiptImportCanvas(image: preparedPhoto ?? photo, regions: .constant([]), selected: .constant(nil))
-                            .accessibilityIdentifier("photoCheckCanvas")
-                    }
-                } else { ProgressView("Opening photo") }
+    @ViewBuilder private func photoStep(height: CGFloat, sideBySide: Bool) -> some View {
+        if sideBySide {
+            HStack(alignment: .top, spacing: 20) {
+                photoCanvas.frame(maxWidth: .infinity).frame(height: max(132, height))
+                VStack(spacing: 8) {
+                    photoControls
+                    guidance("Photo tips", text: cropEditing
+                        ? "Drag the corners. Pinch to zoom."
+                        : "Keep the receipt sharp and upright.")
+                    retakeAction
+                    if preparing { ProgressView("Preparing photo").font(.caption) }
+                    primaryAction
+                }.frame(width: 264)
             }
-            guidance("Photo tips", text: cropEditing
-                ? "Drag the white corners. Keep the merchant, items and totals inside. Pinch to zoom."
-                : "Check that the receipt is sharp, upright and complete. Your original stays unchanged.")
-            if workspace.importFromCamera && !cropEditing {
-                Button("Retake photo", systemImage: "camera", action: retake)
-                    .buttonStyle(ReceiptSecondaryStyle()).frame(maxWidth: .infinity).accessibilityIdentifier("cameraRetake")
+        } else {
+            ReceiptImportPageLayout(availableHeight: height) {
+                photoCanvas
+                photoGuidance
+                retakeAction
             }
+        }
+    }
+
+    @ViewBuilder private var photoCanvas: some View {
+        if let photo {
+            if cropEditing {
+                ReceiptImportCanvas(image: photo, cropMode: true, regions: $crop, selected: $cropSelection)
+                    .accessibilityIdentifier("photoAdjustmentCanvas")
+            } else {
+                ReceiptImportCanvas(image: preparedPhoto ?? photo, regions: .constant([]), selected: .constant(nil))
+                    .accessibilityIdentifier("photoCheckCanvas")
+            }
+        } else { ProgressView("Opening photo") }
+    }
+
+    private var photoGuidance: some View {
+        guidance("Photo tips", text: cropEditing
+            ? "Drag the white corners. Keep the merchant, items and totals inside. Pinch to zoom."
+            : "Check that the receipt is sharp, upright and complete. Your original stays unchanged.")
+    }
+
+    @ViewBuilder private var retakeAction: some View {
+        if workspace.importFromCamera && !cropEditing {
+            Button("Retake photo", systemImage: "camera", action: retake)
+                .buttonStyle(ReceiptSecondaryStyle()).frame(maxWidth: .infinity).accessibilityIdentifier("cameraRetake")
         }
     }
     private var photoControls: some View {
@@ -183,22 +228,31 @@ struct ReceiptUploadPreview: View {
     }
     private var methodStep: some View {
         VStack(spacing: 14) {
-            methodCard("On-device", subtitle: "Offline · stays on your iPhone", icon: "iphone", ai: false)
-                .accessibilityIdentifier("readLocal")
-            methodCard("AI reading", subtitle: "Gemini · uploads your prepared image", icon: "sparkles", ai: true)
-                .accessibilityIdentifier("previewAI")
-            HStack {
-                Label(workspace.aiConnection.settingsSummary,
-                      systemImage: workspace.aiConnection.canUseAI ? "checkmark.circle" : "gear")
-                    .font(.footnote).foregroundStyle(.secondary)
-                Spacer()
-                Button(workspace.aiConnection.settingsActionTitle) { settings = true }
+            methodCard("On-device", subtitle: "Offline · stays on your iPhone", icon: "iphone", selected: !aiSelectedForReading) {
+                selectReadingMethod(ai: false)
+            }.accessibilityIdentifier("readLocal")
+            if workspace.aiConnection.canUseAI {
+                methodCard("AI reading", subtitle: "Gemini · uploads your prepared image", icon: "sparkles", selected: aiSelectedForReading) {
+                    selectReadingMethod(ai: true)
+                }.accessibilityIdentifier("previewAI")
+                Button("Manage AI connection") { settings = true }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityIdentifier("importAISettings")
-            }.padding(.horizontal, 4)
+            } else {
+                methodCard("AI reading", subtitle: workspace.aiConnection.settingsSummary, icon: "sparkles",
+                           setup: workspace.aiConnection.settingsActionTitle) { settings = true }
+                    .accessibilityIdentifier("importAISettings")
+            }
             guidance("About reading methods", text: "On-device uses Apple Vision offline. AI uses your connected provider and API allowance. You’ll hide sensitive details and check the image before uploading.")
                 .padding(.top, 10)
         }
     }
+
+    private func selectReadingMethod(ai: Bool) {
+        workspace.importUsesAI = ai
+        workspace.checkpointImport()
+    }
+
     private func guidance(_ title: String, text: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(.subheadline.weight(.semibold))
@@ -206,24 +260,24 @@ struct ReceiptUploadPreview: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func methodCard(_ title: String, subtitle: String, icon: String, ai: Bool) -> some View {
-        Button {
-            workspace.importUsesAI = ai
-            workspace.checkpointImport()
-        } label: {
+    private func methodCard(_ title: String, subtitle: String, icon: String, selected: Bool = false,
+                            setup: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon).font(.title2).frame(width: 30)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title).font(.headline)
                     Text(subtitle).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let setup { Text(setup).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true) }
                 }
                 Spacer(minLength: 0)
-                Image(systemName: useAI == ai ? "checkmark.circle.fill" : "circle").font(.title3)
+                Image(systemName: setup == nil ? (selected ? "checkmark.circle.fill" : "circle") : "chevron.right")
+                    .font(.title3).accessibilityHidden(true)
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22))
-                .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Color.primary.opacity(useAI == ai ? 0.6 : 0.08), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(Color.primary.opacity(selected ? 0.6 : 0.08), lineWidth: 1))
                 .contentShape(RoundedRectangle(cornerRadius: 22))
-        }.buttonStyle(.plain).accessibilityAddTraits(useAI == ai ? .isSelected : [])
+        }.buttonStyle(.plain).accessibilityAddTraits(selected ? .isSelected : [])
     }
     private func privacyStep(height: CGFloat) -> some View {
         ReceiptImportPageLayout(availableHeight: height) {
@@ -289,13 +343,13 @@ struct ReceiptUploadPreview: View {
         }
     }
     private var actionTitle: String {
-        switch step { case 0: cropEditing ? "Apply crop" : "Continue"; case 1: useAI ? "Continue" : "Read receipt"; case 2: "Review upload"; default: "Upload and read" }
+        switch step { case 0: cropEditing ? "Apply crop" : "Choose reading method"; case 1: aiSelectedForReading ? "Hide sensitive details" : "Read on device"; case 2: "Review upload"; default: "Upload and read" }
     }
     private var actionID: String {
         switch step { case 0: "adjustPhotoContinue"; case 1: "readingMethodContinue"; case 2: "reviewUpload"; default: "sendReceiptAI" }
     }
     private var canContinue: Bool {
-        switch step { case 0: photo != nil; case 1: !useAI || workspace.aiConnection.canUseAI; case 2: prepared != nil; default: acknowledged && upload != nil && workspace.aiConnection.canUseAI }
+        switch step { case 0: photo != nil; case 1: true; case 2: prepared != nil; default: acknowledged && upload != nil && workspace.aiConnection.canUseAI }
     }
     private func rememberCovers() {
         coverUndo.append(redactions)
@@ -353,7 +407,7 @@ struct ReceiptUploadPreview: View {
             if cropEditing { cropEditing = false; workspace.checkpointImport(); prepareCrop() }
             else { go(1) }
         case 1:
-            if useAI {
+            if aiSelectedForReading {
                 go(2)
                 if prepared == nil { loadPhoto() }
             } else { workspace.readImage() }

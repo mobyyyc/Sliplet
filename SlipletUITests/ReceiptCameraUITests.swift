@@ -92,10 +92,25 @@ import XCTest
         capture("camera-landscape", app: app)
         app.buttons["cameraShutter"].tap()
         XCTAssertTrue(app.buttons["adjustPhotoContinue"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["adjustPhotoContinue"].isHittable)
-        XCTAssertTrue(app.buttons["cropImportPhoto"].exists)
-        Thread.sleep(forTimeInterval: 0.5)
+        let next = app.buttons["adjustPhotoContinue"]
+        XCTAssertTrue(next.isHittable)
+        XCTAssertLessThan(next.frame.maxY, app.frame.maxY - 8)
+        let crop = app.buttons["cropImportPhoto"]
+        XCTAssertTrue(crop.isHittable)
+        let image = app.images["uploadImage"]
+        XCTAssertTrue(image.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(image.frame.height, 140)
+        XCTAssertGreaterThan(crop.frame.minX, image.frame.maxX)
         capture("camera-landscape-photo-check", app: app)
+        crop.tap()
+        let handle = app.descendants(matching: .any)["importHandle-0-4"]
+        XCTAssertTrue(handle.waitForExistence(timeout: 5))
+        XCTAssertTrue(handle.isHittable)
+        XCTAssertTrue(next.isHittable)
+        XCTAssertLessThan(next.frame.maxY, app.frame.maxY - 8)
+        capture("camera-landscape-crop", app: app)
+        app.buttons["back"].tap()
+        XCTAssertTrue(app.staticTexts["Check photo"].waitForExistence(timeout: 5))
         app.buttons["back"].tap(); app.buttons["Discard changes"].tap()
         XCTAssertTrue(app.buttons["import"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.buttons["receipt-0"].exists)

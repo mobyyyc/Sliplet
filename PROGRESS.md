@@ -1,5 +1,9 @@
 # Progress
 
+## P13-02 complete in Simulator · 2026-11-14
+
+Landscape photo preparation now uses a side control panel, Gemini setup lives in the reading choice, and recovery prioritizes retry or offline reading based on the failure. Twelve focused Simulator tests passed and three cases passed again after the final layout adjustment. The iPhone walkthrough remains pending. P13-03 is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
+
 ## P7-01A completed · 2026-10-18
 
 Same-version OpenCV repair passed deployment; PP-OCRv5_mobile benchmark failed accuracy promotion. Fresh comparable full-image results: Vision 42/66 strict item pairs, Paddle 25/66; totals both 3/5, zero recoveries. Historical baseline remains 43/66; input/runtime differences are disclosed. No production change. [Results and next decision](docs/PHASE7_COMPATIBILITY_AND_RESULTS.md). P7-02 one-item interpretation proof is proposed only, pending approval; no further model sweep/integration.

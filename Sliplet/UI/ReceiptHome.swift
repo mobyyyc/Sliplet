@@ -347,64 +347,108 @@ struct ReceiptHome: View {
                              ? .accessibility5 : typeSize)
             #endif
 
-        case .failed:
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    Label(workspace.image == nil ? "Couldn’t open the photo" : "Continue with your photo",
-                          systemImage: workspace.image == nil ? "photo" : "doc.viewfinder")
+        case .failed: importRecovery
+        }
+    }
+
+    private var retryUploadFirst: Bool {
+        guard workspace.aiUploadStarted, workspace.aiConnection.canUseAI else { return false }
+        switch workspace.lastAIReadFailure {
+        case .timedOut, .invalidResponse: return true
+        default: return false
+        }
+    }
+
+    private var importRecoveryTitle: String {
+        guard workspace.image != nil else { return "Couldn’t open the photo" }
+        guard workspace.aiUploadStarted else { return "Continue with your photo" }
+        switch workspace.lastAIReadFailure {
+        case .timedOut: return "AI reading timed out"
+        case .offline: return "You’re offline"
+        case .rateOrQuotaLimit: return "Google usage limit reached"
+        case .billingRequired, .accessDenied, .modelUnavailable, .invalidKey, .secureStorage:
+            return "Check the AI connection"
+        case .serviceUnavailable, .invalidResponse: return "AI couldn’t read this receipt"
+        case nil: return "Continue with your photo"
+        }
+    }
+
+    private var importRecovery: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(importRecoveryTitle, systemImage: workspace.image == nil ? "photo" : "doc.viewfinder")
                         .font(.title2.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
                     if let message = workspace.errorMessage { Text(message).foregroundStyle(.secondary) }
-                    if workspace.image != nil {
-                        VStack(alignment: .leading, spacing: 14) {
-                            if workspace.aiUploadStarted {
-                                if workspace.lastAIReadFailure == .rateOrQuotaLimit || workspace.lastAIReadFailure == .billingRequired {
-                                    Link(destination: URL(string: "https://aistudio.google.com/usage")!) {
-                                        Label("Check Google usage", systemImage: "chart.bar")
-                                    }
-                                }
-                                if workspace.aiConnection.canUseAI {
-                                    Button("Review and retry upload", systemImage: "eye", action: workspace.chooseRecognition)
-                                        .accessibilityIdentifier("recoverPreview")
-                                }
-                                Button("AI settings", systemImage: "gear") { recoveryAISettings = true }
-                                    .accessibilityIdentifier("recoverAISettings")
-                                Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
-                                    .accessibilityIdentifier("manual")
-                                anchoredImportChoices {
-                                    Button("Choose another image", systemImage: "photo") { importChoices = true }
-                                }
-                            } else {
-                                Button("Reading options", systemImage: "doc.viewfinder", action: workspace.chooseRecognition)
-                                    .accessibilityIdentifier("recoverPreview")
-                                anchoredImportChoices {
-                                    Button("Choose another image", systemImage: "photo") { importChoices = true }
+                    if workspace.image != nil && workspace.aiUploadStarted {
+                        Text(retryUploadFirst
+                             ? "Your photo and covers are still here. Review the image again before retrying."
+                             : "Your photo is still here. You can read it on this iPhone.")
+                            .font(.subheadline)
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                if workspace.image != nil {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if workspace.aiUploadStarted {
+                            if workspace.lastAIReadFailure == .rateOrQuotaLimit || workspace.lastAIReadFailure == .billingRequired {
+                                Link(destination: URL(string: "https://aistudio.google.com/usage")!) {
+                                    Label("Check Google usage", systemImage: "chart.bar")
                                 }
                             }
+                            if retryUploadFirst {
+                                Button("Read on device instead", systemImage: "iphone", action: workspace.readImage)
+                                    .accessibilityIdentifier("recoverLocal")
+                            } else if workspace.aiConnection.canUseAI {
+                                retryImportButton
+                            }
+                            Button("AI settings", systemImage: "gear") { recoveryAISettings = true }
+                                .accessibilityIdentifier("recoverAISettings")
+                            Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
+                                .accessibilityIdentifier("manual")
+                        } else {
+                            Button("Reading options", systemImage: "doc.viewfinder", action: workspace.chooseRecognition)
+                                .accessibilityIdentifier("recoverPreview")
                         }
-                        .buttonStyle(ReceiptSecondaryStyle())
+                        chooseAnotherImage
                     }
-                }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                    .font(.body)
+                    .buttonStyle(.borderless)
+                }
+            }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+            Group {
+                if workspace.image == nil {
+                    chooseAnotherImage
+                } else if retryUploadFirst {
+                    retryImportButton
+                } else if workspace.aiUploadStarted {
+                    Button("Read on device", systemImage: "iphone", action: workspace.readImage)
+                        .accessibilityIdentifier("recoverLocal")
+                } else {
+                    Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
+                        .accessibilityIdentifier("manual")
+                }
             }
-            .scrollClipDisabled().scrollEdgeEffectStyle(.soft, for: .vertical)
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                Group {
-                    if workspace.image == nil {
-                        anchoredImportChoices {
-                            Button("Choose another image", systemImage: "photo") { importChoices = true }
-                                .buttonStyle(ReceiptProminentStyle())
-                        }
-                    } else if workspace.aiUploadStarted {
-                        Button("Read on device", systemImage: "iphone", action: workspace.readImage)
-                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("recoverLocal")
-                    } else {
-                        Button("Enter manually", systemImage: "pencil", action: workspace.manualReview)
-                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("manual")
-                    }
-                }.modifier(ReceiptActionBarLayout())
-            }
+            .buttonStyle(ReceiptProminentStyle())
+            .modifier(ReceiptActionBarLayout())
         }
     }
+
+    private var retryImportButton: some View {
+        Button("Review and retry upload", systemImage: "eye", action: workspace.chooseRecognition)
+            .accessibilityIdentifier("recoverPreview")
+    }
+
+    private var chooseAnotherImage: some View {
+        anchoredImportChoices {
+            Button("Choose another image", systemImage: "photo") { importChoices = true }
+        }
+    }
+
     private var wallet: some View {
         Group {
             if workspace.library && workspace.flow == .wallet {

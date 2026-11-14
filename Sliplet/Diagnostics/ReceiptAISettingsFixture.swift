@@ -23,7 +23,7 @@ import Foundation
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let keys = Keys()
-        if upload {
+        if upload && !ProcessInfo.processInfo.arguments.contains("--import-ai-disconnected-fixture") {
             let credential = ReceiptAICredential(id: UUID(), key: "FICTIONAL_UI_TEST_KEY_NOT_REAL")
             try? keys.save(credential)
             let preferences = ReceiptAIConnection.Preferences(credentialID: credential.id, checkedAt: Date(), privacyVersion: ReceiptAIConnection.privacyVersion, enabled: true)
