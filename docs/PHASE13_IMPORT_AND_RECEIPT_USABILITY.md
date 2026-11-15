@@ -36,7 +36,21 @@ Twelve distinct UI cases and three native cases passed across the focused iPhone
 2. Open a longer receipt, compare Fit and Full width, scroll to the total, and use the system share sheet to save the PNG to Files.
 3. Tap a Required to finish message. Confirm that it lands on the field to correct. In Reread area, check the field and current value before reading, then verify that Cancel discards a trial value.
 
+## P13-04 · History & Split
+
+- Compare unit prices opens with both purchases, merchants, dates and recorded unit prices. The overview stacks at accessibility text sizes. If a receipt has no unit price, the overview labels the line total separately. Price evidence expands per purchase, with a separate link to the original receipt.
+- Split progress links directly to unassigned items and the next adjustment to confirm. Confirmed adjustments show each person's exact share once the split reconciles.
+- At accessibility text sizes, one bottom action reserves its own space. Save choices moves to Amounts when Finalize becomes available. Cancel is in the navigation bar during bulk assignment, with Apply items at the bottom.
+
+### Simulator verification
+
+Five focused UI cases passed across the iPhone 15 Pro Simulator runs on iOS 27.0. They covered price evidence and saved comparison, the two split progress shortcuts, long bulk selection, the single action at accessibility text sizes, and finalized split sharing and recovery. All 27 selected tests for unit-price evidence, split arithmetic and split persistence passed. UI runs used fictional receipts. Physical iPhone acceptance remains pending.
+
+### Owner checks on iPhone 15 Pro
+
+1. Compare two purchases in Purchase History. Check that each price and unit is easy to associate with its purchase. Open the price evidence and return from the original.
+2. With accessibility text sizing enabled, open a split with unassigned items and tax or discounts. Follow both progress links, then confirm the bottom rows remain reachable as the action changes from Save choices to Finalize. Open bulk assignment and check the top Cancel and bottom Apply items actions.
+
 ## Remaining milestones
 
-- **P13-04 · History & Split.** Give both unit prices a compact overview before evidence details. Surface remaining assignments and adjustments, including with large text.
 - **P13-05 · iPhone Walkthrough.** Verify the import and reading paths, long receipts, wallet gestures, Face ID, light and dark appearances, Dynamic Type, VoiceOver and Reduce Motion.

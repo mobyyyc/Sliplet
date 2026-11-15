@@ -1,5 +1,9 @@
 # Progress
 
+## P13-04 complete in Simulator · 2026-11-15
+
+Purchase comparison leads with both recorded unit prices and groups optional evidence per purchase. Split progress links to unassigned items and adjustments. The large-text layout keeps one bottom action and reserves list space for it. Five focused UI cases and 27 unit and persistence cases passed. P13-05 iPhone Walkthrough is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
+
 ## P13-03 complete in Simulator · 2026-11-14
 
 Receipt sharing is in the toolbar across Wallet, Search and Purchase History. Review prioritizes required corrections, and region reread starts with its target and current value. Fit and Full width show the same export at different preview scales. Twelve distinct UI cases and three native cases passed across focused runs. The system share sheet saved a 48-line opaque PNG in local Files. P13-04 is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).

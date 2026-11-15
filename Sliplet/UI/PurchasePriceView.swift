@@ -8,7 +8,10 @@ struct PurchasePriceView: View {
     @State private var checked = false
     @State private var loaded = false
     @State private var editingVerification = false
+    @State private var firstEvidenceExpanded = false
+    @State private var secondEvidenceExpanded = false
     @State private var message: String?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Group {
@@ -22,6 +25,19 @@ struct PurchasePriceView: View {
                 let saved = PurchasePriceComparison.savedEvidence(a, line: left.id, b, line: right.id)
                 let comparison = Result { try PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: evidence) }
                 Form {
+                    Section {
+                        let sameName = left.paperName == right.paperName
+                        if sameName {
+                            Text(left.paperName).font(.headline).accessibilityAddTraits(.isHeader)
+                        }
+                        let pairLayout = typeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 16))
+                            : AnyLayout(HStackLayout(alignment: .top, spacing: 16))
+                        pairLayout {
+                            overview("This purchase", record: a, item: left, showItem: !sameName, identifier: "firstPriceOverview")
+                            overview("Other purchase", record: b, item: right, showItem: !sameName, identifier: "secondPriceOverview")
+                        }.padding(.vertical, 4)
+                    } header: { Text("Purchase overview") }
                     if let saved, let result = try? PurchasePriceComparison.compare(a, line: left.id, b, line: right.id, evidence: saved) {
                         Section("Saved comparison") {
                             resultDetails(result, identifier: "savedUnitPriceResult")
@@ -33,8 +49,6 @@ struct PurchasePriceView: View {
                         Section { Text("These purchases are marked as different.").accessibilityIdentifier("priceUnavailable") }
                     } else if decision?.pack != .same {
                         Section {
-                            purchaseIdentity("This purchase", record: a, item: left)
-                            purchaseIdentity("Other purchase", record: b, item: right)
                             NavigationLink("Original for this purchase") { PurchaseOriginalView(workspace: workspace, receiptID: a.id) }
                             NavigationLink("Original for other purchase") { PurchaseOriginalView(workspace: workspace, receiptID: b.id) }
                             Button("Confirm same product and pack size") { save(a, b, value: nil, confirmingPair: true) }
@@ -59,21 +73,13 @@ struct PurchasePriceView: View {
                                 }.accessibilityIdentifier("cancelPriceEvidenceEdit")
                             }
                         }
-                        Section("This purchase") {
-                            Text(left.paperName)
-                            if a.current.fields.adjustments.contains(where: { $0.kind == .discount }) {
-                                Text("This receipt has separate discounts. They are excluded from this comparison.").font(.footnote)
-                            }
-                            choices(basis: $evidence.firstBasis, unit: $evidence.firstUnit, line: left, prefix: "firstPrice")
-                            NavigationLink("Check original") { PurchaseOriginalView(workspace: workspace, receiptID: a.id) }
-                        }
-                        Section("Other purchase") {
-                            Text(right.paperName)
-                            if b.current.fields.adjustments.contains(where: { $0.kind == .discount }) {
-                                Text("This receipt has separate discounts. They are excluded from this comparison.").font(.footnote)
-                            }
-                            choices(basis: $evidence.secondBasis, unit: $evidence.secondUnit, line: right, prefix: "secondPrice")
-                            NavigationLink("Check original") { PurchaseOriginalView(workspace: workspace, receiptID: b.id) }
+                        Section("Price evidence") {
+                            priceEvidence("This purchase", record: a, item: left,
+                                          basis: $evidence.firstBasis, unit: $evidence.firstUnit,
+                                          expanded: $firstEvidenceExpanded, prefix: "firstPrice")
+                            priceEvidence("Other purchase", record: b, item: right,
+                                          basis: $evidence.secondBasis, unit: $evidence.secondUnit,
+                                          expanded: $secondEvidenceExpanded, prefix: "secondPrice")
                         }
                         Section {
                             Picker("Both row prices", selection: $evidence.tax) {
@@ -145,13 +151,54 @@ struct PurchasePriceView: View {
             .labeledContentStyle(ReceiptAdaptiveLabeledContentStyle())
     }
 
-    private func purchaseIdentity(_ title: String, record: ReceiptRecord, item: ReceiptLine) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(item.paperName).font(.headline)
-            Text([record.current.fields.merchant, PurchasePresentation.date(record.current.fields.purchaseDate)]
-                .compactMap { $0 }.joined(separator: " · "))
-                .font(.subheadline)
+    private func overview(_ title: String, record: ReceiptRecord, item: ReceiptLine, showItem: Bool, identifier: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if showItem { Text(item.paperName).font(.subheadline.weight(.medium)) }
+            Text(record.current.fields.merchant ?? "Unknown merchant").font(.subheadline.weight(.medium))
+            Text(PurchasePresentation.date(record.current.fields.purchaseDate))
+                .font(.caption).foregroundStyle(.secondary)
+            if let price = PurchasePresentation.recordedUnitPrice(item), (item.unitPrice?.minorUnits ?? 0) > 0 {
+                Text(price).font(.headline.monospacedDigit())
+            } else {
+                Text("Unit price not recorded").font(.subheadline).foregroundStyle(.secondary)
+                if let amount = item.amount {
+                    Text("Line total " + moneyText(amount)).font(.caption.monospacedDigit())
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
+    }
+
+    @ViewBuilder private func priceEvidence(_ title: String, record: ReceiptRecord, item: ReceiptLine,
+                               basis: Binding<PurchasePriceEvidence.Basis>, unit: Binding<PurchasePriceEvidence.Unit>,
+                               expanded: Binding<Bool>, prefix: String) -> some View {
+        Button {
+            expanded.wrappedValue.toggle()
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                    Text(basis.wrappedValue.title + " · " + unit.wrappedValue.title)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: expanded.wrappedValue ? "chevron.up" : "chevron.down")
+                    .font(.caption.weight(.semibold)).accessibilityHidden(true)
+            }.frame(minHeight: 44).contentShape(Rectangle())
+        }.buttonStyle(.plain)
+            .accessibilityValue(expanded.wrappedValue ? "Expanded" : "Collapsed")
+            .accessibilityIdentifier(prefix + "Details")
+        if expanded.wrappedValue {
+            choices(basis: basis, unit: unit, line: item, prefix: prefix)
+            if record.current.fields.adjustments.contains(where: { $0.kind == .discount }) {
+                Text("Separate discounts are excluded from this comparison.").font(.footnote)
+            }
+        }
+        NavigationLink("Original for " + title.lowercased()) {
+            PurchaseOriginalView(workspace: workspace, receiptID: record.id)
         }
     }
 

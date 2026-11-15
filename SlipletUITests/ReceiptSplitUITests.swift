@@ -9,17 +9,23 @@ import XCTest
         XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 15), .completed)
         openSplit(app); XCTAssertTrue(app.buttons["splitAddPerson"].exists); return app
     }
-    private func reveal(_ element: XCUIElement, app: XCUIApplication) {
-        for _ in 0..<10 {
+    private func reveal(_ element: XCUIElement, app: XCUIApplication, shortScrolls: Bool = false) {
+        let upper = shortScrolls ? 0.39 : 0.30
+        let lower = shortScrolls ? 0.60 : 0.70
+        for _ in 0..<(shortScrolls ? 24 : 10) {
             let editor = app.navigationBars["Item owners"].exists || app.navigationBars["Allocation policy"].exists
             let bottom = app.frame.height - (editor ? 60 : 140)
             if element.exists && element.isHittable && element.frame.minY > 130 && element.frame.midY < bottom { return }
             let above = element.exists && element.frame.midY < 130
-            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.3 : 0.7))
-            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? 0.7 : 0.3))
-            start.press(forDuration: 0.05, thenDragTo: end)
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? upper : lower))
+            let end = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: above ? lower : upper))
+            if shortScrolls {
+                start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.12)
+            } else {
+                start.press(forDuration: 0.05, thenDragTo: end)
+            }
         }
-        XCTAssertTrue(element.isHittable)
+        XCTAssertTrue(element.isHittable, element.debugDescription)
     }
     private func openSplit(_ app: XCUIApplication) {
         let button = app.buttons["splitOpen"]
@@ -212,6 +218,39 @@ import XCTest
         try structureAudit(app, screen: "policy")
         capture(app, "T06-policy-structure-audit"); app.terminate()
     }
+    func testSplitProgressOpensUnassignedItemsAndPendingAdjustment() {
+        let app = launch()
+        addPerson(app, name: "Alex")
+        assign(app, index: 0, names: ["Alex"])
+        let remaining = app.buttons["splitUnassignedProgress"]
+        let adjustment = app.buttons["splitAdjustmentProgress"]
+        reveal(remaining, app: app)
+        XCTAssertEqual(remaining.label, "1 unassigned item")
+        XCTAssertEqual(adjustment.label, "1 adjustment to confirm")
+        capture(app, "Split progress and next actions")
+        remaining.tap()
+        let last = app.buttons["splitItem-1"]
+        reveal(last, app: app)
+        XCTAssertTrue(last.isHittable)
+        XCTAssertFalse(app.buttons["splitItem-0"].exists)
+        last.tap()
+        let owner = app.buttons["splitOwner-Alex"]
+        reveal(owner, app: app); owner.tap()
+        app.navigationBars["Item owners"].buttons.firstMatch.tap()
+        for _ in 0..<4 where !adjustment.isHittable { app.swipeDown() }
+        XCTAssertTrue(adjustment.isHittable)
+        XCTAssertFalse(remaining.exists)
+        adjustment.tap()
+        XCTAssertTrue(app.navigationBars["Allocation policy"].waitForExistence(timeout: 5))
+        let accepted = app.buttons["splitPolicyAccepted"]
+        reveal(accepted, app: app); accepted.tap()
+        app.navigationBars["Allocation policy"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["splitFinalize"].isEnabled)
+        let tax = app.buttons["splitAdjustment-0"]
+        reveal(tax, app: app)
+        XCTAssertTrue(tax.label.contains("Alex") && tax.label.contains("0.63"))
+    }
+
     func testDarkSplitPresentationAndAssignments() {
         let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "split"]
         app.launch(); XCTAssertTrue(app.buttons["splitOpen"].waitForExistence(timeout: 45))
@@ -223,10 +262,29 @@ import XCTest
     }
     func testLargeTextReducedMotionOpaqueSplitControls() {
         let app = launch(extra: ["--t05-large-text", "--t05-reduce-motion", "--t05-opaque", "--t05-contrast"])
-        addPerson(app, name: "Alex")
-        assign(app, index: 0, names: ["Alex"])
-        capture(app, "T06-large-text-reduced-motion")
-        XCTAssertFalse(app.buttons["splitFinalize"].isEnabled); XCTAssertGreaterThanOrEqual(app.buttons["splitSave"].frame.height, 44)
+        app.buttons["splitAddPerson"].tap()
+        let selectUnassigned = app.buttons["splitSelectUnassigned"]
+        reveal(selectUnassigned, app: app); selectUnassigned.tap()
+        app.buttons["splitBatchApply"].tap()
+        let finalize = app.buttons["splitFinalize"]
+        let save = app.buttons["splitSave"]
+        XCTAssertFalse(finalize.exists)
+        XCTAssertGreaterThanOrEqual(save.frame.height, 44)
+
+        let adjustment = app.buttons["splitAdjustment-0"]
+        reveal(adjustment, app: app, shortScrolls: true)
+        XCTAssertLessThan(adjustment.frame.midY, save.frame.minY)
+        capture(app, "Large text split with clear list and single action")
+        adjustment.tap()
+        let accept = app.buttons["splitPolicyAccepted"]
+        reveal(accept, app: app, shortScrolls: true); accept.tap()
+        app.navigationBars["Allocation policy"].buttons.firstMatch.tap()
+        XCTAssertTrue(finalize.waitForExistence(timeout: 5))
+        XCTAssertTrue(finalize.isEnabled)
+        XCTAssertTrue(finalize.isHittable)
+        reveal(save, app: app, shortScrolls: true)
+        XCTAssertLessThan(save.frame.midY, finalize.frame.minY)
+        capture(app, "Large text split with finalization available")
         app.terminate()
     }
 }
@@ -314,7 +372,7 @@ extension ReceiptSplitUITests {
         }
         XCTAssertTrue(empty.isHittable)
         app.buttons["splitBatchCancel"].tap()
-        XCTAssertFalse(app.buttons["splitFinalize"].isEnabled)
+        XCTAssertFalse(app.buttons["splitFinalize"].exists)
         app.terminate()
     }
 }

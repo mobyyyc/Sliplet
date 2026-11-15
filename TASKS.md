@@ -2,7 +2,7 @@
 
 ## Phase 13 · 2026-11-14
 
-The existing wallet, library and lock design was retained after P13-01. P13-02 Capture to Save and P13-03 Read, Correct & Share are complete in Simulator. P13-04 History & Split is next for approval in Main, followed by P13-05 iPhone Walkthrough. [Plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
+The existing wallet, library and lock design was retained after P13-01. P13-02 Capture to Save, P13-03 Read, Correct & Share, and P13-04 History & Split are complete in Simulator. P13-05 iPhone Walkthrough is next for approval in Main. [Plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
 
 ## Phase 5 · 2026-10-16
 

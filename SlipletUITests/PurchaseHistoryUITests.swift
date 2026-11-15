@@ -90,7 +90,24 @@ import XCTest
         let compare = app.buttons["compareUnitPrices"].firstMatch
         reveal(compare, app: app); compare.tap()
         XCTAssertFalse(app.staticTexts["unitPriceResult"].exists)
-        app.buttons["confirmComparisonPair"].tap()
+        let firstOverview = app.descendants(matching: .any)["firstPriceOverview"].firstMatch
+        let secondOverview = app.descendants(matching: .any)["secondPriceOverview"].firstMatch
+        XCTAssertTrue(firstOverview.isHittable)
+        XCTAssertTrue(secondOverview.isHittable)
+        XCTAssertTrue(firstOverview.label.contains("6.17"))
+        XCTAssertTrue(secondOverview.label.contains("6.17"))
+        XCTAssertEqual(firstOverview.frame.minY, secondOverview.frame.minY, accuracy: 5)
+        let overview = XCTAttachment(screenshot: app.screenshot())
+        overview.name = "Unit price comparison overview"; overview.lifetime = .keepAlways; add(overview)
+        let confirm = app.buttons["confirmComparisonPair"]
+        reveal(confirm, app: app); confirm.tap()
+        let details = app.buttons["firstPriceDetails"]
+        reveal(details, app: app)
+        let basis = app.descendants(matching: .any)["firstPriceBasis"].firstMatch
+        XCTAssertFalse(basis.exists)
+        details.tap()
+        XCTAssertTrue(basis.waitForExistence(timeout: 5))
+        details.tap()
         let tax = app.descendants(matching: .any)["priceTaxBasis"].firstMatch
         reveal(tax, app: app); tax.tap()
         app.buttons["Before tax"].firstMatch.tap()
