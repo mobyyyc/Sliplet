@@ -42,70 +42,33 @@ struct ReceiptRereadView: View {
     var body: some View {
         NavigationStack {
             if available {
-                Form {
-                    Section {
-                        ZoomReceiptImage(bytes: image.bytes, boxes: [region], reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "rereadRaster", selection: drawing ? $region : nil)
-                            .frame(height: 300).accessibilityIdentifier("rereadImage")
-                        VStack(alignment: .leading, spacing: 12) {
-                            ReceiptSourceZoomControls(target: zoomTarget, prefix: "reread")
-                            Button(drawing ? "Done selecting" : "Select area") { drawing.toggle() }
-                                .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("rereadSelectArea")
-                        }
-                        Text(drawing ? "Drag a rectangle around the text. Use two fingers to scroll or pinch to zoom." : "The outlined area will be read. Select a smaller area for difficult text.")
-                            .font(.footnote).foregroundStyle(.secondary)
-                        DisclosureGroup("Adjust area precisely") {
-                            areaSlider("Left", key: \.x)
-                            areaSlider("Bottom", key: \.y)
-                            areaSlider("Width", key: \.width)
-                            areaSlider("Height", key: \.height)
-                        }.accessibilityIdentifier("rereadAreaAdjustments")
-                        Button { read() } label: {
-                            HStack { if busy { ProgressView() }; Label(busy ? "Reading…" : "Read selected area", systemImage: "text.viewfinder") }
-                        }.buttonStyle(ReceiptProminentStyle()).disabled(busy).accessibilityIdentifier("rereadRun")
-                    } header: { Text("Original comparison") }
-                    Section {
-                        Picker("Field to update", selection: $field) {
-                            ForEach(fields, id: \.self) { Text($0.title).tag($0) }
-                        }.accessibilityIdentifier("rereadField")
-                        LabeledContent("Current value", value: current.isEmpty ? "Missing" : current)
-                        if observations.isEmpty && !busy { Text("Read an area to see possible values. Nothing changes automatically.").font(.footnote) }
-                        ForEach(choices) { choice in
-                            Button { chosen = choice.id } label: {
-                                HStack(alignment: .top) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(choice.value).foregroundStyle(.primary)
-                                        Text("Printed token: “" + choice.literal + "”").font(.subheadline.monospaced()).foregroundStyle(.secondary)
-                                        if let source = observations.first(where: { $0.id == choice.observationID }) {
-                                            Text("Source row \((observations.firstIndex(where: { $0.id == source.id }) ?? 0) + 1): " + source.text)
-                                                .font(.caption).foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer()
-                                    Image(systemName: chosen == choice.id ? "checkmark.circle.fill" : "circle")
-                                        .symbolRenderingMode(.monochrome).foregroundStyle(.primary)
-                                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                            }.buttonStyle(.plain).accessibilityIdentifier("rereadChoice-\(choice.id)")
-                                .accessibilityAddTraits(chosen == choice.id ? .isSelected : [])
-                        }
-                        if !observations.isEmpty && choices.isEmpty {
-                            Text("No unambiguous value for this field. Adjust the area or cancel and type the value from the photo.").font(.footnote)
-                        }
-                        if !observations.isEmpty {
-                            DisclosureGroup("All text from this area") {
-                                ForEach(observations) { Text($0.text).textSelection(.enabled) }
+                ScrollViewReader { proxy in
+                    rereadForm
+                        .onChange(of: busy) { _, reading in
+                            if !reading && (!observations.isEmpty || error != nil) {
+                                proxy.scrollTo("rereadResults", anchor: .top)
                             }
                         }
-                        if let error { Label(error, systemImage: "exclamationmark.circle").foregroundStyle(.secondary) }
-                    } header: { Text("Choose a reading") }
-                    footer: { Text("Check the photo before using a value. The focused editor still needs Apply; this does not mark the whole receipt reviewed.") }
-                }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
-                    .navigationTitle("Reread area").navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { stop(); dismiss() }.accessibilityIdentifier("rereadCancel") }
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Use reading") { accept() }.disabled(busy || chosen == nil).accessibilityIdentifier("rereadUse")
-                        }
+                }
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    Button(action: read) {
+                        HStack {
+                            if busy { ProgressView() }
+                            Label(busy ? "Reading…" : "Read selected area", systemImage: "text.viewfinder")
+                        }.frame(maxWidth: .infinity)
+                    }.buttonStyle(ReceiptProminentStyle())
+                        .disabled(busy).accessibilityIdentifier("rereadRun")
+                        .modifier(ReceiptActionBarLayout())
+                }
+                .navigationTitle("Reread area").navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { stop(); dismiss() }.accessibilityIdentifier("rereadCancel")
                     }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Use reading") { accept() }.disabled(busy || chosen == nil).accessibilityIdentifier("rereadUse")
+                    }
+                }
             } else { ContentUnavailableView("Receipt locked", systemImage: "lock") }
         }.tint(.primary).accessibilityIdentifier("rereadScreen")
             .onChange(of: region) { _, _ in stop(); observations = []; chosen = nil; error = nil }
@@ -114,6 +77,69 @@ struct ReceiptRereadView: View {
             .onChange(of: workspace.privacyCovered) { _, covered in if covered { stop(); dismiss() } }
             .onChange(of: workspace.sessionID) { _, _ in stop(); dismiss() }
             .onDisappear { stop() }
+    }
+
+    private var rereadForm: some View {
+        Form {
+            Section {
+                Picker("Field to update", selection: $field) {
+                    ForEach(fields, id: \.self) { Text($0.title).tag($0) }
+                }.accessibilityIdentifier("rereadField")
+                LabeledContent("Current value", value: current.isEmpty ? "Missing" : current)
+                    .accessibilityIdentifier("rereadCurrentValue")
+            } header: { Text("Reading target") }
+            Section {
+                ZoomReceiptImage(bytes: image.bytes, boxes: [region], reduceMotion: reduceMotion, zoomTarget: zoomTarget, rasterID: "rereadRaster", selection: drawing ? $region : nil)
+                    .frame(height: 244).accessibilityIdentifier("rereadImage")
+                VStack(alignment: .leading, spacing: 12) {
+                    ReceiptSourceZoomControls(target: zoomTarget, prefix: "reread")
+                    Button(drawing ? "Done selecting" : "Select area") { drawing.toggle() }
+                        .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("rereadSelectArea")
+                }
+                Text(drawing ? "Drag a rectangle around the text. Use two fingers to scroll or pinch to zoom." : "The outlined area will be read. Select a smaller area for difficult text.")
+                    .font(.footnote).foregroundStyle(.secondary)
+                DisclosureGroup("Adjust area precisely") {
+                    areaSlider("Left", key: \.x)
+                    areaSlider("Bottom", key: \.y)
+                    areaSlider("Width", key: \.width)
+                    areaSlider("Height", key: \.height)
+                }.accessibilityIdentifier("rereadAreaAdjustments")
+            } header: { Text("Original comparison") }
+            Section {
+                ForEach(choices) { choice in
+                    Button { chosen = choice.id } label: {
+                        HStack(alignment: .top) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(choice.value).font(.headline).foregroundStyle(.primary)
+                                Text("Printed: “" + choice.literal + "”").font(.subheadline.monospaced()).foregroundStyle(.secondary)
+                                if let source = observations.first(where: { $0.id == choice.observationID }) {
+                                    Text("Source row \((observations.firstIndex(where: { $0.id == source.id }) ?? 0) + 1): " + source.text)
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer()
+                            Image(systemName: chosen == choice.id ? "checkmark.circle.fill" : "circle")
+                                .symbolRenderingMode(.monochrome).foregroundStyle(.primary)
+                        }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("rereadChoice-\(choice.id)")
+                        .accessibilityAddTraits(chosen == choice.id ? .isSelected : [])
+                }
+                if !observations.isEmpty && choices.isEmpty {
+                    Text("No unambiguous value for this field. Adjust the area or cancel and type the value from the photo.").font(.footnote)
+                }
+                if !observations.isEmpty {
+                    DisclosureGroup("All text from this area") {
+                        ForEach(observations) { Text($0.text).textSelection(.enabled) }
+                    }
+                }
+                if let error { Label(error, systemImage: "exclamationmark.circle").foregroundStyle(.secondary) }
+            } header: { if !observations.isEmpty || error != nil { Text("Reading results").id("rereadResults") } }
+            footer: {
+                Text("Use reading adds the selected value to the editor. Tap Apply there to keep it.")
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
     }
     private func areaSlider(_ title: String, key: KeyPath<ReceiptOCRBox, Double>) -> some View {
         VStack(alignment: .leading) {

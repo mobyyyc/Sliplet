@@ -29,6 +29,7 @@ import UIKit
         let extraction = try ReceiptParser.extraction(OCRResult(lines: observations, revision: 3))
         var draft = ReceiptReviewDraft(fields: extraction.fields)
         if !["correction-difficult", "correction-source", "correction-summaries"].contains(mode), !draft.lines.isEmpty { draft.lines[draft.lines.count - 1].amount = "" }
+        if mode == "correction-reread-unresolved-total" { draft.total = "" }
         return (data, extraction, draft)
     }
 }

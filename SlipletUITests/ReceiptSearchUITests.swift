@@ -54,6 +54,11 @@ import Vision
         let first = matches(app).firstMatch
         reveal(first, app: app); first.tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+        let share = app.buttons["openReceiptShare"]
+        XCTAssertTrue(share.isHittable)
+        share.tap()
+        XCTAssertTrue(app.images["receiptShareImage"].waitForExistence(timeout: 10))
+        app.buttons["Close"].tap()
         let original = app.buttons["searchOriginal"]
         XCTAssertTrue(original.waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["walletHeading"].exists, "Search detail must not mount the home wallet")

@@ -152,6 +152,17 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         d.lines[1].amount = "1.00"; XCTAssertFalse(d.canFinalize)
         d.lines[0].quantity = "-1"; XCTAssertFalse(d.canSaveDraft)
     }
+    func testFirstReviewBlockerPointsToMissingReceiptField() {
+        var input = draft()
+        input.date = ""
+        input.currency = ""
+        XCTAssertEqual(input.reconciliation.firstTarget, .date)
+        input.date = draft().date
+        XCTAssertEqual(input.reconciliation.firstTarget, .currency)
+        input.currency = draft().currency
+        XCTAssertNil(input.reconciliation.firstTarget)
+    }
+
     func testCurrencyUnknownEditableDraftRoundTripAndAtomicCorrection() async throws {
         let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let store = try ReceiptStore(directory: dir, keyProvider: Key())

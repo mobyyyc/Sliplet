@@ -10,6 +10,8 @@ import XCTest
         if large { app.launchArguments.append("--t05-large-text") }
         app.launch()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
+        let suggestions = app.buttons["reviewSuggestions"]
+        if suggestions.exists { suggestions.tap() }
         return app
     }
     @discardableResult private func reveal(_ element: XCUIElement, app: XCUIApplication) -> Int {

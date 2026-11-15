@@ -179,7 +179,7 @@ struct ReceiptFocusedCorrectionView: View {
                         if detailLine != nil {
                             Text("Saving a changed line marks this receipt as a draft for review.").font(.footnote)
                             if let message = workspace.errorMessage { Text(message).font(.footnote) }
-                        } else { Text("Applying keeps only your explicit edits. This check does not confirm the entire receipt; Finish still requires full original review and matching totals.").font(.footnote) }
+                        } else { Text("Apply keeps these edits in the receipt draft. Fill in the required fields and match the printed total before finishing.").font(.footnote) }
                     }
                 }
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)

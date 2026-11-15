@@ -54,7 +54,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
     let zoomTarget: UUID
     let rasterID: String
     var selection: Binding<ReceiptOCRBox>? = nil
-    var isSharePreview = false
+    var sharePreviewMode: ReceiptSharePreviewMode? = nil
     func makeCoordinator() -> Coordinator { Coordinator() }
     func makeUIView(context: Context) -> UIScrollView {
         let view = ReceiptZoomScrollView()
@@ -71,9 +71,9 @@ struct ZoomReceiptImage: UIViewRepresentable {
         view.addGestureRecognizer(draw); coordinator.selectionGesture = draw
         let imageView = coordinator.imageView
         imageView.contentMode = .scaleAspectFit
-        imageView.accessibilityLabel = isSharePreview ? "Receipt image preview" : "Original receipt image"
+        imageView.accessibilityLabel = sharePreviewMode != nil ? "Receipt image preview" : "Original receipt image"
         imageView.accessibilityIdentifier = rasterID
-        imageView.accessibilityHint = isSharePreview ? "Pinch, double tap, or use the zoom buttons."
+        imageView.accessibilityHint = sharePreviewMode != nil ? "Pinch, double tap, or use the zoom buttons."
             : "Pinch, double tap, or use the zoom buttons. Printed text provides an OCR alternative."
         view.addSubview(imageView)
         coordinator.spinner.hidesWhenStopped = true
@@ -99,11 +99,13 @@ struct ZoomReceiptImage: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: coordinator, action: #selector(Coordinator.doubleTap(_:)))
         tap.numberOfTapsRequired = 2; view.addGestureRecognizer(tap)
         coordinator.reduceMotion = reduceMotion; coordinator.zoomTarget = zoomTarget
+        coordinator.sharePreviewMode = sharePreviewMode
         coordinator.observeZoom(); coordinator.update(bytes: bytes, boxes: boxes)
         return view
     }
     func updateUIView(_ view: UIScrollView, context: Context) {
         context.coordinator.reduceMotion = reduceMotion; context.coordinator.zoomTarget = zoomTarget
+        context.coordinator.setSharePreviewMode(sharePreviewMode)
         context.coordinator.selection = selection
         context.coordinator.selectionGesture?.isEnabled = selection != nil
         view.panGestureRecognizer.minimumNumberOfTouches = selection == nil ? 1 : 2
@@ -124,6 +126,7 @@ struct ZoomReceiptImage: UIViewRepresentable {
         var reduceMotion = false
         var boxes: [ReceiptOCRBox] = []
         var zoomTarget = UUID()
+        var sharePreviewMode: ReceiptSharePreviewMode?
         var selection: Binding<ReceiptOCRBox>?
         weak var selectionGesture: UIPanGestureRecognizer?
         private var selectionStart: CGPoint?
@@ -193,17 +196,29 @@ struct ZoomReceiptImage: UIViewRepresentable {
                 imageView.addSubview(region)
             }
         }
+        func setSharePreviewMode(_ mode: ReceiptSharePreviewMode?) {
+            guard mode != sharePreviewMode else { return }
+            sharePreviewMode = mode
+            fitted = false
+            viewport = .zero
+        }
         func fit(_ view: UIScrollView) {
             guard imageView.image != nil, view.bounds.width > 0, view.bounds.height > 0, viewport != view.bounds.size else { return }
             let initial = !fitted
             let relativeZoom = fitted ? view.zoomScale / max(0.001, view.minimumZoomScale) : 1
             let position = view.convert(CGPoint(x: view.bounds.midX, y: view.bounds.midY), to: imageView)
             viewport = view.bounds.size; fitted = true
-            let fit = view.bounds.width / max(1, imageView.bounds.width)
-            view.minimumZoomScale = fit; view.maximumZoomScale = max(fit * 8, 2)
+            let widthScale = view.bounds.width / max(1, imageView.bounds.width)
+            let heightScale = view.bounds.height / max(1, imageView.bounds.height)
+            let fit = sharePreviewMode == .fit ? min(widthScale, heightScale) : widthScale
+            view.minimumZoomScale = fit; view.maximumZoomScale = max(widthScale * 8, 2)
             view.setZoomScale(min(view.maximumZoomScale, fit * relativeZoom), animated: false)
-            if initial { focus() }
-            else {
+            if initial {
+                if sharePreviewMode != nil {
+                    centerSharePreview(view)
+                    view.setContentOffset(CGPoint(x: -view.contentInset.left, y: -view.contentInset.top), animated: false)
+                } else { focus() }
+            } else {
                 view.setContentOffset(CGPoint(x: min(max(0, position.x * view.zoomScale - view.bounds.width / 2), max(0, view.contentSize.width - view.bounds.width)),
                                               y: min(max(0, position.y * view.zoomScale - view.bounds.height / 2), max(0, view.contentSize.height - view.bounds.height))), animated: false)
             }
@@ -215,11 +230,21 @@ struct ZoomReceiptImage: UIViewRepresentable {
             view.zoom(to: region, animated: false); describePosition(view)
         }
         func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
-        func scrollViewDidZoom(_ scrollView: UIScrollView) { describePosition(scrollView) }
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            centerSharePreview(scrollView)
+            describePosition(scrollView)
+        }
+        private func centerSharePreview(_ view: UIScrollView) {
+            guard sharePreviewMode != nil else { return }
+            let horizontal = max(0, (view.bounds.width - imageView.frame.width) / 2)
+            let vertical = max(0, (view.bounds.height - imageView.frame.height) / 2)
+            let inset = UIEdgeInsets(top: vertical, left: horizontal, bottom: vertical, right: horizontal)
+            if inset != view.contentInset { view.contentInset = inset }
+        }
         func scrollViewDidScroll(_ scrollView: UIScrollView) { describePosition(scrollView) }
         func describePosition(_ view: UIScrollView) {
             let range = max(1, view.contentSize.height - view.bounds.height)
-            let position = Int(min(100, max(0, view.contentOffset.y / range * 100)))
+            let position = Int(min(100, max(0, (view.contentOffset.y / range * 100).rounded())))
             imageView.accessibilityValue = "Zoom \(Int(view.zoomScale * 100)) percent, image position \(position) percent"
             let visible = view.convert(view.bounds, to: imageView).intersection(imageView.bounds)
             if !visible.isNull && !visible.isEmpty { imageView.accessibilityFrame = UIAccessibility.convertToScreenCoordinates(visible, in: imageView) }
@@ -291,12 +316,15 @@ enum ReceiptDisplayImage {
 struct ReceiptSourceZoomControls: View {
     let target: UUID
     let prefix: String
+    var showsReset = true
     private func signal(_ name: Notification.Name) { NotificationCenter.default.post(name: name, object: nil, userInfo: ["target": target]) }
     var body: some View {
         HStack {
             Button("Zoom in", systemImage: "plus.magnifyingglass") { signal(.receiptZoomIn) }.accessibilityIdentifier(prefix + "ZoomIn")
             Button("Zoom out", systemImage: "minus.magnifyingglass") { signal(.receiptZoomOut) }.accessibilityIdentifier(prefix + "ZoomOut")
-            Button("Reset zoom", systemImage: "arrow.down.right.and.arrow.up.left") { signal(.receiptZoomReset) }.accessibilityIdentifier(prefix + "ZoomReset")
+            if showsReset {
+                Button("Reset zoom", systemImage: "arrow.down.right.and.arrow.up.left") { signal(.receiptZoomReset) }.accessibilityIdentifier(prefix + "ZoomReset")
+            }
         }.labelStyle(.iconOnly).buttonStyle(ReceiptSecondaryStyle())
     }
 }

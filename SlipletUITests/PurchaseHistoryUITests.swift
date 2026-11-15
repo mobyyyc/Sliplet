@@ -46,6 +46,12 @@ import XCTest
         XCTAssertLessThan(highlighted.frame.midY, app.frame.maxY - 60)
         let receipt = XCTAttachment(screenshot: app.screenshot())
         receipt.name = "Highlighted receipt"; receipt.lifetime = .keepAlways; add(receipt)
+        let share = app.buttons["historyOpenReceiptShare"]
+        XCTAssertTrue(share.isHittable)
+        share.tap()
+        XCTAssertTrue(app.images["receiptShareImage"].waitForExistence(timeout: 10))
+        app.buttons["Close"].tap()
+        XCTAssertTrue(highlighted.waitForExistence(timeout: 5))
         app.buttons["historyReceiptOriginal"].tap()
         XCTAssertTrue(app.images["purchaseOriginalRaster"].waitForExistence(timeout: 10))
         app.navigationBars.buttons.firstMatch.tap()

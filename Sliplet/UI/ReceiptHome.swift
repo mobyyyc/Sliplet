@@ -106,11 +106,14 @@ struct ReceiptHome: View {
                         }
                     }
                     if workspace.flow == .detail {
+                        if workspace.selected != nil {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                ReceiptShareButton { sharingReceipt = true }.disabled(workspace.saving)
+                            }
+                        }
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
                                 if let record = workspace.selected {
-                                    Button("Share receipt image", systemImage: "square.and.arrow.up") { sharingReceipt = true }
-                                        .accessibilityIdentifier("openReceiptShare")
                                     Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
                                     Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
                                 }

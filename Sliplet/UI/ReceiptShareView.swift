@@ -111,15 +111,35 @@ struct ReceiptShareImage: Transferable {
     }
 }
 
+struct ReceiptShareButton: View {
+    var identifier = "openReceiptShare"
+    let action: () -> Void
+
+    var body: some View {
+        Button("Share receipt image", systemImage: "square.and.arrow.up", action: action)
+            .labelStyle(.iconOnly)
+            .accessibilityIdentifier(identifier)
+    }
+}
+
+enum ReceiptSharePreviewMode: String, CaseIterable, Identifiable {
+    case fit = "Fit"
+    case fullWidth = "Full width"
+
+    var id: Self { self }
+}
+
 struct ReceiptShareView: View {
     @Bindable var workspace: ReceiptWorkspace
     let receiptID: UUID
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var preview: Image?
     @State private var export: ReceiptShareImage?
     @State private var failureMessage: String?
     @State private var zoomTarget = UUID()
+    @State private var mode: ReceiptSharePreviewMode = .fullWidth
 
     private var record: ReceiptRecord? { workspace.receipts.first { $0.id == receiptID } }
     private var available: Bool { workspace.active && !workspace.privacyCovered }
@@ -132,8 +152,17 @@ struct ReceiptShareView: View {
                 } else if let export {
                     VStack(spacing: 12) {
                         ZoomReceiptImage(bytes: export.bytes, boxes: [], reduceMotion: true,
-                                         zoomTarget: zoomTarget, rasterID: "receiptShareImage", isSharePreview: true)
-                        ReceiptSourceZoomControls(target: zoomTarget, prefix: "receiptShare")
+                                         zoomTarget: zoomTarget, rasterID: "receiptShareImage", sharePreviewMode: mode)
+                        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8))
+                            : AnyLayout(HStackLayout(spacing: 12))
+                        layout {
+                            if typeSize.isAccessibilitySize {
+                                previewModePicker.pickerStyle(.menu)
+                            } else {
+                                previewModePicker.pickerStyle(.segmented)
+                            }
+                            ReceiptSourceZoomControls(target: zoomTarget, prefix: "receiptShare", showsReset: false)
+                        }
                     }
                     .padding(12)
                 } else if let failureMessage {
@@ -154,6 +183,7 @@ struct ReceiptShareView: View {
                         ShareLink(item: export, preview: SharePreview("Sliplet Receipt", image: preview)) {
                             Label("Share image", systemImage: "square.and.arrow.up")
                         }
+                        .labelStyle(.iconOnly)
                         .accessibilityIdentifier("shareReceiptImage")
                     }
                 }
@@ -162,6 +192,7 @@ struct ReceiptShareView: View {
                 preview = nil
                 export = nil
                 failureMessage = nil
+                mode = .fullWidth
                 guard available else { return }
                 guard let record else { failureMessage = "This receipt is no longer available."; return }
                 do {
@@ -185,4 +216,13 @@ struct ReceiptShareView: View {
             }
         }
     }
+
+    private var previewModePicker: some View {
+        Picker("Preview size", selection: $mode) {
+            ForEach(ReceiptSharePreviewMode.allCases) { setting in
+                Text(setting.rawValue).tag(setting)
+            }
+        }.accessibilityIdentifier("receiptSharePreviewMode")
+    }
+
 }

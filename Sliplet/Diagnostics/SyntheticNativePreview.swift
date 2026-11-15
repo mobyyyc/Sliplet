@@ -57,7 +57,9 @@ import CryptoKit
         let date = String(format: "2026-10-%02d", 7 - index % 3)
         let historyScrollFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--history-long-receipt")
         let names: [String]
-        if historyScrollFixture && index == 1 {
+        if mode == "long", index == 1, ProcessInfo.processInfo.arguments.contains("--long-share-fixture") {
+            names = (1...48).map { "TEST GROCERY \($0)" }
+        } else if historyScrollFixture && index == 1 {
             names = (1...18).map { "TEST GROCERY \($0)" } + ["TEST ITEM"]
         } else if index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet" {
             names = ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"]

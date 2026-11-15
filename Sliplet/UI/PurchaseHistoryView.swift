@@ -185,8 +185,9 @@ private struct PurchaseReceiptView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         NavigationLink("Original") { PurchaseOriginalView(workspace: workspace, receiptID: record.id) }
                             .accessibilityIdentifier("historyReceiptOriginal")
-                        Button("Share receipt image", systemImage: "square.and.arrow.up") { sharingReceipt = true }
-                            .accessibilityIdentifier("openReceiptShare")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        ReceiptShareButton(identifier: "historyOpenReceiptShare") { sharingReceipt = true }
                     }
                 }
                 .sheet(isPresented: $sharingReceipt) {

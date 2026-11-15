@@ -104,6 +104,7 @@ import XCTest
         app.launchArguments = ["--t05-synthetic-preview", "correction-normal", "--t05-light"]
         app.launch()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
+        app.buttons["reviewSuggestions"].tap()
         let check = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'reviewCheck-line-'")).firstMatch
         reveal(check, in: app); check.tap()
         reveal(app.buttons["focusedReread"], in: app); app.buttons["focusedReread"].tap()

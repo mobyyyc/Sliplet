@@ -7,6 +7,7 @@ struct ReceiptReviewView: View {
     @State private var selectingDate = false
     @State private var pendingDate = Date()
     @State private var focusedCheck: ReceiptReviewGuidance?
+    @State private var showSuggestions = false
     @State private var allChecks = false
     @State private var showChecked = false
     private var reconciliationResult: ReceiptReconciliation { workspace.draft.reconciliation }
@@ -25,6 +26,8 @@ struct ReceiptReviewView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if reconciliationResult.firstTarget != nil {
                         blocker { target in pendingTarget = target; openedEditor = true }
+                            .padding(12)
+                            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
                     }
                     Button("Edit receipt fields", systemImage: "pencil") { openedEditor = true }
                         .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("editReviewFields")
@@ -32,7 +35,7 @@ struct ReceiptReviewView: View {
                         guard let line = workspace.draft.lines.first(where: { $0.id == id }) else { return }
                         focusedCheck = .forLine(line)
                     })
-                    ForEach(checks.filter { !$0.isChecked(in: workspace.draft) }) { check in checkButton(check) }
+                    suggestedChecks
                     if let error = workspace.errorMessage {
                         Label(error, systemImage: "exclamationmark.triangle").accessibilityIdentifier("saveError")
                     }
@@ -58,22 +61,9 @@ struct ReceiptReviewView: View {
                         }
                     }
                 }
-                Section {
-                    let pending = checks.filter { !$0.isChecked(in: workspace.draft) }
-                    ForEach(Array(pending.prefix(allChecks ? pending.count : 3))) { check in
-                        checkButton(check)
-                    }
-                    if pending.count > 3 {
-                        Button(allChecks ? "Show fewer checks" : "Show all \(pending.count) checks") { allChecks.toggle() }
-                            .frame(minHeight: 44).accessibilityIdentifier("showAllChecks")
-                    }
-                    let checked = checks.filter { $0.isChecked(in: workspace.draft) }
-                    if !checked.isEmpty {
-                        DisclosureGroup("\(checked.count) checked", isExpanded: $showChecked) {
-                            ForEach(checked) { check in checkButton(check) }
-                        }.accessibilityIdentifier("checkedGuidance")
-                    }
-                } header: { if !checks.isEmpty { Text("Suggested checks") } }
+                if !checks.isEmpty {
+                    Section { suggestedChecks }
+                }
                 Section {
                     LabeledContent("Merchant") { TextField("Required", text: field(\.merchant), axis: typeSize > .large ? .vertical : .horizontal).multilineTextAlignment(.trailing).focused(editing, equals: "merchant").accessibilityIdentifier("merchantField") }
                     .id(ReceiptReviewSection.receipt)
@@ -87,11 +77,11 @@ struct ReceiptReviewView: View {
                                 Text(date.formatted(date: .abbreviated, time: .omitted))
                             } else { Label("Choose date", systemImage: "calendar") }
                         }
-                    }.foregroundStyle(.primary).accessibilityIdentifier("dateField")
+                    }.foregroundStyle(.primary).accessibilityIdentifier("dateField").id(ReceiptReviewSection.date)
                     Picker("Currency", selection: field(\.currency)) {
                         Text("Choose currency").tag("")
                         ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
-                    }.accessibilityIdentifier("currencyField")
+                    }.accessibilityIdentifier("currencyField").id(ReceiptReviewSection.currency)
                     if let context = workspace.draft.currencyContextMessage {
                         Text(context).font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("currencyContext")
                     }
@@ -190,18 +180,59 @@ struct ReceiptReviewView: View {
         }
     }
 
+    @ViewBuilder private var suggestedChecks: some View {
+        let pending = checks.filter { !$0.isChecked(in: workspace.draft) }
+        let checked = checks.filter { $0.isChecked(in: workspace.draft) }
+        if !pending.isEmpty || !checked.isEmpty {
+            Button { showSuggestions.toggle() } label: {
+                HStack {
+                    Text("Suggested checks")
+                    Spacer(minLength: 8)
+                    Text("\(pending.count)").monospacedDigit()
+                    Image(systemName: showSuggestions ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold)).accessibilityHidden(true)
+                }.frame(minHeight: 44).contentShape(Rectangle())
+                    .foregroundStyle(.secondary)
+            }.buttonStyle(.plain)
+                .accessibilityIdentifier("reviewSuggestions")
+                .accessibilityValue(showSuggestions ? "Expanded" : "Collapsed")
+            if showSuggestions {
+                ForEach(Array(pending.prefix(allChecks ? pending.count : 3))) { check in
+                    checkButton(check)
+                }
+                if pending.count > 3 {
+                    Button(allChecks ? "Show fewer checks" : "Show all \(pending.count) checks") { allChecks.toggle() }
+                        .frame(minHeight: 44).accessibilityIdentifier("showAllChecks")
+                }
+                if !checked.isEmpty {
+                    DisclosureGroup("\(checked.count) checked", isExpanded: $showChecked) {
+                        ForEach(checked) { check in checkButton(check) }
+                    }.accessibilityIdentifier("checkedGuidance")
+                }
+            }
+        }
+    }
+
     @ViewBuilder private func blocker(open: @escaping (ReceiptReviewSection) -> Void) -> some View {
         if let target = reconciliationResult.firstTarget, let message = reconciliationResult.issues.first {
             Button { open(target) } label: {
-                Label {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(.orange).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Before finishing").font(.subheadline.weight(.semibold))
-                        Text(message).font(.footnote)
+                        Text("Required to finish").font(.subheadline.weight(.semibold))
+                        Text(message).font(.footnote).foregroundStyle(.secondary)
                     }
-                } icon: {
-                    Image(systemName: "exclamationmark.circle")
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
                 }
-            }.accessibilityIdentifier("reviewBlocker")
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("reviewBlocker")
+            .accessibilityHint("Jumps to the field that needs attention")
         }
     }
 

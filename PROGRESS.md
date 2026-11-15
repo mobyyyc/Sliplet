@@ -1,5 +1,9 @@
 # Progress
 
+## P13-03 complete in Simulator · 2026-11-14
+
+Receipt sharing is in the toolbar across Wallet, Search and Purchase History. Review prioritizes required corrections, and region reread starts with its target and current value. Fit and Full width show the same export at different preview scales. Twelve distinct UI cases and three native cases passed across focused runs. The system share sheet saved a 48-line opaque PNG in local Files. P13-04 is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
+
 ## P13-02 complete in Simulator · 2026-11-14
 
 Landscape photo preparation now uses a side control panel, Gemini setup lives in the reading choice, and recovery prioritizes retry or offline reading based on the failure. Twelve focused Simulator tests passed and three cases passed again after the final layout adjustment. The iPhone walkthrough remains pending. P13-03 is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).

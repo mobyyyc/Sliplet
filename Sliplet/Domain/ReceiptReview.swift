@@ -122,8 +122,8 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
         }
         let f = fields
         if f.merchant == nil { issue("Merchant is missing.", .receipt) }
-        if f.purchaseDate == nil { issue("Choose the printed purchase date.", .receipt) }
-        if f.currency == nil { issue("Choose the currency printed on the receipt, or verify it with the store.", .receipt) }
+        if f.purchaseDate == nil { issue("Choose the printed purchase date.", .date) }
+        if f.currency == nil { issue("Choose the currency printed on the receipt, or verify it with the store.", .currency) }
         if f.items.isEmpty { issue("Add the missing purchases.", .items) }
         if let line = lines.first(where: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
             issue("Each line needs a description.", .line(line.id))
@@ -186,7 +186,7 @@ struct ReceiptReviewDraft: Codable, Equatable, Sendable {
 }
 
 enum ReceiptReviewSection: Hashable, Sendable {
-    case receipt, items, line(UUID), subtotal, total
+    case receipt, date, currency, items, line(UUID), subtotal, total
 }
 
 struct ReceiptReconciliation: Equatable, Sendable {
