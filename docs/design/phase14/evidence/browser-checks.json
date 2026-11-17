@@ -95,57 +95,57 @@
       "count": 5,
       "variant": "sections",
       "maxMountedReceipts": 5,
-      "paintP95Ms": 0.3999999761581421,
-      "layoutP95Ms": 5.100000023841858
+      "paintP95Ms": 0.40000009536743164,
+      "layoutP95Ms": 5.300000071525574
     },
     {
       "count": 5,
       "variant": "continuous",
       "maxMountedReceipts": 5,
-      "paintP95Ms": 0.3999999761581421,
-      "layoutP95Ms": 1
-    },
-    {
-      "count": 50,
-      "variant": "sections",
-      "maxMountedReceipts": 13,
-      "paintP95Ms": 0.6999999284744263,
+      "paintP95Ms": 0.2999999523162842,
       "layoutP95Ms": 1.100000023841858
     },
     {
       "count": 50,
-      "variant": "continuous",
-      "maxMountedReceipts": 13,
-      "paintP95Ms": 0.7000000476837158,
-      "layoutP95Ms": 1.5
-    },
-    {
-      "count": 200,
       "variant": "sections",
-      "maxMountedReceipts": 13,
-      "paintP95Ms": 0.6999999284744263,
-      "layoutP95Ms": 1.100000023841858
-    },
-    {
-      "count": 200,
-      "variant": "continuous",
       "maxMountedReceipts": 13,
       "paintP95Ms": 0.7000000476837158,
       "layoutP95Ms": 1.1999999284744263
     },
     {
-      "count": 1000,
+      "count": 50,
+      "variant": "continuous",
+      "maxMountedReceipts": 13,
+      "paintP95Ms": 0.7999999523162842,
+      "layoutP95Ms": 3.299999952316284
+    },
+    {
+      "count": 200,
       "variant": "sections",
+      "maxMountedReceipts": 13,
+      "paintP95Ms": 0.7000000476837158,
+      "layoutP95Ms": 1.399999976158142
+    },
+    {
+      "count": 200,
+      "variant": "continuous",
       "maxMountedReceipts": 13,
       "paintP95Ms": 0.6000000238418579,
       "layoutP95Ms": 1.2000000476837158
     },
     {
       "count": 1000,
+      "variant": "sections",
+      "maxMountedReceipts": 13,
+      "paintP95Ms": 0.7000000476837158,
+      "layoutP95Ms": 1.100000023841858
+    },
+    {
+      "count": 1000,
       "variant": "continuous",
       "maxMountedReceipts": 13,
-      "paintP95Ms": 0.6000000238418579,
-      "layoutP95Ms": 1.2000000476837158
+      "paintP95Ms": 0.7000000476837158,
+      "layoutP95Ms": 1.7000000476837158
     }
   ],
   "runtimeErrors": []

@@ -4,9 +4,16 @@ import UIKit
 
 /// Explicit fictional search previews; called only within the existing isolated preview store.
 @MainActor enum SyntheticSearchPreview {
-    static func fixture(_ index: Int) -> (Data, ReceiptExtraction, ReceiptReviewDraft) {
+    static func fixture(_ index: Int, organized: Bool = false) -> (Data, ReceiptExtraction, ReceiptReviewDraft) {
         let merchant = ["FICTIONAL CORNER MART", "FICTIONAL GROVE", "FICTIONAL HARBOR"][index % 3]
-        let date = index % 3 == 2 ? "" : index % 3 == 1 ? "2026-09-14" : "2026-10-08"
+        let date: String
+        if organized {
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+            let base = calendar.date(from: DateComponents(year: 2026, month: 11, day: 20))!
+            let value = calendar.date(byAdding: .month, value: -(index / 10), to: base)!
+            let parts = calendar.dateComponents([.year, .month, .day], from: value)
+            date = index % 37 == 36 ? "" : String(format: "%04d-%02d-%02d", parts.year!, parts.month!, parts.day! - index % 10)
+        } else { date = index % 3 == 2 ? "" : index % 3 == 1 ? "2026-09-14" : "2026-10-08" }
         let content = [merchant, date, "ORG MLK 2% OLD-123456 1.23", "CREME OCR 2.00", "REMOVED APPLES 0.99", "UNPARSED FENNEL 9.99", "FICTIONAL SEARCH TEST — NOT A PURCHASE"]
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let bytes = UIGraphicsImageRenderer(size: CGSize(width: 800, height: 700), format: format).pngData { _ in

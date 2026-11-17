@@ -1,0 +1,22 @@
+[
+  {
+    "mountedAfterJump" : 5,
+    "mountedAtInitialPosition" : 5,
+    "receipts" : 5
+  },
+  {
+    "mountedAfterJump" : 16,
+    "mountedAtInitialPosition" : 11,
+    "receipts" : 50
+  },
+  {
+    "mountedAfterJump" : 15,
+    "mountedAtInitialPosition" : 15,
+    "receipts" : 200
+  },
+  {
+    "mountedAfterJump" : 15,
+    "mountedAtInitialPosition" : 16,
+    "receipts" : 1000
+  }
+]

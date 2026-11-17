@@ -50,17 +50,15 @@ h1 { font-size: 32px; font-weight: 600; letter-spacing: -1.3px; margin: 0; }
 .symbol.chart { display: flex; align-items: end; gap: 3px; }
 .symbol.chart::before, .symbol.chart::after { content: ""; width: 5px; border-radius: 2px; background: currentColor; height: 12px; }
 .symbol.chart::after { height: 19px; }
-.view-switch { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; background: color-mix(in srgb, var(--secondary) 12%, transparent); border-radius: 24px; height: 40px; }
-.view-switch button { border: none; border-radius: 20px; background: transparent; color: var(--secondary); font-size: 14px; font-weight: 550; }
-.view-switch button[aria-pressed=true] { background: var(--surface); box-shadow: 0 1px 5px #0000000a; color: var(--ink); }
+.view-glyph { font-size: 25px; line-height: 1; font-weight: 600; }
 .browse-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
 .collection { max-width: 190px; color: var(--ink); background: transparent; border: 0; border-radius: 8px; font-size: 13px; padding: 8px 0; min-height: 36px; }
 .month-jump { border: 0; background: transparent; color: var(--secondary); min-height: 36px; font-size: 13px; padding: 7px 0 7px 10px; }
 .search-box { display: flex; align-items: center; margin-top: 8px; padding: 0 12px; border-radius: 15px; background: var(--surface); gap: 10px; }
 .search-box input { min-width: 0; flex: 1; border: 0; background: transparent; color: var(--ink); height: 40px; font-size: 14px; }
 .search-box button { background: transparent; border: 0; min-width: 35px; min-height: 40px; font-size: 20px; }
-.workspace { position: absolute; z-index: 2; isolation: isolate; inset: 223px 0 112px; }
-.phone.searching .workspace { top: 272px; }
+.workspace { position: absolute; z-index: 2; isolation: isolate; inset: 183px 0 112px; }
+.phone.searching .workspace { top: 232px; }
 .scroller { height: 100%; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--secondary) 35%, transparent) transparent; }
 .scroll-content { position: relative; margin: 0 23px; }
 .receipt-slot, .month-slot { position: absolute; left: 0; right: 0; }

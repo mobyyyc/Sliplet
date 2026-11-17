@@ -42,7 +42,7 @@ const check = (description, value) => {
 
             for (const variant of ["sections", "continuous"]) {
                 const root = phone(variant);
-                await root.getByRole("button", { name: "Wallet", exact: true }).click();
+                if (await state(variant, "view") !== "wallet") await root.getByRole("button", { name: "Switch to Wallet", exact: true }).click();
                 const rows = await state(variant, "rows");
                 check(variant + ": all " + count + " receipts have an individual entry",
                     rows.filter(row => row.type === "receipt").length === count);
@@ -78,7 +78,7 @@ const check = (description, value) => {
                     Math.abs(await root.locator(".scroller").evaluate(element => element.scrollTop) - scrollBefore) < 2);
 
                 const anchorBefore = await state(variant, "anchorID");
-                await root.getByRole("button", { name: "List", exact: true }).click();
+                if (await state(variant, "view") !== "list") await root.getByRole("button", { name: "Switch to List", exact: true }).click();
                 const anchorVisible = await page.evaluate(({ variant, id }) => {
                     const study = SlipletPhase14.studies.find(study => study.variant === variant);
                     const row = study.rows.find(row => row.type === "receipt" && row.receipt.id === id);
@@ -86,7 +86,7 @@ const check = (description, value) => {
                         row.y < study.scroller.scrollTop + study.scroller.clientHeight;
                 }, { variant, id: anchorBefore });
                 check(variant + ": Wallet to List keeps the same purchase visible", anchorVisible);
-                await root.getByRole("button", { name: "Wallet", exact: true }).click();
+                if (await state(variant, "view") !== "wallet") await root.getByRole("button", { name: "Switch to Wallet", exact: true }).click();
 
                 if (count >= 200) {
                     await root.getByRole("button", { name: "Jump to month", exact: true }).click();
@@ -137,7 +137,7 @@ const check = (description, value) => {
         await page.locator("#receipt-count").selectOption("5");
         for (const variant of ["sections", "continuous"]) {
             const root = phone(variant);
-            await root.getByRole("button", { name: "Wallet", exact: true }).click();
+            if (await state(variant, "view") !== "wallet") await root.getByRole("button", { name: "Switch to Wallet", exact: true }).click();
         }
         await screenshot("five-receipts-light.png");
 
@@ -154,19 +154,19 @@ const check = (description, value) => {
 
         await page.locator("#receipt-count").selectOption("200");
         for (const variant of ["sections", "continuous"]) {
-            await phone(variant).getByRole("button", { name: "List", exact: true }).click();
+            if (await state(variant, "view") !== "list") await phone(variant).getByRole("button", { name: "Switch to List", exact: true }).click();
         }
         await screenshot("two-hundred-receipts-list.png");
         await page.locator("#appearance").selectOption("dark");
         for (const variant of ["sections", "continuous"]) {
-            await phone(variant).getByRole("button", { name: "Wallet", exact: true }).click();
+            if (await state(variant, "view") !== "wallet") await phone(variant).getByRole("button", { name: "Switch to Wallet", exact: true }).click();
         }
         await screenshot("two-hundred-receipts-dark.png");
 
         await page.locator("#large-text").check();
         await page.locator("#reduce-motion").check();
         for (const variant of ["sections", "continuous"]) {
-            await phone(variant).getByRole("button", { name: "List", exact: true }).click();
+            if (await state(variant, "view") !== "list") await phone(variant).getByRole("button", { name: "Switch to List", exact: true }).click();
             check(variant + ": large text retains individual receipt entries",
                 (await state(variant, "rows")).filter(row => row.type === "receipt").length === 200);
         }
@@ -181,7 +181,7 @@ const check = (description, value) => {
         await page.locator("#receipt-count").selectOption("50");
         for (const variant of ["sections", "continuous"]) {
             const root = phone(variant);
-            await root.getByRole("button", { name: "Wallet", exact: true }).click();
+            if (await state(variant, "view") !== "wallet") await root.getByRole("button", { name: "Switch to Wallet", exact: true }).click();
             await root.getByRole("button", { name: "Purchase overview", exact: true }).click();
             check(variant + ": the overview entry is reachable", await root.locator(".overview-amount").count() === 1);
             await page.keyboard.press("Escape");

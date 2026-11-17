@@ -1,0 +1,47 @@
+{
+  "scope": "Fictional iPhone 15 Pro Simulator iOS 27.0; physical acceptance and frame/hitch timing are not measured.",
+  "ui": {
+    "passed": 7,
+    "failed": 0,
+    "resultBundle": "/tmp/sliplet-p1402-ui-final.xcresult"
+  },
+  "unit": {
+    "passed": 15,
+    "failed": 0,
+    "resultBundle": "/tmp/sliplet-p1402-unit-final.xcresult"
+  },
+  "browser": {
+    "passed": 88,
+    "runtimeErrors": []
+  },
+  "mountedPaperSnapshots": [
+    {
+      "mountedAfterJump": 5,
+      "mountedAtInitialPosition": 5,
+      "receipts": 5
+    },
+    {
+      "mountedAfterJump": 16,
+      "mountedAtInitialPosition": 11,
+      "receipts": 50
+    },
+    {
+      "mountedAfterJump": 15,
+      "mountedAtInitialPosition": 15,
+      "receipts": 200
+    },
+    {
+      "mountedAfterJump": 15,
+      "mountedAtInitialPosition": 16,
+      "receipts": 1000
+    }
+  ],
+  "roundTrip": {
+    "iterations": 3,
+    "clockSecondsBefore": 1.795566191,
+    "clockSecondsAfter": 1.801453873,
+    "cpuSecondsBefore": 0.4729295197,
+    "cpuSecondsAfter": 0.4885657853,
+    "caveat": "Automated taps and idle waits; original receipt-1 is reached through the new month chooser before measurement. These samples do not measure frame rate or phone responsiveness."
+  }
+}

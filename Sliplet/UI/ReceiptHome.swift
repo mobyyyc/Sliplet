@@ -17,6 +17,7 @@ struct ReceiptHome: View {
     @State private var settings = false
     @State private var recoveryAISettings = false
     @State private var walletInformation = false
+    @State private var walletMonths = false
     @FocusState private var editing: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -88,15 +89,28 @@ struct ReceiptHome: View {
                                     }
                                 }
                             }
+                        }
+                        if !workspace.library && !workspace.walletLayout.sections.isEmpty {
                             ToolbarItem(placement: .topBarLeading) {
-                                Button("Wallet", systemImage: "chevron.left") { workspace.library = false }
-                                    .accessibilityIdentifier("walletTab")
-                            }
-                        } else if !workspace.receipts.isEmpty {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("All receipts", systemImage: "magnifyingglass") { workspace.collection = "All receipts"; workspace.library = true }.accessibilityIdentifier("allReceipts")
+                                Button { walletMonths = true } label: {
+                                    HStack(spacing: 5) {
+                                        Text(workspace.walletLayout.sections.first { $0.id == workspace.walletMonthID }?.title
+                                             ?? workspace.walletLayout.sections.last?.title ?? "Months")
+                                            .font(.subheadline.weight(.medium)).lineLimit(1)
+                                        Image(systemName: "chevron.down").font(.caption2.weight(.semibold))
+                                    }
+                                }.accessibilityLabel("Jump to month").accessibilityIdentifier("walletMonths")
                             }
                         }
+                        if typeSize.isAccessibilitySize {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Menu {
+                                    Button("Settings", systemImage: "gearshape") { settings = true }
+                                    Button("Wallet information", systemImage: "info.circle") { walletInformation = true }
+                                } label: { Image(systemName: "ellipsis") }
+                                    .accessibilityLabel("Wallet options").accessibilityIdentifier("walletOptions")
+                            }
+                        } else {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Settings", systemImage: "gearshape") { settings = true }.accessibilityIdentifier("walletSettings")
                         }
@@ -104,6 +118,26 @@ struct ReceiptHome: View {
                             Button("Wallet information", systemImage: "info.circle") { walletInformation = true }
                                 .accessibilityIdentifier("walletInformation")
                         }
+                        }
+                    }
+                    if workspace.flow == .wallet {
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                if !workspace.library, workspace.searchQuery.isEmpty,
+                                   workspace.collection == "All receipts", workspace.merchantFilter == .all,
+                                   workspace.monthFilter == .all, let anchor = workspace.walletAnchorID {
+                                    workspace.searchReturnID = "receipt-" + anchor.uuidString
+                                }
+                                workspace.library.toggle()
+                            } label: {
+                                Image(systemName: workspace.library ? "wallet.bifold" : "list.bullet")
+                                    .font(.body.weight(.semibold))
+                            }
+                            .buttonStyle(ReceiptSecondaryStyle(circular: true))
+                            .accessibilityLabel(workspace.library ? "Switch to Wallet" : "Switch to List")
+                            .accessibilityIdentifier(workspace.library ? "walletTab" : "allReceipts")
+                        }.sharedBackgroundVisibility(.hidden)
                     }
                     if workspace.flow == .detail {
                         if workspace.selected != nil {
@@ -216,6 +250,11 @@ struct ReceiptHome: View {
             }
             .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
+            .sheet(isPresented: $walletMonths) {
+                ReceiptWalletMonths(sections: workspace.walletLayout.sections, selected: workspace.walletMonthID) { section in
+                    workspace.walletJumpID = section.id
+                }
+            }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
             .sheet(isPresented: $recoveryAISettings) {

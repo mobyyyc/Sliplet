@@ -58,11 +58,8 @@ class ReceiptStudy {
                 <div class="nav-line"><h3>Receipts</h3><div class="nav-actions">
                     <button class="icon-button glass search-action" aria-label="Search receipts"><span class="symbol search"></span></button>
                     <button class="icon-button glass overview-action" aria-label="Purchase overview"><span class="symbol chart"></span></button>
+                    <button class="icon-button glass view-toggle" aria-label="Switch to List"><span class="view-glyph" aria-hidden="true">☷</span></button>
                 </div></div>
-                <div class="view-switch" role="group" aria-label="Receipt view">
-                    <button data-view="wallet" aria-pressed="true">Wallet</button>
-                    <button data-view="list" aria-pressed="false">List</button>
-                </div>
                 <div class="browse-line">
                     <select class="collection" aria-label="Receipt collection"><option>All receipts</option><option>Starred</option><option>Archive</option></select>
                     <button class="month-jump" aria-label="Jump to month">November 2026 ⌄</button>
@@ -83,8 +80,7 @@ class ReceiptStudy {
                 this.paint();
             });
         }, { passive: true });
-        this.root.querySelectorAll("[data-view]").forEach(button =>
-            button.addEventListener("click", () => this.setView(button.dataset.view)));
+        this.root.querySelector(".view-toggle").addEventListener("click", () => this.setView(this.view === "wallet" ? "list" : "wallet"));
         this.root.querySelector(".collection").addEventListener("change", event => {
             this.collection = event.target.value;
             this.rebuild(null);
@@ -130,8 +126,8 @@ class ReceiptStudy {
         const anchor = this.anchorID;
         this.view = view;
         this.root.classList.toggle("list-mode", view === "list");
-        this.root.querySelectorAll("[data-view]").forEach(button =>
-            button.setAttribute("aria-pressed", String(button.dataset.view === view)));
+        this.root.querySelector(".view-toggle").setAttribute("aria-label", view === "wallet" ? "Switch to List" : "Switch to Wallet");
+        this.root.querySelector(".view-glyph").textContent = view === "wallet" ? "☷" : "▱";
         this.rebuild(anchor);
     }
 

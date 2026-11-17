@@ -17,11 +17,17 @@ final class ReceiptWorkspace {
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
         walletReceipts = orderedReceipts.reversed().filter { !$0.isArchived }
+        walletLayout = ReceiptWalletLayout(records: walletReceipts)
     } }
     private(set) var searchIndex = ReceiptSearchIndex()
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
     private(set) var orderedReceipts: [ReceiptRecord] = []
     private(set) var walletReceipts: [ReceiptRecord] = []
+    private(set) var walletLayout = ReceiptWalletLayout()
+    var walletScrollOffset: CGFloat?
+    var walletAnchorID: UUID?
+    var walletMonthID: String?
+    var walletJumpID: String?
     var searchQuery = ""
     var searchFiltersExpanded = false
     var searchReturnID: String?
@@ -203,6 +209,7 @@ final class ReceiptWorkspace {
         draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; detailLine = nil; splitVisible = false; sourceLineIDs = []
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
+        walletScrollOffset = nil; walletAnchorID = nil; walletMonthID = nil; walletJumpID = nil
         searchQuery = ""; searchMatch = nil; includeArchived = false
         searchFiltersExpanded = false; searchReturnID = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
@@ -969,10 +976,10 @@ final class ReceiptWorkspace {
                 receipts = try await store.receipts()
                 return
             }
-            if ["search", "search-large"].contains(SyntheticNativePreview.mode) {
+            if ["search", "search-large", "wallet-months"].contains(SyntheticNativePreview.mode) {
                 for index in 0..<count {
                     try Task.checkCancellation()
-                    let (bytes, extraction, draft) = SyntheticSearchPreview.fixture(index)
+                    let (bytes, extraction, draft) = SyntheticSearchPreview.fixture(index, organized: SyntheticNativePreview.mode == "wallet-months")
                     _ = try await store.create(extraction: extraction, originalImage: bytes, mediaType: "image/png", correction: draft.fields,
                         review: draft.date.isEmpty ? .draft : .sourceReviewed, reviewInput: JSONEncoder().encode(draft), permit: permit)
                 }

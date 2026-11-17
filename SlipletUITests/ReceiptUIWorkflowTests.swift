@@ -338,6 +338,8 @@ import Vision
     }
     func testCrowdedWalletRoundTripResourceBaseline() {
         let app = launch("many")
+        app.buttons["walletMonths"].tap()
+        app.buttons["walletMonth-2026-10"].tap()
         let paper = app.buttons["receipt-1"]
         XCTAssertTrue(paper.waitForExistence(timeout: 10))
         let position = paper.frame.minY

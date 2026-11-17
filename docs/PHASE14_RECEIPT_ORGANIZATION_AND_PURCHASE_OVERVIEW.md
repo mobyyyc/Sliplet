@@ -1,6 +1,6 @@
 # Phase 14 · Receipt organization, purchase overview and everyday UX
 
-Planned on November 17, 2026. The owner approved P14-01 and requested efficient interactions and rendering. P14-01 is complete with two interactive studies and a recommendation. P14-02 requires approval of the selected layout in Main.
+Planned on November 17, 2026. The owner approved P14-01 and requested efficient interactions and rendering. P14-01 is complete with two interactive studies and a recommendation. The owner approved P14-02 with a circular upper-right Wallet/List switch that does not reserve a separate row. P14-02 is complete in Simulator: seven UI methods and 15 unit methods passed. [Implementation and efficiency results](PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).
 
 ## Product intent
 
@@ -17,7 +17,7 @@ As the collection grows, users should recognize individual receipts, orient them
 
 ### First-level access
 
-Provide a visible Wallet / List control in the main receipt-browsing surface. Wallet presents the paper/pocket experience; List presents compact, readable receipts grouped by month. Search is an explicit action within browsing. Archive and Starred are directly accessible collection choices. The current collection and any applied filters are visible.
+Provide a circular Wallet/List button at the upper right of the main receipt-browsing surface. Its icon names the destination view; no permanent segmented-control row is used. Wallet presents the paper/pocket experience; List presents compact, readable receipts grouped by month. Search is an explicit action within browsing. Archive and Starred are directly accessible collection choices. The current collection and any applied filters are visible.
 
 ### Time organization
 
@@ -67,4 +67,4 @@ Browsing efficiency and running cost are acceptance criteria throughout Phase 14
 
 ## Next approval
 
-P14-02 · Implement receipt organization. Approve the month-section layout or select the continuous-wallet alternative before implementation.
+P14-03 · Browsing, search and return flow. Extend context preservation to filters, collections, editing and receipt organization changes after Main approval.

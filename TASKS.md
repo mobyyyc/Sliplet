@@ -1,8 +1,8 @@
 # Task registry
 
-## Phase 14 · Proposed 2026-11-17
+## Phase 14 · In progress 2026-11-17
 
-The owner requested clearer receipt organization, direct access to older purchases, an overview and further UI/UX improvements, with efficiency required. P14-01 is approved and complete with two interactive prototypes, 88 browser checks and a measured native wallet baseline. Month sections with direct Wallet/List and period navigation are recommended. P14-02 implementation awaits layout approval in Main. [Phase 14 proposal](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md).
+P14-01 design and P14-02 receipt organization are complete. The owner selected month sections and a circular upper-right Wallet/List button, without a permanent control row. Native month/year jumping, missing-date access and bounded paper rendering are verified in Simulator. Seven UI methods, 15 unit methods and 88 browser checks passed. The 1,000-receipt snapshots mounted 15–16 papers. P14-03 browsing/search/return integration is next for approval in Main. [Phase 14 roadmap](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-02 results](docs/PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).
 
 ## Phase 13 · 2026-11-14
 

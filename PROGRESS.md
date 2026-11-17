@@ -1,5 +1,9 @@
 # Progress
 
+## P14-02 receipt organization verified in Simulator · 2026-11-17
+
+Wallet/List now uses a circular upper-right glass button. The continuous paper wallet has cached month sections and direct month/year navigation, including Date unavailable. Detail returns and Wallet-to-List anchors preserve browsing position. Deterministic separated geometry fixes the large-text return shift. Seven UI methods, 15 unit methods and 88 browser checks passed. Native 1,000-receipt snapshots mounted 15–16 papers; measured 30-receipt round-trip clock time differs by +0.3% and CPU by +3.3% from the baseline. Frame/hitch timing and physical-device acceptance remain unmeasured. P14-03 is next for approval. [Implementation results](docs/PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).
+
 ## P14-01 design studies complete · 2026-11-17
 
 Two interactive receipt-browsing studies cover 5, 50, 200 and 1,000 fictional receipts. Month sections with direct Wallet/List switching are recommended. Eighty-eight browser checks passed, including month jumps, search, return position and bounded rendering. Large browser collections mounted at most 13 receipt elements. The existing native 30-receipt open/return resource baseline passed with retained CPU/clock samples. P14-02 requires approval of the selected layout. [Design recommendation and limits](docs/design/phase14/README.md).

@@ -6,7 +6,7 @@ Open [the interactive studies](index.html). The controls select 5, 50, 200 or 1,
 
 ## Recommendation for P14-02
 
-Implement **Month sections**, together with the first-level Wallet/List control and direct month jump.
+The owner approved **Month sections**, direct month jumping and a circular Wallet/List button at the upper right. The button shows the destination icon and occupies the toolbar; the earlier segmented-control row has been removed from both studies.
 
 Each receipt exposes its merchant, date and amount before opening. Month boundaries create a visible pause between groups. Every receipt retains its own entry. The List view provides a denser reading surface when locating an older purchase or comparing rows.
 
@@ -31,7 +31,7 @@ These counts describe control selections. They exclude text entry time, the plat
 
 The browser studies build sorted groups and row offsets when the collection, query, view or text size changes. Scrolling uses a binary search over cached offsets and mounts only the nearby receipt elements. The full logical scroll extent and month index remain available. Detail open/return retains that extent and the browsing position.
 
-The 1,000-receipt browser study mounted at most 13 receipt elements in either variant during the recorded paths. Its measured 95th-percentile JavaScript paint work was approximately 0.6 ms and layout work 1.2 ms in this run. These cover instrumented JavaScript execution and synchronous layout observed by this prototype. They exclude browser composition, GPU work and input-to-display latency. They establish browser prototype behavior, while native iOS implementation and hardware animation measurements remain later work.
+The 1,000-receipt browser study mounted at most 13 receipt elements in either variant during the recorded paths. Its measured 95th-percentile JavaScript paint work was approximately 0.7 ms and layout work 1.7 ms in this run. These cover instrumented JavaScript execution and synchronous layout observed by this prototype. They exclude browser composition, GPU work and input-to-display latency. They establish browser prototype behavior, while native iOS implementation and hardware animation measurements remain later work.
 
 ### Native implementation constraints for P14-02
 
@@ -72,4 +72,4 @@ The prototype runtime uses local project files. Its browser-check runner is a re
 
 ## Scope and next approval
 
-P14-01 delivers these design studies, the recommendation and the performance constraints. The next task is **P14-02 · Implement receipt organization**, with approval of the chosen layout in Main.
+P14-01 delivers these design studies, the recommendation and the performance constraints. The owner approved **P14-02 · Implement receipt organization**, including the toolbar-only circular view switch. Native implementation results are recorded in [P14-02](../../PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).
