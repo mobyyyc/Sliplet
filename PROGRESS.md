@@ -1,5 +1,9 @@
 # Progress
 
+## P14-01 design studies complete · 2026-11-17
+
+Two interactive receipt-browsing studies cover 5, 50, 200 and 1,000 fictional receipts. Month sections with direct Wallet/List switching are recommended. Eighty-eight browser checks passed, including month jumps, search, return position and bounded rendering. Large browser collections mounted at most 13 receipt elements. The existing native 30-receipt open/return resource baseline passed with retained CPU/clock samples. P14-02 requires approval of the selected layout. [Design recommendation and limits](docs/design/phase14/README.md).
+
 ## P13-05 split refinement verified in Simulator · 2026-11-17
 
 Finalized splits open a dedicated per-person amount summary with Copy, Share, View breakdown and Edit split. After batch item assignment, tax allocation is a separate step offering purchase shares, equal shares or chosen payers. Multiple tax charges require individual choices. Seven focused UI cases and 33 calculation and persistence cases passed across the Simulator runs. Physical-device verification of this refinement remains pending. [Phase 13 owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).

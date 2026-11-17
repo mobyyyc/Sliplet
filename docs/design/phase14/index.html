@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sliplet · Receipt browsing</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="prototype.js" defer></script>
+</head>
+<body>
+<main>
+  <header class="review-header">
+    <div><p class="eyebrow">Sliplet · Phase 14</p><h1>Receipt browsing.</h1></div>
+    <div class="review-controls">
+      <label>Collection size<select id="receipt-count"><option>5</option><option selected>50</option><option>200</option><option>1000</option></select></label>
+      <label>Appearance<select id="appearance"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+      <label class="check-label"><input type="checkbox" id="large-text"> Larger text</label>
+      <label class="check-label"><input type="checkbox" id="reduce-motion"> Reduce motion</label>
+    </div>
+  </header>
+  <p class="review-intro">Compare the same fictional collection. Jump to an older month, switch to List, or open a receipt and return.</p>
+  <div class="studies">
+    <section class="study"><h2>Month sections</h2><p class="study-caption">Time boundaries within the paper stack.</p><div class="phone" id="sections"></div></section>
+    <section class="study"><h2>Continuous wallet</h2><p class="study-caption">A familiar stack with direct access to List.</p><div class="phone" id="continuous"></div></section>
+  </div>
+  <footer class="review-footer">Design prototypes · Fictional receipts · Glass and motion approximate the native app.</footer>
+</main>
+</body>
+</html>

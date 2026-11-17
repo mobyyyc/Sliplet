@@ -1,5 +1,9 @@
 # Task registry
 
+## Phase 14 · Proposed 2026-11-17
+
+The owner requested clearer receipt organization, direct access to older purchases, an overview and further UI/UX improvements, with efficiency required. P14-01 is approved and complete with two interactive prototypes, 88 browser checks and a measured native wallet baseline. Month sections with direct Wallet/List and period navigation are recommended. P14-02 implementation awaits layout approval in Main. [Phase 14 proposal](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md).
+
 ## Phase 13 · 2026-11-14
 
 The existing wallet, library and lock design was retained after P13-01. P13-02 Capture to Save, P13-03 Read, Correct & Share, and P13-04 History & Split are complete in Simulator. P13-05 iPhone Walkthrough is underway. The owner confirmed the updated app opens and existing receipts are visible. Remaining physical-device checks are pending. [Plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
