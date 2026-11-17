@@ -21,6 +21,11 @@ import CryptoKit
                 .init(id: UUID(), kind: "purchase", name: "FICTIONAL TEA", quantity: "", amount: "4.99", sourceLineIDs: []),
                 .init(id: UUID(), kind: "tax", name: "FICTIONAL TAX", quantity: "", amount: "0.63", sourceLineIDs: [])]
             d.subtotal = "15.00"; d.total = "15.63"; d.sourceOpened = true; d.sourceChecked = true
+            if ProcessInfo.processInfo.arguments.contains("--split-two-taxes") {
+                d.lines.append(.init(id: UUID(), kind: "tax", name: "SECOND FICTIONAL TAX",
+                                     quantity: "", amount: "0.40", sourceLineIDs: []))
+                d.total = "16.03"
+            }
             if ProcessInfo.processInfo.arguments.contains("--p1105-many-items") {
                 for index in 1...12 {
                     d.lines.insert(.init(id: UUID(), kind: "purchase", name: "FICTIONAL EXTRA ITEM \(index)", quantity: "", amount: "1.01", sourceLineIDs: []), at: d.lines.count - 1)

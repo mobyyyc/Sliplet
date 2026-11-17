@@ -51,6 +51,29 @@ import Foundation
         do { _ = try await reopened.originalImage(receiptID: saved.id); XCTFail("Deleted asset survived") } catch { XCTAssertEqual(error as? ReceiptStoreError, .notFound) }
         try await reopened.close()
     }
+    func testChosenTaxPayerSurvivesEncryptedRestart() async throws {
+        let url = directory(); defer { try? FileManager.default.removeItem(at: url) }
+        let store = try ReceiptStore(directory: url, keyProvider: Key())
+        let record = try await create(store)
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.a]])
+        plan.policies[0] = .init(id: record.current.fields.adjustments[0].id, method: .equal,
+                                target: .selectedPeople, selectedIDs: [SplitFixture.b], accepted: true)
+        let saved = try await store.saveSplit(id: record.id, expectedRevision: record.current.id,
+                                             expectedPlan: nil, plan: plan, finalize: true)
+        try await store.close()
+        let reopened = try ReceiptStore(directory: url, keyProvider: Key())
+        let reloaded = try await reopened.receipt(id: saved.id)
+        let loaded = try XCTUnwrap(reloaded)
+        let restored = try XCTUnwrap(loaded.splitPlan)
+        XCTAssertEqual(restored.policies, plan.policies)
+        XCTAssertFalse(restored.policies[0].sourceConfirmed)
+        let result = try ReceiptSplitEngine.compute(loaded, plan: restored)
+        XCTAssertEqual(result.totals[SplitFixture.a], 301)
+        XCTAssertEqual(result.totals[SplitFixture.b], 3)
+        XCTAssertEqual(result.total, 304)
+        try await reopened.close()
+    }
+
     func testStaleRevisionStalePlanAndRevokedPermitCannotWrite() async throws {
         let url = directory(); defer { try? FileManager.default.removeItem(at: url) }
         let store = try ReceiptStore(directory: url, keyProvider: Key())

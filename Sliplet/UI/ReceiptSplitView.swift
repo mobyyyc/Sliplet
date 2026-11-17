@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 /// Local editing surface. Explicit Save/Finalize persist; Copy/Share exist only for the committed current split.
 struct ReceiptSplitView: View {
     @Bindable var workspace: ReceiptWorkspace
-    private enum Destination: Hashable { case item(UUID), policy(UUID), summary }
+    private enum Destination: Hashable { case item(UUID), policy(UUID), tax(UUID), summary }
     private enum SectionAnchor: Hashable { case purchases, adjustments, amounts }
     @State private var path: [Destination] = []
     @State private var plan: ReceiptSplitPlan
@@ -19,6 +19,7 @@ struct ReceiptSplitView: View {
     @State private var returnToReview = false
     @State private var copied = false
     @State private var adjustmentsExpanded = false
+    @State private var editingFinalized = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var systemTypeSize
     private var effectiveTypeSize: DynamicTypeSize {
@@ -59,10 +60,13 @@ struct ReceiptSplitView: View {
         let finalizedSummary = summary
         return NavigationStack(path: $path) {
             ScrollViewReader { proxy in
-                splitForm(prepared: prepared, result: result, error: error, finalizedSummary: finalizedSummary, proxy: proxy)
-                    .onChange(of: finalizedSummary != nil) { _, finalized in
-                        if finalized { proxy.scrollTo(SectionAnchor.amounts, anchor: .top) }
+                Group {
+                    if let result, let finalizedSummary, !editingFinalized, activePerson == nil {
+                        completedSplit(result, summary: finalizedSummary)
+                    } else {
+                        splitForm(prepared: prepared, result: result, error: error, finalizedSummary: finalizedSummary, proxy: proxy)
                     }
+                }
             }
             .id(activePerson)
             .navigationDestination(for: Destination.self) { destination in
@@ -71,6 +75,14 @@ struct ReceiptSplitView: View {
                     if let item = record?.current.fields.items.first(where: { $0.id == id }) { itemEditor(item) }
                 case .policy(let id):
                     if let adjustment = record?.current.fields.adjustments.first(where: { $0.id == id }) { policyEditor(adjustment) }
+                case .tax(let id):
+                    if let adjustment = record?.current.fields.adjustments.first(where: { $0.id == id }) {
+                        ReceiptTaxAllocationView(adjustment: adjustment, people: plan.participants, plan: plan,
+                            explanation: taxExplanation, current: policy(adjustment), money: money,
+                            advanced: { path.append(.policy(adjustment.id)) }) { chosen in
+                            applyTax(chosen)
+                        }.id(adjustment.id)
+                    }
                 case .summary:
                     ScrollView { Text(summary ?? "Finalize this split first.").textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(20) }
                         .navigationTitle("Split summary").modifier(SplitEditorBack())
@@ -87,7 +99,13 @@ struct ReceiptSplitView: View {
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { source = true } label: { Text("Original") }.disabled(workspace.image == nil || workspace.saving).accessibilityIdentifier("splitOriginal")
+                        if finalizedSummary != nil && !editingFinalized {
+                            Button("Edit split") { editingFinalized = true }
+                                .accessibilityIdentifier("splitEditCompleted")
+                        } else {
+                            Button { source = true } label: { Text("Original") }
+                                .disabled(workspace.image == nil || workspace.saving).accessibilityIdentifier("splitOriginal")
+                        }
                     }
                 }
             }
@@ -121,7 +139,7 @@ struct ReceiptSplitView: View {
                 Button("Cancel", role: .cancel) { returnToReview = false }
             }
             .onChange(of: record?.splitPlan) { _, _ in
-                if let saved = record?.splitPlan { plan = saved; copied = false; undoPlan = nil; cancelBatch() }
+                if let saved = record?.splitPlan { plan = saved; copied = false; undoPlan = nil; editingFinalized = false; cancelBatch() }
             }
             .onChange(of: workspace.active) { _, active in
                 if !active { cancelBatch(); editingPerson = nil; undoPlan = nil }
@@ -137,10 +155,99 @@ struct ReceiptSplitView: View {
         .dynamicTypeSize(effectiveTypeSize)
         #endif
     }
+    private var pendingTax: ReceiptAdjustment? {
+        guard let record, ReceiptCompletion.isComplete(record) else { return nil }
+        return record.current.fields.adjustments.first { adjustment in
+            adjustment.kind == .tax && plan.policies.first(where: { $0.id == adjustment.id })?.accepted != true
+        }
+    }
+
+    private var taxExplanation: String {
+        guard let record else { return "Choose who will cover this tax." }
+        let knownMarkers = record.original.paperTaxedMarkers
+        let identified = record.current.fields.items.contains {
+            $0.taxMarker.map { knownMarkers.contains($0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()) } ?? false
+        }
+        return identified
+            ? "Some tax markers were found, but this tax couldn’t be matched to specific items. Choose how to share it."
+            : "No clear tax markers were found. Who should cover this tax?"
+    }
+
+    private func reviewTaxButton(_ tax: ReceiptAdjustment) -> some View {
+        Button("Review tax") { path.append(.tax(tax.id)) }
+            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("splitReviewTax")
+    }
+
+    private func applyTax(_ chosen: SplitAdjustmentPolicy) {
+        change {
+            $0.policies.removeAll { $0.id == chosen.id }
+            $0.policies.append(chosen)
+        }
+        if let tax = pendingTax { path = [.tax(tax.id)] }
+        else { path = [] }
+    }
+
+    private func completedSplit(_ result: ReceiptSplitResult, summary: String) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Split finalized", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline).foregroundStyle(.secondary).accessibilityIdentifier("splitStatus")
+                    Text(record?.current.fields.merchant ?? "Receipt").font(.title2.weight(.semibold))
+                    Text("Total " + money(result.total)).font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary).accessibilityIdentifier("splitExactTotal")
+                }
+                ForEach(plan.participants) { person in
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 10) {
+                            personBadge(person)
+                            Text(person.name).font(.headline)
+                        }
+                        Text(money(result.totals[person.id] ?? 0))
+                            .font(.largeTitle.weight(.semibold).monospacedDigit())
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground),
+                                in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("splitTotal-" + person.name)
+                }
+                NavigationLink("View breakdown", value: Destination.summary)
+                    .frame(minHeight: 44).accessibilityIdentifier("splitBreakdown")
+                if copied {
+                    Label("Copied on this device", systemImage: "checkmark")
+                        .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("splitCopied")
+                }
+            }.padding(20)
+        }
+        .accessibilityIdentifier("splitCompleted")
+        .background(Color(uiColor: .systemGroupedBackground))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            ReceiptPairedActions {
+                Button("Copy", systemImage: "doc.on.doc") {
+                    guard workspace.active, !workspace.privacyCovered else { return }
+                    UIPasteboard.general.setItems([[UTType.utf8PlainText.identifier: summary]], options: [.localOnly: true])
+                    copied = true
+                }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("splitCopy")
+            } primary: {
+                ShareLink(item: summary) { Label("Share", systemImage: "square.and.arrow.up") }
+                    .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("splitShare")
+            }
+            .modifier(ReceiptActionBarLayout())
+            .frame(maxWidth: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
+        }
+    }
+
     private func splitForm(prepared: ReceiptSplitPlan, result: ReceiptSplitResult?, error: SplitError?,
                            finalizedSummary: String?, proxy: ScrollViewProxy) -> some View {
         let policies = Dictionary(prepared.policies.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let components = Dictionary((result?.components ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let visibleAdjustments = (record?.current.fields.adjustments ?? []).filter {
+            unassignedItems.isEmpty || $0.kind != .tax
+        }
         return Form {
             if let person = plan.participants.first(where: { $0.id == activePerson }) {
                 Section {
@@ -198,9 +305,8 @@ struct ReceiptSplitView: View {
             if activePerson == nil, let error = workspace.errorMessage {
                 Section { Label(error, systemImage: "exclamationmark.circle") }
             }
-            if activePerson == nil, showsSplitDetails, let adjustments = record?.current.fields.adjustments,
-               !adjustments.isEmpty {
-                adjustmentSection(adjustments, policies: policies, components: components)
+            if activePerson == nil, showsSplitDetails, !visibleAdjustments.isEmpty {
+                adjustmentSection(visibleAdjustments, policies: policies, components: components)
             }
             if showsSplitDetails {
                 Section {
@@ -255,7 +361,7 @@ struct ReceiptSplitView: View {
             .id(SectionAnchor.adjustments)
             if adjustmentsExpanded {
                 ForEach(Array(adjustments.enumerated()), id: \.element.id) { index, adjustment in
-                    NavigationLink(value: Destination.policy(adjustment.id)) {
+                    NavigationLink(value: adjustment.kind == .tax ? Destination.tax(adjustment.id) : .policy(adjustment.id)) {
                         VStack(alignment: .leading, spacing: 5) {
                             LabeledContent(adjustment.label ?? adjustment.kind.rawValue.capitalized) {
                                 if let amount = adjustment.amount { Text(money(amount.minorUnits)).monospacedDigit() }
@@ -312,12 +418,12 @@ struct ReceiptSplitView: View {
                 }.accessibilityIdentifier("splitUnassignedProgress")
             }
             let pending = record?.current.fields.adjustments.filter { policies[$0.id]?.accepted == false } ?? []
-            if let adjustment = pending.first {
+            if remaining == 0, let adjustment = pending.first {
                 Button {
-                    path.append(.policy(adjustment.id))
+                    path.append(adjustment.kind == .tax ? .tax(adjustment.id) : .policy(adjustment.id))
                 } label: {
-                    Label(pending.count == 1 ? "1 adjustment to confirm" : "\(pending.count) adjustments to confirm",
-                          systemImage: "checklist")
+                    Label(adjustment.kind == .tax ? "Choose who pays tax" : "Confirm adjustment",
+                          systemImage: "person.2")
                 }.accessibilityIdentifier("splitAdjustmentProgress")
             } else if error == .invalidTargets || error == .unknownTaxScope || error == .zeroBase {
                 Button {
@@ -334,7 +440,7 @@ struct ReceiptSplitView: View {
     }
 
     @ViewBuilder private func splitActions(prepared: ReceiptSplitPlan, canFinalize: Bool) -> some View {
-        if path.isEmpty {
+        if path.isEmpty && (summary == nil || editingFinalized) {
             if activePerson != nil {
                 if effectiveTypeSize.isAccessibilitySize {
                     applyItemsButton.modifier(ReceiptActionBarLayout())
@@ -349,13 +455,19 @@ struct ReceiptSplitView: View {
             } else if !plan.participants.isEmpty || !pristine || undoPlan != nil {
                 Group {
                     if effectiveTypeSize.isAccessibilitySize {
-                        if canFinalize { finalizeButton(prepared: prepared, enabled: true) }
+                        if let tax = pendingTax, unassignedItems.isEmpty {
+                            reviewTaxButton(tax)
+                        } else if canFinalize { finalizeButton(prepared: prepared, enabled: true) }
                         else { saveChoicesButton.buttonStyle(ReceiptSecondaryStyle()) }
                     } else {
                         ReceiptPairedActions {
                             saveChoicesButton.buttonStyle(ReceiptSecondaryStyle())
                         } primary: {
-                            finalizeButton(prepared: prepared, enabled: canFinalize)
+                            if let tax = pendingTax, unassignedItems.isEmpty {
+                                reviewTaxButton(tax)
+                            } else {
+                                finalizeButton(prepared: prepared, enabled: canFinalize)
+                            }
                         }
                     }
                 }.modifier(ReceiptActionBarLayout())
@@ -419,6 +531,7 @@ struct ReceiptSplitView: View {
             undoPlan = previous
         }
         cancelBatch()
+        if unassignedItems.isEmpty, let tax = pendingTax { path.append(.tax(tax.id)) }
     }
     private func removePerson(_ id: UUID) {
         guard plan.participants.contains(where: { $0.id == id }) else { return }
@@ -584,7 +697,7 @@ struct ReceiptSplitView: View {
             if p.target == .selectedPeople {
                 Section { ForEach(plan.participants) { person in SplitSelectionRow(title: person.name, selection: selection(adjustment, id: person.id)) } } header: { Text("Included people").foregroundStyle(Color(uiColor: .label)) }
             }
-            if adjustment.kind == .tax && p.target != .allPurchases {
+            if adjustment.kind == .tax && p.target == .selectedPurchases {
                 Section("Tax scope") {
                     Button("Check original") { source = true }.disabled(workspace.image == nil)
                     SplitSelectionRow(title: "I verified which purchases this tax covers", selection: Binding(get: { policy(adjustment).sourceConfirmed }, set: { confirmed in
@@ -592,7 +705,7 @@ struct ReceiptSplitView: View {
                     })).accessibilityIdentifier("splitTaxConfirmed")
                 }
             }
-            if !p.matchesRule(.standard(for: adjustment)) {
+            if adjustment.kind == .tax || !p.matchesRule(.standard(for: adjustment)) {
                 Section {
                     SplitSelectionRow(title: "Confirm allocation", selection: Binding(get: { policy(adjustment).accepted }, set: { accepted in
                         setPolicy(adjustment) { $0.accepted = accepted }
@@ -608,7 +721,17 @@ struct ReceiptSplitView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
-        }.navigationTitle("Allocation policy").modifier(SplitEditorBack())
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if adjustment.kind == .tax {
+                Button("Apply tax split") { applyTax(p) }
+                    .buttonStyle(ReceiptProminentStyle()).disabled(!p.accepted)
+                    .accessibilityIdentifier("splitApplyAdvancedTax")
+                    .modifier(ReceiptActionBarLayout()).frame(maxWidth: .infinity)
+                    .background(Color(uiColor: .systemGroupedBackground))
+            }
+        }
+        .navigationTitle("Allocation policy").modifier(SplitEditorBack())
     }
     private func selection(_ adjustment: ReceiptAdjustment, id: UUID) -> Binding<Bool> {
         Binding(get: { policy(adjustment).selectedIDs.contains(id) }, set: { selected in
@@ -617,18 +740,122 @@ struct ReceiptSplitView: View {
     }
 }
 
+private struct ReceiptTaxAllocationView: View {
+    private enum Choice: String, CaseIterable {
+        case proportional = "By purchase share"
+        case equal = "Split equally"
+        case people = "Choose who pays"
+
+        var detail: String {
+            switch self {
+            case .proportional: "Based on each person’s assigned purchases"
+            case .equal: "Same share for everyone"
+            case .people: "One person or a group you select"
+            }
+        }
+    }
+
+    let adjustment: ReceiptAdjustment
+    let people: [SplitParticipant]
+    let plan: ReceiptSplitPlan
+    let explanation: String
+    let current: SplitAdjustmentPolicy
+    let money: (Int64) -> String
+    let advanced: () -> Void
+    let apply: (SplitAdjustmentPolicy) -> Void
+    @State private var choice: Choice?
+    @State private var selectedPeople: Set<UUID> = []
+
+    private var validChoice: Bool {
+        choice != nil && (choice != .people || !selectedPeople.isEmpty)
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Text(adjustment.label ?? "Tax").font(.headline)
+                if let amount = adjustment.amount {
+                    Text(money(amount.minorUnits)).font(.largeTitle.weight(.semibold).monospacedDigit())
+                }
+                Text(explanation).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Section("Who pays?") {
+                ForEach(Choice.allCases, id: \.self) { option in
+                    SplitSelectionRow(title: option.rawValue, subtitle: option.detail, selection: Binding(
+                        get: { choice == option }, set: { _ in choice = option }
+                    )).accessibilityIdentifier("splitTaxChoice-" + option.rawValue)
+                }
+            }
+            if choice == .people {
+                Section {
+                    ForEach(people) { person in
+                        Button {
+                            if selectedPeople.contains(person.id) { selectedPeople.remove(person.id) }
+                            else { selectedPeople.insert(person.id) }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Circle().fill(plan.color(for: person).tint).frame(width: 14, height: 14)
+                                    .accessibilityHidden(true)
+                                Text(person.name).frame(maxWidth: .infinity, alignment: .leading)
+                                Image(systemName: selectedPeople.contains(person.id) ? "checkmark.circle.fill" : "circle")
+                                    .accessibilityHidden(true)
+                            }.frame(minHeight: 44).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityValue(selectedPeople.contains(person.id) ? "Selected" : "Not selected")
+                        .accessibilityIdentifier("splitTaxPayer-" + person.name)
+                    }
+                } footer: {
+                    Text("One person pays the full tax. Select several people to divide it equally among them.")
+                }
+            }
+            Section {
+                DisclosureGroup("More options") {
+                    Button("Choose taxable items", action: advanced)
+                }
+            }
+        }
+        .navigationTitle("Share tax").navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Button("Apply tax split") {
+                guard let choice, validChoice else { return }
+                let policy = SplitAdjustmentPolicy(id: adjustment.id,
+                    method: choice == .proportional ? .proportional : .equal,
+                    target: choice == .people ? .selectedPeople : .allPurchases,
+                    selectedIDs: choice == .people ? selectedPeople.sorted { $0.uuidString < $1.uuidString } : [],
+                    accepted: true)
+                apply(policy)
+            }
+            .buttonStyle(ReceiptProminentStyle()).disabled(!validChoice)
+            .accessibilityIdentifier("splitApplyTax")
+            .modifier(ReceiptActionBarLayout()).frame(maxWidth: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
+        }
+        .onAppear {
+            guard current.accepted, current.target != .selectedPurchases else { return }
+            choice = current.target == .selectedPeople ? .people : current.method == .equal ? .equal : .proportional
+            selectedPeople = Set(current.selectedIDs.filter { id in people.contains { $0.id == id } })
+        }
+    }
+}
+
 /// Standard full-row selection button: a native 44pt action with an explicit selected state.
 private struct SplitSelectionRow: View {
     let title: String
+    var subtitle: String? = nil
     @Binding var selection: Bool
     var body: some View {
         Button { selection.toggle() } label: {
             HStack(spacing: 12) {
-                Text(title).frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                    if let subtitle { Text(subtitle).font(.footnote).foregroundStyle(.secondary) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: selection ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
             }.foregroundStyle(Color(uiColor: .label)).frame(minHeight: 48).contentShape(Rectangle())
         }.buttonStyle(.plain)
             .accessibilityLabel(title).accessibilityValue(selection ? "Selected" : "Not selected")
+            .accessibilityHint(subtitle ?? "")
             .accessibilityAddTraits(selection ? .isSelected : [])
     }
 }

@@ -89,7 +89,11 @@ final class ReceiptSplitTests: XCTestCase {
         let adjustments = record.current.fields.adjustments
         var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
         plan.policies = []
-        let prepared = plan.withStandardAdjustments(adjustments)
+        var prepared = plan.withStandardAdjustments(adjustments)
+        XCTAssertThrowsError(try ReceiptSplitEngine.compute(record, plan: prepared)) {
+            XCTAssertEqual($0 as? SplitError, .policiesNeedReview)
+        }
+        prepared.policies[0].accepted = true
         let result = try ReceiptSplitEngine.compute(record, plan: prepared)
         XCTAssertTrue(plan.policies.isEmpty)
         XCTAssertEqual(result.components[2].shares, [SplitFixture.a: 43, SplitFixture.b: 87])
@@ -103,7 +107,7 @@ final class ReceiptSplitTests: XCTestCase {
         let adjustments = record.current.fields.adjustments
         var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
         plan.policies[0].accepted = false
-        XCTAssertTrue(plan.withStandardAdjustments(adjustments).policies[0].accepted)
+        XCTAssertFalse(plan.withStandardAdjustments(adjustments).policies[0].accepted)
         plan.policies[0].target = .selectedPurchases
         plan.policies[0].selectedIDs = [record.current.fields.items[0].id]
         let pending = plan.withStandardAdjustments(adjustments)
@@ -115,6 +119,34 @@ final class ReceiptSplitTests: XCTestCase {
         XCTAssertThrowsError(try ReceiptSplitEngine.compute(record, plan: plan.withStandardAdjustments(adjustments))) {
             XCTAssertEqual($0 as? SplitError, .unknownTaxScope)
         }
+    }
+
+    func testTaxPayerChoiceDoesNotAssertWhichItemsWereTaxed() throws {
+        let record = SplitFixture.record(amounts: [1000, 2000], adjustments: [(.tax, 131)])
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
+        plan.policies[0] = .init(id: record.current.fields.adjustments[0].id, method: .equal,
+                                target: .selectedPeople, selectedIDs: [SplitFixture.c], accepted: true)
+        let paidByOne = try ReceiptSplitEngine.compute(record, plan: plan)
+        XCTAssertEqual(paidByOne.totals, [SplitFixture.a: 1000, SplitFixture.b: 2000, SplitFixture.c: 131])
+        XCTAssertFalse(plan.policies[0].sourceConfirmed)
+        XCTAssertFalse(paidByOne.components.last!.detail.contains("Source-confirmed"))
+        plan.policies[0].selectedIDs = [SplitFixture.b, SplitFixture.c]
+        let paidByTwo = try ReceiptSplitEngine.compute(record, plan: plan)
+        XCTAssertEqual(paidByTwo.components.last!.shares, [SplitFixture.b: 66, SplitFixture.c: 65])
+        XCTAssertEqual(paidByTwo.totals.values.reduce(0, +), 3131)
+    }
+
+    func testAssignmentChangeRequiresTaxChoiceAgainAndKeepsTheProposedPayer() throws {
+        let record = SplitFixture.record(amounts: [1000, 2000], adjustments: [(.tax, 130)])
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
+        plan.policies[0] = .init(id: record.current.fields.adjustments[0].id, method: .equal,
+                                target: .selectedPeople, selectedIDs: [SplitFixture.b], accepted: true)
+        plan.assign(SplitFixture.c, selected: [record.current.fields.items[0].id],
+                    items: Set(record.current.fields.items.map(\.id)))
+        let prepared = plan.withStandardAdjustments(record.current.fields.adjustments)
+        XCTAssertFalse(prepared.policies[0].accepted)
+        XCTAssertEqual(prepared.policies[0].selectedIDs, [SplitFixture.b])
+        XCTAssertThrowsError(try ReceiptSplitEngine.compute(record, plan: prepared))
     }
 
     func testCouponLimitedToItemOwnersAndEqualPolicy() throws {

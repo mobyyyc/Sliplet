@@ -1,5 +1,9 @@
 # Progress
 
+## P13-05 split refinement verified in Simulator · 2026-11-17
+
+Finalized splits open a dedicated per-person amount summary with Copy, Share, View breakdown and Edit split. After batch item assignment, tax allocation is a separate step offering purchase shares, equal shares or chosen payers. Multiple tax charges require individual choices. Seven focused UI cases and 33 calculation and persistence cases passed across the Simulator runs. Physical-device verification of this refinement remains pending. [Phase 13 owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).
+
 ## P13-04 complete in Simulator · 2026-11-15
 
 Purchase comparison leads with both recorded unit prices and groups optional evidence per purchase. Split progress links to unassigned items and adjustments. The large-text layout keeps one bottom action and reserves list space for it. Five focused UI cases and 27 unit and persistence cases passed. P13-05 iPhone Walkthrough is next for approval. [Phase 13 plan and owner checks](docs/PHASE13_IMPORT_AND_RECEIPT_USABILITY.md).

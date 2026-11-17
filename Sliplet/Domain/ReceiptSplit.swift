@@ -41,7 +41,7 @@ struct SplitAdjustmentPolicy: Codable, Equatable, Sendable, Identifiable {
         if adjustment.kind == .discount, case .item(let id) = adjustment.discountScope {
             return Self(id: adjustment.id, target: .selectedPurchases, selectedIDs: [id], accepted: true)
         }
-        return Self(id: adjustment.id, accepted: true)
+        return Self(id: adjustment.id, accepted: adjustment.kind != .tax)
     }
 }
 struct ReceiptSplitPlan: Codable, Equatable, Sendable {
@@ -113,7 +113,7 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
         }
     }
 
-    /// Prepares a preview or finalization using standard rules for untouched adjustments.
+    /// Prepares non-tax adjustments. Tax allocation requires a saved user choice.
     /// Explicit overrides still require confirmation after assignments change.
     func withStandardAdjustments(_ adjustments: [ReceiptAdjustment]) -> Self {
         var next = self
@@ -122,7 +122,7 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
         for adjustment in adjustments {
             let standard = SplitAdjustmentPolicy.standard(for: adjustment)
             if let index = indexByID[adjustment.id] {
-                if policies[index].matchesRule(standard) {
+                if adjustment.kind != .tax && policies[index].matchesRule(standard) {
                     next.policies[index].accepted = true
                 }
             } else {
@@ -271,7 +271,7 @@ enum ReceiptSplitEngine {
             if policy.target == .allPurchases && !selection.isEmpty { throw SplitError.invalidTargets }
             if policy.target == .selectedPurchases && (selection.isEmpty || !selection.isSubset(of: items)) { throw SplitError.invalidTargets }
             if policy.target == .selectedPeople && (selection.isEmpty || !selection.isSubset(of: people)) { throw SplitError.invalidTargets }
-            if adjustment.kind == .tax && policy.target != .allPurchases && !policy.sourceConfirmed { throw SplitError.unknownTaxScope }
+            if adjustment.kind == .tax && policy.target == .selectedPurchases && !policy.sourceConfirmed { throw SplitError.unknownTaxScope }
             var weights: [UUID: UInt64] = [:]
             for component in components where !component.adjustment && (policy.target != .selectedPurchases || selection.contains(component.id)) {
                 for (person, value) in component.shares where policy.target != .selectedPeople || selection.contains(person) {
@@ -295,7 +295,7 @@ enum ReceiptSplitEngine {
             case .selectedPurchases: scope = "Owners of " + fields.items.filter { selection.contains($0.id) }.map { $0.description ?? "Purchase" }.joined(separator: ", ")
             case .selectedPeople: scope = plan.participants.filter { selection.contains($0.id) }.sorted { $0.id.uuidString < $1.id.uuidString }.map(\.name).joined(separator: ", ")
             }
-            let source = adjustment.kind == .tax && policy.target != .allPurchases ? " · Source-confirmed scope" : ""
+            let source = adjustment.kind == .tax && policy.target == .selectedPurchases ? " · Source-confirmed scope" : ""
             let fallback = adjustment.kind == .tax && policy.target == .allPurchases ? " · Unknown tax applicability fallback" : ""
             components.append(.init(id: adjustment.id, label: adjustment.label ?? adjustment.kind.rawValue, adjustment: true,
                 shares: shares, detail: "\(policy.method.title) · \(scope)\(fallback)\(source)"))

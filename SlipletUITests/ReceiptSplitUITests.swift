@@ -52,6 +52,15 @@ import XCTest
         options.tap()
         XCTAssertEqual(options.value as? String, "Expanded")
     }
+    private func chooseTax(_ app: XCUIApplication, option: String = "By purchase share") {
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
+        let choice = app.buttons["splitTaxChoice-" + option]
+        reveal(choice, app: app, shortScrolls: true); choice.tap()
+        let apply = app.buttons["splitApplyTax"]
+        XCTAssertTrue(apply.isEnabled); apply.tap()
+        XCTAssertTrue(app.buttons["splitDone"].waitForExistence(timeout: 5))
+    }
+
     private func addPerson(_ app: XCUIApplication, name: String) {
         let add = app.buttons["splitAddPerson"]; XCTAssertTrue(add.waitForExistence(timeout: 5)); add.tap()
         XCTAssertFalse(app.keyboards.firstMatch.exists)
@@ -81,11 +90,16 @@ import XCTest
         let app = launch(); XCTAssertFalse(app.buttons["splitFinalize"].exists)
         addPeople(app)
         assign(app, index: 0, names: ["Alex"]); assign(app, index: 1, names: ["Blair", "Casey"])
-        XCTAssertFalse(app.buttons["splitAdjustmentProgress"].exists)
+        app.buttons["splitReviewTax"].tap()
+        chooseTax(app)
         XCTAssertTrue(app.buttons["splitFinalize"].isEnabled); app.buttons["splitFinalize"].tap()
         let copy = app.buttons["splitCopy"]; reveal(copy, app: app)
         XCTAssertTrue(app.staticTexts["splitExactTotal"].label.contains("15.63"))
-        capture(app, "T06-finalized-exact-amounts")
+        XCTAssertTrue(app.scrollViews["splitCompleted"].exists)
+        XCTAssertFalse(app.buttons["splitAddPerson"].exists)
+        XCTAssertFalse(app.buttons["splitAdjustmentOptions"].exists)
+        XCTAssertFalse(app.buttons["splitFinalize"].exists)
+        capture(app, "Completed split with prominent person amounts")
         copy.tap(); XCTAssertTrue(app.staticTexts["splitCopied"].waitForExistence(timeout: 5))
         reveal(app.buttons["splitShare"], app: app); app.buttons["splitShare"].tap()
         capture(app, "T06-native-share-sheet")
@@ -102,6 +116,7 @@ import XCTest
         app.buttons["splitDone"].tap(); app.buttons["edit"].tap(); XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 10)); app.buttons["saveDraft"].tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10)); openSplit(app)
         XCTAssertFalse(app.buttons["splitFinalize"].isEnabled); XCTAssertFalse(app.buttons["splitCopy"].exists)
+        XCTAssertTrue(app.buttons["splitContinueReview"].exists)
         capture(app, "T06-edit-invalidates-finalization"); app.terminate()
     }
     func testUnsavedDismissalAndOriginalEvidence() {
@@ -198,8 +213,11 @@ import XCTest
         let item = app.buttons["splitItem-0"]; reveal(item, app: app); item.tap()
         try contrastAudit(app, screen: "owners")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        openAdjustments(app)
-        let policy = app.buttons["splitAdjustment-0"]; reveal(policy, app: app); policy.tap()
+        returnToPeople(app)
+        app.buttons["splitPerson-1"].tap()
+        app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
         try contrastAudit(app, screen: "policy")
         capture(app, "T06-policy-contrast"); app.terminate()
     }
@@ -224,8 +242,11 @@ import XCTest
         let item = app.buttons["splitItem-1"]; reveal(item, app: app); item.tap()
         try structureAudit(app, screen: "owners")
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        openAdjustments(app)
-        let policy = app.buttons["splitAdjustment-0"]; reveal(policy, app: app); policy.tap()
+        returnToPeople(app)
+        app.buttons["splitPerson-1"].tap()
+        app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
         try structureAudit(app, screen: "policy")
         capture(app, "T06-policy-structure-audit"); app.terminate()
     }
@@ -248,27 +269,93 @@ import XCTest
         let owner = app.buttons["splitOwner-Alex"]
         reveal(owner, app: app); owner.tap()
         app.navigationBars["Item owners"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["splitReviewTax"].isEnabled)
+        app.buttons["splitReviewTax"].tap()
+        chooseTax(app)
         XCTAssertTrue(app.buttons["splitFinalize"].isEnabled)
-        for _ in 0..<3 { app.swipeDown() }
+        returnToPeople(app)
         openAdjustments(app)
         let tax = app.buttons["splitAdjustment-0"]
         reveal(tax, app: app)
         XCTAssertTrue(tax.label.contains("Alex") && tax.label.contains("0.63"))
         tax.tap()
-        XCTAssertTrue(app.navigationBars["Allocation policy"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["splitPolicyAccepted"].exists)
-        app.buttons["splitMethod"].tap()
-        app.buttons["Equal"].tap()
-        app.navigationBars["Allocation policy"].buttons.firstMatch.tap()
-        XCTAssertFalse(app.buttons["splitFinalize"].isEnabled)
-        for _ in 0..<3 { app.swipeDown() }
-        reveal(adjustment, app: app)
-        XCTAssertEqual(adjustment.label, "1 adjustment to confirm")
-        adjustment.tap()
-        let accepted = app.buttons["splitPolicyAccepted"]
-        reveal(accepted, app: app); accepted.tap()
-        app.navigationBars["Allocation policy"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["splitMethod"].exists)
+        chooseTax(app, option: "Split equally")
         XCTAssertTrue(app.buttons["splitFinalize"].isEnabled)
+    }
+
+    func testEachTaxNeedsItsOwnChoiceBeforeFinalizing() {
+        let app = launch(extra: ["--split-two-taxes"])
+        app.buttons["splitAddPerson"].tap()
+        app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
+        let first = app.buttons["splitTaxChoice-By purchase share"]
+        reveal(first, app: app, shortScrolls: true); first.tap()
+        app.buttons["splitApplyTax"].tap()
+        XCTAssertTrue(app.staticTexts["SECOND FICTIONAL TAX"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["splitApplyTax"].isEnabled)
+        chooseTax(app, option: "Split equally")
+        app.buttons["splitFinalize"].tap()
+        XCTAssertTrue(app.staticTexts["splitExactTotal"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["splitExactTotal"].label.contains("16.03"))
+        app.terminate()
+    }
+
+    func testTaxQuestionCanBeCancelledAndAssignedToOnePerson() {
+        let app = launch()
+        addPerson(app, name: "Alex")
+        addPerson(app, name: "Blair")
+        app.buttons["splitPerson-1"].tap()
+        let select = app.buttons["splitSelectUnassigned"]
+        reveal(select, app: app); select.tap()
+        app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["splitApplyTax"].isEnabled)
+        XCTAssertTrue(app.staticTexts["No clear tax markers were found. Who should cover this tax?"].exists)
+        capture(app, "Tax question after all purchases are assigned")
+        app.navigationBars["Share tax"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.buttons["splitReviewTax"].isEnabled)
+        app.buttons["splitReviewTax"].tap()
+        let choice = app.buttons["splitTaxChoice-Choose who pays"]
+        reveal(choice, app: app, shortScrolls: true); choice.tap()
+        XCTAssertFalse(app.buttons["splitApplyTax"].isEnabled)
+        let payer = app.buttons["splitTaxPayer-Blair"]
+        reveal(payer, app: app, shortScrolls: true); payer.tap()
+        app.buttons["splitApplyTax"].tap()
+        XCTAssertTrue(app.buttons["splitFinalize"].waitForExistence(timeout: 5))
+        app.buttons["splitFinalize"].tap()
+        let amount = app.descendants(matching: .any)["splitTotal-Blair"].firstMatch
+        reveal(amount, app: app, shortScrolls: true)
+        XCTAssertTrue(amount.label.contains("0.63"))
+        XCTAssertFalse(app.buttons["splitAdjustmentOptions"].exists)
+        app.buttons["splitEditCompleted"].tap()
+        XCTAssertTrue(app.buttons["splitAddPerson"].waitForExistence(timeout: 5))
+        app.terminate()
+    }
+
+    func testDarkCompletedSplitKeepsSettingsBehindEdit() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "split"]
+        app.launch()
+        XCTAssertTrue(app.buttons["splitOpen"].waitForExistence(timeout: 30))
+        openSplit(app)
+        app.buttons["splitAddPerson"].tap()
+        app.buttons["splitSelectUnassigned"].tap()
+        app.buttons["splitBatchApply"].tap()
+        chooseTax(app, option: "Split equally")
+        app.buttons["splitFinalize"].tap()
+        XCTAssertTrue(app.staticTexts["splitExactTotal"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["splitExactTotal"].label.contains("15.63"))
+        XCTAssertTrue(app.buttons["splitCopy"].isHittable)
+        XCTAssertTrue(app.buttons["splitShare"].isHittable)
+        XCTAssertFalse(app.buttons["splitAddPerson"].exists)
+        XCTAssertFalse(app.buttons["splitAdjustmentOptions"].exists)
+        capture(app, "Dark completed split")
+        app.buttons["splitEditCompleted"].tap()
+        XCTAssertTrue(app.buttons["splitAddPerson"].waitForExistence(timeout: 5))
+        app.terminate()
     }
 
     func testDarkSplitPresentationAndAssignments() {
@@ -288,6 +375,7 @@ import XCTest
         XCTAssertEqual(selectUnassigned.label, "Select all unassigned")
         XCTAssertFalse(selectUnassigned.isEnabled)
         app.buttons["splitBatchApply"].tap()
+        chooseTax(app)
         let finalize = app.buttons["splitFinalize"]
         let save = app.buttons["splitSave"]
         XCTAssertTrue(finalize.waitForExistence(timeout: 5))
@@ -318,12 +406,15 @@ extension ReceiptSplitUITests {
         app.buttons["splitPerson-1"].tap()
         reveal(app.buttons["splitSelectUnassigned"], app: app); app.buttons["splitSelectUnassigned"].tap()
         app.buttons["splitBatchApply"].tap()
+        XCTAssertTrue(app.navigationBars["Share tax"].waitForExistence(timeout: 5))
+        app.navigationBars["Share tax"].buttons.firstMatch.tap()
         XCTAssertTrue(app.buttons["splitUndoBatch"].waitForExistence(timeout: 5)); app.buttons["splitUndoBatch"].tap()
         reveal(first, app: app); XCTAssertTrue(first.label.contains("Unassigned"))
         returnToPeople(app)
         app.buttons["splitPerson-1"].tap()
         reveal(app.buttons["splitSelectUnassigned"], app: app); app.buttons["splitSelectUnassigned"].tap()
         app.buttons["splitBatchApply"].tap()
+        chooseTax(app)
         app.buttons["splitAddPerson"].tap()
         reveal(second, app: app); second.tap()
         XCTAssertFalse(app.buttons["splitPerson-1"].exists)
@@ -335,6 +426,7 @@ extension ReceiptSplitUITests {
         app.buttons["splitPersonApply"].tap()
         reveal(second, app: app); XCTAssertEqual(second.value as? String, "Not selected"); second.tap()
         app.buttons["splitBatchApply"].tap()
+        chooseTax(app)
         reveal(second, app: app)
         XCTAssertTrue(second.label.contains("Person 1")); XCTAssertTrue(second.label.contains("Person 2"))
         XCTAssertTrue(second.label.contains("Shared equally"))
@@ -367,6 +459,7 @@ extension ReceiptSplitUITests {
         app.swipeDown()
         XCTAssertTrue(count.waitForExistence(timeout: 5))
         app.buttons["splitBatchApply"].tap()
+        chooseTax(app)
         let person = app.buttons["splitPerson-1"]
         reveal(person, app: app); person.tap()
         XCTAssertTrue(app.navigationBars["Assign items"].waitForExistence(timeout: 5))
