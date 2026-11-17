@@ -6,13 +6,17 @@ enum SplitFixture {
     static let a = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     static let b = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
     static let c = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
-    static func record(amounts: [Int64], adjustments: [(ReceiptAdjustment.Kind, Int64)] = [], review: ReceiptRevision.Review = .sourceReviewed) -> ReceiptRecord {
+    static func record(amounts: [Int64], adjustments: [(ReceiptAdjustment.Kind, Int64)] = [], discountItemIndex: Int? = nil, review: ReceiptRevision.Review = .sourceReviewed) -> ReceiptRecord {
         let now = Date(timeIntervalSince1970: 1700000000)
         let items = amounts.enumerated().map { index, amount in
             ReceiptLine(id: UUID(), description: "FICTIONAL ITEM \(index)", sku: nil, quantity: nil, unitPrice: nil,
                 amount: .init(minorUnits: amount, currency: .cad), taxMarker: index == 0 ? "AMBIGUOUS H" : nil, sourceLineIDs: [])
         }
-        let changes = adjustments.map { kind, amount in ReceiptAdjustment(id: UUID(), kind: kind, label: "FICTIONAL \(kind.rawValue)", amount: .init(minorUnits: amount, currency: .cad), rate: nil, sourceLineIDs: []) }
+        let changes = adjustments.map { kind, amount in
+            ReceiptAdjustment(id: UUID(), kind: kind, label: "FICTIONAL \(kind.rawValue)",
+                amount: .init(minorUnits: amount, currency: .cad), rate: nil, sourceLineIDs: [],
+                discountScope: kind == .discount ? discountItemIndex.map { .item(items[$0].id) } : nil)
+        }
         let total = amounts.reduce(0, +) + adjustments.map(\.1).reduce(0, +)
         let fields = ReceiptFields(merchant: "FICTIONAL STORE", purchaseDate: try! .init(year: 2026, month: 10, day: 8), currency: .cad,
             items: items, adjustments: changes, subtotal: nil, total: .init(minorUnits: total, currency: .cad))
@@ -79,6 +83,40 @@ final class ReceiptSplitTests: XCTestCase {
         let result = try ReceiptSplitEngine.compute(record, plan: plan)
         XCTAssertEqual(result.totals[SplitFixture.a], 1130); XCTAssertEqual(result.totals[SplitFixture.b], 2000)
     }
+    func testStandardSplitUsesPurchaseSharesAndKeepsLinkedDiscountWithItsOwner() throws {
+        let record = SplitFixture.record(amounts: [1000, 2000], adjustments: [(.tax, 130), (.discount, -100)],
+                                         discountItemIndex: 0)
+        let adjustments = record.current.fields.adjustments
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
+        plan.policies = []
+        let prepared = plan.withStandardAdjustments(adjustments)
+        let result = try ReceiptSplitEngine.compute(record, plan: prepared)
+        XCTAssertTrue(plan.policies.isEmpty)
+        XCTAssertEqual(result.components[2].shares, [SplitFixture.a: 43, SplitFixture.b: 87])
+        XCTAssertEqual(result.components[3].shares, [SplitFixture.a: -100])
+        XCTAssertEqual(result.totals[SplitFixture.a], 943)
+        XCTAssertEqual(result.totals[SplitFixture.b], 2087)
+    }
+
+    func testStandardSplitNeverAutomaticallyConfirmsCustomTaxScope() throws {
+        let record = SplitFixture.record(amounts: [1000, 2000], adjustments: [(.tax, 130)])
+        let adjustments = record.current.fields.adjustments
+        var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b]])
+        plan.policies[0].accepted = false
+        XCTAssertTrue(plan.withStandardAdjustments(adjustments).policies[0].accepted)
+        plan.policies[0].target = .selectedPurchases
+        plan.policies[0].selectedIDs = [record.current.fields.items[0].id]
+        let pending = plan.withStandardAdjustments(adjustments)
+        XCTAssertEqual(pending, plan)
+        XCTAssertThrowsError(try ReceiptSplitEngine.compute(record, plan: pending)) {
+            XCTAssertEqual($0 as? SplitError, .policiesNeedReview)
+        }
+        plan.policies[0].accepted = true
+        XCTAssertThrowsError(try ReceiptSplitEngine.compute(record, plan: plan.withStandardAdjustments(adjustments))) {
+            XCTAssertEqual($0 as? SplitError, .unknownTaxScope)
+        }
+    }
+
     func testCouponLimitedToItemOwnersAndEqualPolicy() throws {
         let record = SplitFixture.record(amounts: [900, 100], adjustments: [(.discount, -99)])
         var plan = SplitFixture.plan(record, owners: [[SplitFixture.a], [SplitFixture.b, SplitFixture.c]])

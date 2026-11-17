@@ -1,6 +1,47 @@
 import XCTest
 
 @MainActor final class ReceiptShareUITests: XCTestCase {
+    private func openPhotoSave() -> (XCUIApplication, XCUIElement) {
+        let app = XCUIApplication()
+        app.resetAuthorizationStatus(for: .photos)
+        app.launchArguments = ["--t05-synthetic-preview", "long", "--discount-layout-fixture"]
+        app.launch()
+        let share = app.buttons["openReceiptShare"]
+        XCTAssertTrue(share.waitForExistence(timeout: 20)); share.tap()
+        XCTAssertTrue(app.images["receiptShareImage"].waitForExistence(timeout: 10))
+        let save = app.buttons["saveReceiptToPhotos"]
+        XCTAssertTrue(save.isHittable)
+        let permission = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch
+        XCTAssertFalse(permission.exists)
+        save.tap()
+        XCTAssertTrue(permission.waitForExistence(timeout: 10))
+        return (app, permission)
+    }
+
+    func testSaveToPhotosPromptsOnFirstSaveAndSavesPreview() {
+        continueAfterFailure = false
+        let (app, permission) = openPhotoSave()
+        let allow = permission.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Allow")).firstMatch
+        XCTAssertTrue(allow.exists, permission.debugDescription)
+        allow.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["receiptSavedToPhotos"].firstMatch.waitForExistence(timeout: 12))
+        XCTAssertTrue(app.images["receiptShareImage"].exists)
+    }
+
+    func testDeniedPhotosAccessKeepsShareAvailable() {
+        continueAfterFailure = false
+        let (app, permission) = openPhotoSave()
+        let deny = permission.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Don")).firstMatch
+        XCTAssertTrue(deny.exists, permission.debugDescription)
+        deny.tap()
+        let alert = app.alerts["Allow saving to Photos"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 10))
+        XCTAssertTrue(alert.buttons["Open Settings"].exists)
+        alert.buttons["Cancel"].tap()
+        XCTAssertTrue(app.buttons["shareReceiptImage"].isHittable)
+        XCTAssertFalse(app.descendants(matching: .any)["receiptSavedToPhotos"].firstMatch.exists)
+    }
+
     func testPreviewAndSystemShareSheet() {
         continueAfterFailure = false
         let app = XCUIApplication()

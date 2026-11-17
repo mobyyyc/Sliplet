@@ -31,6 +31,18 @@ struct SplitAdjustmentPolicy: Codable, Equatable, Sendable, Identifiable {
     /// No retailer/jurisdiction inference. Only explicit source review permits a restricted tax base.
     var sourceConfirmed = false
     var accepted = false
+
+    func matchesRule(_ other: Self) -> Bool {
+        id == other.id && method == other.method && target == other.target &&
+            selectedIDs == other.selectedIDs && sourceConfirmed == other.sourceConfirmed
+    }
+
+    static func standard(for adjustment: ReceiptAdjustment) -> Self {
+        if adjustment.kind == .discount, case .item(let id) = adjustment.discountScope {
+            return Self(id: adjustment.id, target: .selectedPurchases, selectedIDs: [id], accepted: true)
+        }
+        return Self(id: adjustment.id, accepted: true)
+    }
 }
 struct ReceiptSplitPlan: Codable, Equatable, Sendable {
     var version = 1
@@ -99,6 +111,25 @@ struct ReceiptSplitPlan: Codable, Equatable, Sendable {
             finalizedRevision = nil
             for i in policies.indices { policies[i].accepted = false }
         }
+    }
+
+    /// Prepares a preview or finalization using standard rules for untouched adjustments.
+    /// Explicit overrides still require confirmation after assignments change.
+    func withStandardAdjustments(_ adjustments: [ReceiptAdjustment]) -> Self {
+        var next = self
+        let indexByID = Dictionary(policies.enumerated().map { ($0.element.id, $0.offset) },
+                                   uniquingKeysWith: { first, _ in first })
+        for adjustment in adjustments {
+            let standard = SplitAdjustmentPolicy.standard(for: adjustment)
+            if let index = indexByID[adjustment.id] {
+                if policies[index].matchesRule(standard) {
+                    next.policies[index].accepted = true
+                }
+            } else {
+                next.policies.append(standard)
+            }
+        }
+        return next
     }
 
     func validateStructure() throws {

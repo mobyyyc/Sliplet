@@ -55,7 +55,18 @@ Five focused UI cases passed across the iPhone 15 Pro Simulator runs on iOS 27.0
 
 The signed Debug build from `3dfc916` was installed over Sliplet 0.3 (build 4) on the iPhone 15 Pro running iOS 27.0.1 on 2026-11-16. The owner opened the updated app and confirmed that existing receipts were visible. The rest of the physical-device walkthrough is pending.
 
+### Walkthrough refinements
+
+- Share preview has a Save to Photos action. The first tap requests permission to add images, and approval saves the same PNG shown in the preview. Share remains available if access is denied.
+- Assign items exposes Select all unassigned next to the person's selection count. It adds only unassigned purchases to the current selection. Apply items still commits the selection to the split.
+- Once every purchase has an owner, Amounts appears before the purchase list. Standard adjustments are included in the preview and saved when the user finalizes. Shared adjustments use purchase shares, and explicitly linked discounts follow the item. Adjustments is collapsed by default. Custom rules keep their controls and any required source confirmation.
+- Purchase history uses a separate heading for the product and item code, so both purchase sections display complete rounded cards in the system list.
+
+Across focused Simulator runs, nine UI cases and 31 unit and persistence cases passed. These included the system Photos allow and deny paths, saving a long PNG to Files, default and custom split rules, and the dark history layout. The refinements are pending installation and physical-device verification.
+
+### Remaining owner checks
+
 1. **Import.** Photograph a long receipt, adjust the crop in landscape, and open Original after saving. Try on-device reading in Airplane Mode and Gemini with the existing connection online. If a Gemini attempt fails, check that retry preserves the prepared image and requests upload permission again.
-2. **Read and share.** Open a long receipt from the wallet, scroll to its total, and compare Fit and Full width in the share preview. Save the PNG to Files. From Search or Purchase History, return from sharing and check that the matched item remains highlighted. If a draft needs correction, check that Required to finish takes you to the field and cancelling an area reread leaves its value unchanged.
-3. **History and split.** Compare two purchases, open their price evidence and return from Original. In a split, follow the unassigned-item and adjustment shortcuts, then confirm that the last row and Finalize are reachable at accessibility text sizes.
+2. **Read and share.** Open a long receipt from the wallet, scroll to its total, and compare Fit and Full width in the share preview. Try Save to Photos and check the saved image. Use Share to save the PNG to Files. From Search or Purchase History, return from sharing and check that the matched item remains highlighted. If a draft needs correction, check that Required to finish takes you to the field and cancelling an area reread leaves its value unchanged.
+3. **History and split.** Compare two purchases, open their price evidence and return from Original. In a split, use Select all unassigned for the last person, check the amounts, and open Adjustments only if you need to change a rule. Confirm that the last row and Finalize are reachable at accessibility text sizes.
 4. **Wallet and accessibility.** Open and close a receipt from the middle of the wallet stack and verify the stack returns to its place. Check the lock-and-return flow with Face ID and spot-check light and dark appearance, VoiceOver and Reduce Motion.

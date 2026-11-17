@@ -1,5 +1,6 @@
 import CoreTransferable
 import ImageIO
+import Photos
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -134,12 +135,21 @@ struct ReceiptShareView: View {
     let receiptID: UUID
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var preview: Image?
     @State private var export: ReceiptShareImage?
     @State private var failureMessage: String?
     @State private var zoomTarget = UUID()
     @State private var mode: ReceiptSharePreviewMode = .fullWidth
+    @State private var photoSave: Task<Void, Never>?
+    @State private var savedToPhotos = false
+    @State private var photoSaveIssue: PhotoSaveIssue?
+
+    private enum PhotoSaveIssue: String, Identifiable {
+        case denied, restricted, failed
+        var id: Self { self }
+    }
 
     private var record: ReceiptRecord? { workspace.receipts.first { $0.id == receiptID } }
     private var available: Bool { workspace.active && !workspace.privacyCovered }
@@ -172,6 +182,49 @@ struct ReceiptShareView: View {
                     ProgressView("Preparing receipt image")
                 }
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if available, let export {
+                    VStack(spacing: 6) {
+                        if savedToPhotos {
+                            Label("Saved to Photos", systemImage: "checkmark.circle")
+                                .font(.footnote).foregroundStyle(.secondary)
+                                .accessibilityIdentifier("receiptSavedToPhotos")
+                        }
+                        Button {
+                            saveToPhotos(export)
+                        } label: {
+                            if photoSave != nil {
+                                ProgressView().accessibilityLabel("Saving to Photos")
+                            } else {
+                                Label("Save to Photos", systemImage: "photo.badge.arrow.down")
+                            }
+                        }
+                        .buttonStyle(ReceiptProminentStyle())
+                        .disabled(photoSave != nil)
+                        .accessibilityIdentifier("saveReceiptToPhotos")
+                    }
+                    .modifier(ReceiptActionBarLayout())
+                    .frame(maxWidth: .infinity)
+                    .background(Color(uiColor: .systemBackground))
+                }
+            }
+            .alert(item: $photoSaveIssue) { issue in
+                switch issue {
+                case .denied:
+                    Alert(title: Text("Allow saving to Photos"),
+                          message: Text("Allow Sliplet to add photos in Settings, or use Share to save the image elsewhere."),
+                          primaryButton: .default(Text("Open Settings")) {
+                              if let settings = URL(string: UIApplication.openSettingsURLString) { openURL(settings) }
+                          },
+                          secondaryButton: .cancel())
+                case .restricted:
+                    Alert(title: Text("Photos access is restricted"),
+                          message: Text("You can still use Share to save the image elsewhere."))
+                case .failed:
+                    Alert(title: Text("Couldn’t save to Photos"),
+                          message: Text("Try again, or use Share to save the image elsewhere."))
+                }
+            }
             .navigationTitle("Share receipt")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -188,12 +241,12 @@ struct ReceiptShareView: View {
                     }
                 }
             }
-            .task(id: available ? record?.current.id : nil) {
+            .task(id: workspace.active ? record?.current.id : nil) {
                 preview = nil
                 export = nil
                 failureMessage = nil
                 mode = .fullWidth
-                guard available else { return }
+                guard workspace.active else { return }
                 guard let record else { failureMessage = "This receipt is no longer available."; return }
                 do {
                     let image = try ReceiptShareRenderer.render(record)
@@ -202,7 +255,7 @@ struct ReceiptShareView: View {
                         try await work.value
                     } onCancel: { work.cancel() }
                     try Task.checkCancellation()
-                    guard available else { return }
+                    guard workspace.active else { return }
                     export = ReceiptShareImage(bytes: bytes)
                     preview = Image(uiImage: UIImage(cgImage: image).preparingThumbnail(of: CGSize(width: 240, height: 240)) ?? UIImage(cgImage: image))
                 } catch is CancellationError {
@@ -214,7 +267,52 @@ struct ReceiptShareView: View {
                     failureMessage = "Sliplet couldn’t prepare this receipt image."
                 }
             }
+        }.onDisappear { photoSave?.cancel() }
+    }
+
+    private func saveToPhotos(_ image: ReceiptShareImage) {
+        guard photoSave == nil, available else { return }
+        let session = workspace.sessionID
+        let revision = record?.current.id
+        savedToPhotos = false
+        photoSave = Task {
+            defer { photoSave = nil }
+            var status = PHPhotoLibrary.authorizationStatus(for: .addOnly)
+            if status == .notDetermined {
+                status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            }
+            // The permission sheet can briefly make the scene inactive. A locked or
+            // replaced wallet session still cancels the save before it reaches Photos.
+            guard !Task.isCancelled, workspace.active, workspace.sessionID == session,
+                  record?.current.id == revision else { return }
+            switch status {
+            case .authorized, .limited:
+                do {
+                    try await Self.addPhoto(image.bytes)
+                    guard !Task.isCancelled, workspace.sessionID == session else { return }
+                    savedToPhotos = true
+                    AccessibilityNotification.Announcement("Saved to Photos").post()
+                } catch {
+                    guard !Task.isCancelled, workspace.sessionID == session else { return }
+                    photoSaveIssue = .failed
+                }
+            case .denied: photoSaveIssue = .denied
+            case .restricted: photoSaveIssue = .restricted
+            case .notDetermined: break
+            @unknown default: photoSaveIssue = .failed
+            }
         }
+    }
+
+    // PhotoKit invokes this change block on its own queue.
+    nonisolated private static func addPhoto(_ bytes: Data) async throws {
+        let changes: @Sendable () -> Void = {
+            let request = PHAssetCreationRequest.forAsset()
+            let options = PHAssetResourceCreationOptions()
+            options.originalFilename = "Sliplet Receipt.png"
+            request.addResource(with: .photo, data: bytes, options: options)
+        }
+        try await PHPhotoLibrary.shared().performChanges(changes)
     }
 
     private var previewModePicker: some View {

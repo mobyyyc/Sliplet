@@ -14,13 +14,15 @@ struct PurchaseHistoryView: View {
                 let entries = PurchaseHistoryEntry.entries(for: endpoint, in: workspace.receipts)
                 List {
                     Section {
-                        PurchaseItemHeading(name: item.paperName, code: item.sku)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 4, bottom: 12, trailing: 4))
-                            .listRowBackground(Color.clear)
                         purchaseRow(record, line: item)
                             .accessibilityIdentifier("currentHistoryPurchase")
                     } header: {
-                        Text("This purchase")
+                        VStack(alignment: .leading, spacing: 16) {
+                            PurchaseItemHeading(name: item.paperName, code: item.sku)
+                                .foregroundStyle(Color(uiColor: .label))
+                            Text("This purchase")
+                        }
+                        .textCase(nil)
                     }
                     if entries.isEmpty {
                         ContentUnavailableView("No other purchases found", systemImage: "clock",

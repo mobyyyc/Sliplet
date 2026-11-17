@@ -24,7 +24,7 @@ import XCTest
     }
 
     func testAutomaticHistoryOpensHighlightedReceiptAndReturnsToSameLine() {
-        let app = launch(["--t05-light", "--history-long-receipt"])
+        let app = launch(["--history-long-receipt"])
         app.buttons["receipt-0"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
         let row = app.scrollViews["detailScreen"].buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'")).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10))
