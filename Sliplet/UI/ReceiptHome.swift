@@ -55,6 +55,29 @@ struct ReceiptHome: View {
                     Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 }
             }
+            .overlay(alignment: .top) {
+                if workspace.availability == .ready && !workspace.privacyCovered && workspace.flow == .wallet {
+                    // Keep the screen-wide fade in place while native search swaps the scroll surface.
+                    Rectangle()
+                        .fill(workspace.searching || workspace.library
+                              ? AnyShapeStyle(Color(uiColor: .systemGroupedBackground))
+                              : AnyShapeStyle(.ultraThinMaterial))
+                        .mask(LinearGradient(stops: [
+                            .init(color: .black, location: 0),
+                            .init(color: .black, location: 0.45),
+                            .init(color: .clear, location: 1),
+                        ], startPoint: .top, endPoint: .bottom))
+                        .frame(height: 144)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .ignoresSafeArea(.container, edges: .top)
+                        .transaction { transaction in
+                            transaction.animation = nil
+                            transaction.disablesAnimations = true
+                        }
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -257,13 +257,14 @@ final class ReceiptWorkspace {
             includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter).filter { browsingFilter.accepts($0.record) }
         let today = ReceiptBrowsingPeriod.today()
         browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles, today: today)
-        let chronological = Array(results.map(\.record).reversed())
-        // Today is the visible end of the pocket; even a future-dated receipt cannot split its month into duplicate sections.
-        let papers = chronological.filter { $0.current.fields.purchaseDate != today }
-            + chronological.filter { $0.current.fields.purchaseDate == today }
+        let newestFirst = results.map(\.record)
+        let recent = ReceiptBrowsingPeriod.Recent(newestFirst: newestFirst, today: today)
+        // Keep the recent period at the pocket, including when newer-looking dates are in the future.
+        let chronological = newestFirst.reversed()
+        let papers = chronological.filter { !recent.contains($0) } + chronological.filter { recent.contains($0) }
         if walletReceipts != papers || walletGroupingDay != today {
             walletReceipts = papers; walletGroupingDay = today
-            walletLayout = ReceiptWalletLayout(records: papers, today: today)
+            walletLayout = ReceiptWalletLayout(records: papers, recent: recent)
         }
         if resetAnchor {
             if let target = walletAnchorID.flatMap({ walletLayout.indexByID[$0] == nil ? nil : $0 }) ?? walletReceipts.last?.id {

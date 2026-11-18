@@ -57,22 +57,34 @@ import XCTest
         capture(app, "shared-date-range-filter"); app.buttons["Cancel"].tap(); app.terminate()
     }
     func testTodayIsVisibleInitiallyAndAfterNativeSearchCancel() {
-        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "wallet", "--t05-light", "--today-wallet"]
+        checkRecentWallet(id: "today", title: "Today", arguments: ["--t05-light", "--today-wallet"])
+    }
+
+    func testLatestReplacesTodayWhenThereAreNoSameDayPurchases() {
+        checkRecentWallet(id: "latest", title: "Latest", arguments: ["--t05-dark"])
+    }
+
+    private func checkRecentWallet(id: String, title: String, arguments: [String]) {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet"] + arguments
         app.launch(); XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 60))
-        let today = app.staticTexts["walletSection-today"]
-        XCTAssertTrue(today.waitForExistence(timeout: 15))
-        capture(app, "today-wallet-initial")
-        XCTAssertGreaterThan(today.frame.minY, 110); XCTAssertLessThan(today.frame.maxY, app.frame.height - 120)
+        let recent = app.staticTexts["walletSection-" + id]
+        XCTAssertTrue(recent.waitForExistence(timeout: 15))
+        XCTAssertTrue(recent.label.contains(title))
+        XCTAssertFalse(app.staticTexts["walletSection-" + (id == "today" ? "latest" : "today")].exists)
+        capture(app, id + "-wallet-initial")
+        XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         let newest = app.buttons["receipt-2"]; XCTAssertTrue(newest.isHittable)
         let position = newest.frame.minY
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("synthetic\n")
         app.buttons["close"].tap()
-        XCTAssertTrue(today.waitForExistence(timeout: 10))
-        XCTAssertGreaterThan(today.frame.minY, 110); XCTAssertLessThan(today.frame.maxY, app.frame.height - 120)
+        XCTAssertTrue(recent.waitForExistence(timeout: 10))
+        XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
         XCTAssertEqual(newest.frame.minY, position, accuracy: 4)
-        capture(app, "today-wallet-after-search-cancel")
+        capture(app, id + "-wallet-after-search-cancel")
+        guard id == "today" else { app.terminate(); return }
         app.buttons["walletSettings"].tap()
         XCTAssertTrue(app.buttons["receiptDisplayMode"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.buttons["paperAppearanceSetting"].isHittable)

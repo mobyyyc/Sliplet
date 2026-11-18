@@ -30,7 +30,8 @@ struct ReceiptBrowsingSnapshot {
         var first: [UUID: String] = [:]
         for row in rows where first[row.record.id] == nil { first[row.record.id] = row.id }
         firstRowByReceipt = first
-        let groups = Dictionary(grouping: rows) { ReceiptBrowsingPeriod.key($0.record, today: today) ?? "" }
+        let recent = ReceiptBrowsingPeriod.Recent(newestFirst: results.map(\.record), today: today)
+        let groups = Dictionary(grouping: rows) { recent.sectionKey(for: $0.record) ?? "" }
         sections = groups.keys.sorted(by: >).map {
             Section(id: $0, title: $0.isEmpty ? "Date unavailable" : monthTitles[$0] ?? ReceiptBrowsingPeriod.title($0), rows: groups[$0]!)
         }

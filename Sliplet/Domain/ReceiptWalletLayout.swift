@@ -22,7 +22,12 @@ struct ReceiptWalletLayout {
     var height: CGFloat { offsets.isEmpty ? 0 : lastOffset + 244 }
 
     init(records: [ReceiptRecord] = [], today: ReceiptDate = ReceiptBrowsingPeriod.today()) {
-        self.init(entries: records.map { ($0.id, ReceiptBrowsingPeriod.key($0, today: today)) })
+        let recent = ReceiptBrowsingPeriod.Recent(newestFirst: Array(records.reversed()), today: today)
+        self.init(records: records, recent: recent)
+    }
+
+    init(records: [ReceiptRecord], recent: ReceiptBrowsingPeriod.Recent) {
+        self.init(entries: records.map { ($0.id, recent.sectionKey(for: $0)) })
     }
     init(entries: [(id: UUID, month: String?)]) {
         receiptIDs = entries.map(\.id)

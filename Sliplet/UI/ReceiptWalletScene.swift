@@ -119,7 +119,6 @@ struct ReceiptWalletScene: View {
         ReceiptWalletPlainLayout(grouped: layout, paperHeight: previewHeight, headingHeight: headingHeight)
     }
     private var contentHeight: CGFloat { elastic ? layout.height : plainLayout.height }
-    private var lastOffset: CGFloat { elastic ? layout.lastOffset : plainLayout.lastOffset }
     private func offset(_ index: Int) -> CGFloat { elastic ? layout.offsets[index] : plainLayout.offset(index) }
 
     var body: some View {
@@ -157,8 +156,6 @@ struct ReceiptWalletScene: View {
                                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                                     if !positioned, !records.isEmpty, height > 0 {
                                         positioned = true
-                                        let latestOffset = max(0, stackTop(in: geometry) + lastOffset + previewHeight
-                                            - (geometry.size.height - walletHeight - 20 + tuckedDepth))
                                         var transaction = Transaction(animation: nil)
                                         transaction.disablesAnimations = true
                                         withTransaction(transaction) {
@@ -166,7 +163,12 @@ struct ReceiptWalletScene: View {
                                                 let target = focusOffset(focus, geometry: geometry, calibration: 0)
                                                 walletScroll.scrollTo(y: target); workspace.walletScrollOffset = target
                                                 workspace.walletFocus = nil
-                                            } else { walletScroll.scrollTo(y: workspace.walletScrollOffset ?? latestOffset) }
+                                            } else if let offset = workspace.walletScrollOffset {
+                                                walletScroll.scrollTo(y: offset)
+                                            } else {
+                                                // Keep the resting position at the pocket as the keyboard inset settles.
+                                                walletScroll.scrollTo(edge: .bottom)
+                                            }
                                         }
                                     }
                                 }
@@ -1095,10 +1097,11 @@ private extension View {
         let top = geometry.safeAreaInsets.top
         let bottom = geometry.safeAreaInsets.bottom
         // Scroll beneath the system bars; preserve safe resting positions with content margins.
-        // The native effect belongs at the screen edges, not around a central paper rectangle.
+        // ReceiptHome owns the persistent top fade across search and wallet.
         return self
             .scrollClipDisabled()
-            .scrollEdgeEffectStyle(.soft, for: .vertical)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
+            .scrollEdgeEffectHidden(true, for: .top)
             .contentMargins(.top, top, for: .scrollContent)
             .contentMargins(.bottom, bottom, for: .scrollContent)
             .frame(width: geometry.size.width, height: geometry.size.height + top + bottom)

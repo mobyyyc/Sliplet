@@ -115,7 +115,8 @@ struct ReceiptPurchaseHistoryView: View {
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
                 .autocorrectionDisabled().scrollDismissesKeyboard(.interactively)
-                .scrollEdgeEffectStyle(.soft, for: .vertical)
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .scrollEdgeEffectHidden(true, for: .top)
                 .coordinateSpace(name: "receiptBrowse")
                 .opacity(pendingRestore == nil ? 1 : 0)
                 .task(id: pendingRestore?.rowID) {

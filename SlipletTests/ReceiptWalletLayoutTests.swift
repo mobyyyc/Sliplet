@@ -70,14 +70,14 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         var first = record(SearchFixture.record(), date: try! ReceiptDate(year: 2025, month: 12, day: 1))
         let second = record(SearchFixture.record(), date: nil)
         workspace.receipts = [first, second]
-        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated", "2025-12"])
+        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated", "latest"])
         first = record(first, date: try! ReceiptDate(year: 2026, month: 1, day: 1))
         workspace.receipts = [first, second]
-        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated", "2026-01"])
+        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated", "latest"])
         XCTAssertEqual(workspace.walletLayout.indexByID[first.id], 1)
         first.organization = ReceiptOrganization(archived: true, starred: false)
         workspace.receipts = [first, second]
-        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated"])
+        XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["latest"])
         XCTAssertEqual(workspace.walletLayout.receiptIDs, [second.id])
     }
     private func dated(_ date: ReceiptDate) -> ReceiptRecord {
@@ -98,7 +98,14 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         let tomorrow = try ReceiptDate(year: 2026, month: 11, day: 19)
         let next = ReceiptWalletLayout(records: records, today: tomorrow)
         XCTAssertFalse(next.sections.contains { $0.id == "today" })
-        XCTAssertEqual(next.sections.last?.count, 3)
+        XCTAssertEqual(next.sections.map(\.id), ["2026-10", "2026-11", "latest"])
+        XCTAssertEqual(next.sections.last?.title, "Latest")
+        XCTAssertEqual(next.sections.last?.count, 2)
+        XCTAssertEqual(next.sections[1].count, 1)
+        let nextList = ReceiptBrowsingSnapshot(results: ReceiptSearchIndex(records).results(query: ""), today: tomorrow)
+        XCTAssertEqual(nextList.sections.first?.title, "Latest")
+        XCTAssertEqual(Set(nextList.sections[0].rows.map(\.record.id)), Set(records.suffix(2).map(\.id)))
+        XCTAssertEqual(Set(nextList.sections.flatMap(\.rows).map(\.record.id)).count, records.count)
     }
     @MainActor func testSearchCancelResetsHomeAndFutureDatesCannotDuplicateTodayMonthSections() throws {
         let today = ReceiptBrowsingPeriod.today()
