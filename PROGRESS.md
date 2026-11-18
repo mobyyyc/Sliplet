@@ -1,5 +1,9 @@
 # Progress
 
+## Shared Wallet/List controls · 2026-11-18
+
+Owner-requested revision replaces month/view/collection toolbar controls with separate Settings and grouped Search/Filters. Both views share date, store, collection and currency-specific total filters. Display preference moves into Settings. Twenty focused unit methods passed and two fictional UI journeys verify navigation, filter reset, search return and native date controls. Production Release builds pass. [Behavior and verification scope](docs/PHASE14_SHARED_BROWSING_CONTROLS.md).
+
 ## P14-03 browsing and search verified in Simulator · 2026-11-17
 
 Collections and filters now have clear native entry points, including during active search. Results lead with merchant/price; optional evidence lives in Match details. Navigation, date corrections and Wallet/List switching retain receipt identity and position. Verification found and repaired an empty-wallet deferred-layout crash, hidden search controls and a small menu hit area. Twelve distinct UI methods passed across the acceptance selection and targeted repairs; 18 final unit methods passed. Three native wallet samples remain close to P14-02 in clock/CPU usage. Physical-phone smoothness and human VoiceOver acceptance remain unmeasured. P14-04 purchase overview is next for approval. [Audit, results and evidence](docs/PHASE14_BROWSING_AND_SEARCH.md).

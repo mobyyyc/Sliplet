@@ -23,7 +23,11 @@ struct ReceiptSplitView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var systemTypeSize
     private var effectiveTypeSize: DynamicTypeSize {
+        #if DEBUG
         SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize
+        #else
+        systemTypeSize
+        #endif
     }
     init(workspace: ReceiptWorkspace) {
         self.workspace = workspace

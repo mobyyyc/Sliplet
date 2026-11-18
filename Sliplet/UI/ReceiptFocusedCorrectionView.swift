@@ -8,7 +8,11 @@ struct ReceiptFocusedCorrectionView: View {
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.dynamicTypeSize) private var systemTypeSize
     private var effectiveTypeSize: DynamicTypeSize {
+        #if DEBUG
         SyntheticNativePreview.enabled && ProcessInfo.processInfo.arguments.contains("--t05-large-text") ? .accessibility5 : systemTypeSize
+        #else
+        systemTypeSize
+        #endif
     }
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemReduceMotion) }
     @State private var input: ReceiptReviewDraft

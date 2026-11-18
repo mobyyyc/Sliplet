@@ -47,17 +47,18 @@ struct ReceiptSearchDetailView: View {
 
 struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
+    var openSettings: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
     @State private var viewportHeight: CGFloat = 1
-    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
-        self.workspace = workspace; self.requestDelete = requestDelete
+    init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {}, requestDelete: @escaping (ReceiptRecord) -> Void) {
+        self.workspace = workspace; self.openSettings = openSettings; self.requestDelete = requestDelete
         _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
-    private var hasFilters: Bool { workspace.merchantFilter != .all || workspace.monthFilter != .all || (workspace.includeArchived && workspace.collection != "Archive") }
+    private var hasFilters: Bool { workspace.hasBrowseFilters }
 
     var body: some View {
         GeometryReader { geometry in
@@ -78,6 +79,13 @@ struct ReceiptPurchaseHistoryView: View {
                                     if workspace.includeArchived && workspace.collection != "Archive" {
                                         filterChip("Including archived") { workspace.includeArchived = false }
                                     }
+                                    if let title = workspace.browseDateTitle {
+                                        filterChip(title) { var filter = workspace.browsingFilter; filter.dateMode = .any; workspace.browsingFilter = filter }
+                                    }
+                                    if let title = workspace.browseAmountTitle {
+                                        filterChip(title) { var filter = workspace.browsingFilter; filter.minimum = ""; filter.maximum = ""; workspace.browsingFilter = filter }
+                                    }
+                                    if workspace.collection != "All receipts" { Text(workspace.collection).font(.caption) }
                                     Button("Clear filters", action: workspace.resetBrowseFilters)
                                         .font(.caption).accessibilityIdentifier("searchClearFilters")
                                 }.padding(.vertical, 2)
@@ -106,7 +114,6 @@ struct ReceiptPurchaseHistoryView: View {
                     }
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
-                .safeAreaBar(edge: .top, spacing: 0) { ReceiptSearchScopeBar(workspace: workspace) }
                 .autocorrectionDisabled().scrollDismissesKeyboard(.interactively)
                 .scrollEdgeEffectStyle(.soft, for: .vertical)
                 .coordinateSpace(name: "receiptBrowse")
@@ -143,8 +150,9 @@ struct ReceiptPurchaseHistoryView: View {
                 }
             }
         }
-        .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or code")
+        .modifier(ReceiptNativeSearch(workspace: workspace))
     }
+
     private var resultCount: some View {
         Text("\(workspace.browsing.receiptCount) \(workspace.browsing.receiptCount == 1 ? "receipt" : "receipts")")
             .font(.caption).foregroundStyle(Color(uiColor: .secondaryLabel)).accessibilityIdentifier("searchResultCount")
@@ -351,5 +359,19 @@ struct ReceiptSearchContext: View {
                     }
                 }
         }
+    }
+}
+
+private struct ReceiptNativeSearch: ViewModifier {
+    @Bindable var workspace: ReceiptWorkspace
+    @ViewBuilder func body(content: Content) -> some View {
+        if workspace.searching {
+            content.searchable(text: $workspace.searchQuery, isPresented: $workspace.searchPresented,
+                               placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or code")
+                .searchPresentationToolbarBehavior(.avoidHidingContent)
+                .onChange(of: workspace.searchPresented) { _, presented in
+                    if !presented && workspace.flow == .wallet { workspace.searching = false; workspace.searchQuery = "" }
+                }
+        } else { content }
     }
 }

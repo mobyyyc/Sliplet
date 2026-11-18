@@ -16,18 +16,16 @@ final class ReceiptWorkspace {
         if let preparedSearchIndex { searchIndex = preparedSearchIndex; self.preparedSearchIndex = nil }
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
-        walletReceipts = orderedReceipts.reversed().filter { !$0.isArchived }
         let previousWallet = walletLayout
-        walletLayout = ReceiptWalletLayout(records: walletReceipts)
         browseMerchants = Array(Set(receipts.compactMap { $0.current.fields.merchant })).sorted()
         browseMonths = Array(Set(receipts.compactMap(ReceiptHistory.monthKey))).sorted(by: >)
         var titles = Dictionary(uniqueKeysWithValues: walletLayout.sections.map { ($0.id, $0.title) })
         for month in browseMonths where titles[month] == nil { titles[month] = ReceiptHistory.monthTitle(month) }
         browseMonthTitles = titles
+        refreshBrowsing()
         if walletReceipts.isEmpty {
             walletFocus = nil; walletAnchorID = nil; walletAnchorY = nil; walletScrollOffset = nil; walletMonthID = nil
         }
-        refreshBrowsing()
         if let anchor = walletAnchorID, let previousIndex = previousWallet.indexByID[anchor], !walletReceipts.isEmpty {
             let nextID = walletLayout.indexByID[anchor] == nil
                 ? walletLayout.receiptIDs[min(previousIndex, walletReceipts.count - 1)] : anchor
@@ -48,6 +46,10 @@ final class ReceiptWorkspace {
     var walletFocus: ReceiptWalletFocus?
     var walletMonthID: String?
     var walletJumpID: String?
+    var searching = false
+    var searchPresented = false
+    var browsingFilter = ReceiptBrowsingFilter() { didSet { if browsingFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
+    var hasBrowseFilters: Bool { merchantFilter != .all || monthFilter != .all || includeArchived || collection != "All receipts" || browsingFilter.active }
     var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var searchFiltersExpanded = false
     var searchReturnID: String?
@@ -56,6 +58,8 @@ final class ReceiptWorkspace {
     private(set) var browseMerchants: [String] = []
     private(set) var browseMonths: [String] = []
     private(set) var browseMonthTitles: [String: String] = [:]
+    private(set) var browseDateTitle: String?
+    private(set) var browseAmountTitle: String?
     private(set) var browseVersion = 0
     @ObservationIgnored private var updatingBrowseFilters = false
     var includeArchived = false { didSet { if includeArchived != oldValue { refreshBrowsing(resetAnchor: true) } } }
@@ -237,6 +241,7 @@ final class ReceiptWorkspace {
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil; walletFocus = nil; walletMonthID = nil; walletJumpID = nil
+        searching = false; searchPresented = false; browsingFilter = ReceiptBrowsingFilter()
         searchQuery = ""; searchMatch = nil; includeArchived = false
         searchFiltersExpanded = false; searchReturnID = nil; browseAnchor = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
@@ -244,23 +249,38 @@ final class ReceiptWorkspace {
     private func refreshBrowsing(resetAnchor: Bool = false) {
         guard !updatingBrowseFilters else { return }
         let previous = browsing
-        browsing = ReceiptBrowsingSnapshot(results: searchIndex.results(query: searchQuery, collection: collection,
-            includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter), monthTitles: browseMonthTitles)
+        let filter = browsingFilter
+        browseDateTitle = filter.dateMode == .day ? filter.start.formatted(date: .abbreviated, time: .omitted) : filter.dateMode == .range ? filter.start.formatted(date: .abbreviated, time: .omitted) + " – " + filter.end.formatted(date: .abbreviated, time: .omitted) : nil
+        browseAmountTitle = filter.hasAmount ? filter.currency.code + " " + (filter.minimum.isEmpty ? "≤ " + filter.maximum : filter.maximum.isEmpty ? "≥ " + filter.minimum : filter.minimum + " – " + filter.maximum) : nil
+        let results = searchIndex.results(query: searchQuery, collection: collection,
+            includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter).filter { browsingFilter.accepts($0.record) }
+        browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles)
+        let papers = results.map(\.record).reversed()
+        if walletReceipts != Array(papers) {
+            walletReceipts = Array(papers)
+            walletLayout = ReceiptWalletLayout(records: walletReceipts)
+        }
+        if resetAnchor {
+            if let target = walletAnchorID.flatMap({ walletLayout.indexByID[$0] == nil ? nil : $0 }) ?? walletReceipts.last?.id {
+                walletFocus = ReceiptWalletFocus(receiptID: target, y: walletAnchorY)
+            } else { walletFocus = nil; walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil }
+        }
         browseAnchor = resetAnchor ? nil : browsing.restored(browseAnchor, from: previous)
-        if library, let selected, let match = searchMatch {
+        if library || searching, let selected, let match = searchMatch {
             let hits = browsing.rows.filter { $0.record.id == selected.id }
             searchMatch = hits.first(where: { $0.match?.itemID == match.itemID })?.match ?? hits.first?.match
         }
         searchReturnID = browseAnchor?.rowID
         browseVersion += 1
     }
-    func applyBrowseFilters(merchant: ReceiptHistoryChoice, month: ReceiptHistoryChoice, archived: Bool) {
+    func applyBrowseFilters(merchant: ReceiptHistoryChoice, month: ReceiptHistoryChoice, archived: Bool, scope: String? = nil, extra: ReceiptBrowsingFilter? = nil) {
         updatingBrowseFilters = true
         merchantFilter = merchant; monthFilter = month; includeArchived = archived
+        if let scope { collection = scope }; if let extra { browsingFilter = extra }
         updatingBrowseFilters = false
         refreshBrowsing(resetAnchor: true)
     }
-    func resetBrowseFilters() { applyBrowseFilters(merchant: .all, month: .all, archived: false) }
+    func resetBrowseFilters() { applyBrowseFilters(merchant: .all, month: .all, archived: false, scope: "All receipts", extra: ReceiptBrowsingFilter()) }
     func showCollection(_ value: String) {
         collection = value; library = true
     }

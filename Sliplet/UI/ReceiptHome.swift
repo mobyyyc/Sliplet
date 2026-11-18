@@ -17,7 +17,7 @@ struct ReceiptHome: View {
     @State private var settings = false
     @State private var recoveryAISettings = false
     @State private var walletInformation = false
-    @State private var walletMonths = false
+    @AppStorage("receiptDisplayList") private var displayList = false
     @FocusState private var editing: String?
     @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -56,7 +56,7 @@ struct ReceiptHome: View {
                 }
             }
             .navigationTitle(title)
-            .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library && workspace.searchQuery.isEmpty ? .large : .inline)
+            .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library && !workspace.searching && workspace.searchQuery.isEmpty ? .large : .inline)
             .toolbar {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
@@ -80,68 +80,22 @@ struct ReceiptHome: View {
                         }
                     }
                     if workspace.flow == .wallet {
-                        if workspace.library {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                if !workspace.hasPendingImport {
-                                    anchoredImportChoices {
-                                        Button("Import receipt", systemImage: "plus") { importChoices = true }
-                                            .accessibilityIdentifier("import")
-                                    }
-                                }
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Settings", systemImage: "gearshape") {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                settings = true
                             }
+                                .accessibilityIdentifier("walletSettings")
                         }
-                        if workspace.library {
-                            ToolbarItem(placement: .topBarLeading) { ReceiptCollectionMenu(workspace: workspace) }
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button { workspace.searchFiltersExpanded = true } label: {
-                                    Image(systemName: workspace.merchantFilter != .all || workspace.monthFilter != .all || (workspace.includeArchived && workspace.collection != "Archive")
-                                          ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
-                                }.accessibilityLabel("Filters").accessibilityIdentifier("searchFilters")
-                            }
+                        ToolbarItemGroup(placement: .topBarTrailing) {
+                            Button("Search", systemImage: "magnifyingglass") {
+                                workspace.searching = true; workspace.searchPresented = true
+                            }.accessibilityIdentifier("receiptSearch")
+                            Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                workspace.searchFiltersExpanded = true
+                            }.accessibilityIdentifier("searchFilters")
                         }
-                        if !workspace.library && !workspace.walletLayout.sections.isEmpty {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button { walletMonths = true } label: {
-                                    HStack(spacing: 5) {
-                                        Text(workspace.walletLayout.sections.first { $0.id == workspace.walletMonthID }?.title
-                                             ?? workspace.walletLayout.sections.last?.title ?? "Months")
-                                            .font(.subheadline.weight(.medium)).lineLimit(1)
-                                        Image(systemName: "chevron.down").font(.caption2.weight(.semibold))
-                                    }
-                                }.accessibilityLabel("Jump to month").accessibilityIdentifier("walletMonths")
-                            }
-                        }
-                        if workspace.library || typeSize.isAccessibilitySize {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Menu {
-                                    Button("Settings", systemImage: "gearshape") { settings = true }
-                                    Button("Wallet information", systemImage: "info.circle") { walletInformation = true }
-                                } label: { Image(systemName: "ellipsis") }
-                                    .accessibilityLabel("Wallet options").accessibilityIdentifier("walletOptions")
-                            }
-                        } else {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Settings", systemImage: "gearshape") { settings = true }.accessibilityIdentifier("walletSettings")
-                        }
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Wallet information", systemImage: "info.circle") { walletInformation = true }
-                                .accessibilityIdentifier("walletInformation")
-                        }
-                        }
-                    }
-                    if workspace.flow == .wallet {
-                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                workspace.switchReceiptView()
-                            } label: {
-                                Image(systemName: workspace.library ? "wallet.bifold" : "list.bullet")
-                                    .font(.body.weight(.semibold))
-                            }
-                            .buttonStyle(ReceiptSecondaryStyle(circular: true))
-                            .accessibilityLabel(workspace.library ? "Switch to Wallet" : "Switch to List")
-                            .accessibilityIdentifier(workspace.library ? "walletTab" : "allReceipts")
-                        }.sharedBackgroundVisibility(.hidden)
                     }
                     if workspace.flow == .detail {
                         if workspace.selected != nil {
@@ -204,7 +158,7 @@ struct ReceiptHome: View {
                 }
             }
             .safeAreaBar(edge: .bottom, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) && !(workspace.flow == .wallet && workspace.library && !workspace.hasPendingImport) {
+                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) {
                     bottomActions.modifier(ReceiptActionBarLayout())
                 }
             }
@@ -257,11 +211,6 @@ struct ReceiptHome: View {
             .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
             .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
-            .sheet(isPresented: $walletMonths) {
-                ReceiptWalletMonths(sections: workspace.walletLayout.sections, selected: workspace.walletMonthID) { section in
-                    workspace.walletJumpID = section.id
-                }
-            }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
             .sheet(isPresented: $recoveryAISettings) {
@@ -282,6 +231,29 @@ struct ReceiptHome: View {
         )) {
             Button("OK", role: .cancel) { workspace.dismissCheckpointError() }
         } message: { Text(workspace.importCheckpointError ?? "") }
+        .onAppear {
+            #if DEBUG
+            if !SyntheticNativePreview.enabled { workspace.library = displayList }
+            #else
+            workspace.library = displayList
+            #endif
+        }
+        .onChange(of: workspace.availability) { _, state in
+            guard state == .ready else { return }
+            #if DEBUG
+            if !SyntheticNativePreview.enabled { workspace.library = displayList }
+            #else
+            workspace.library = displayList
+            #endif
+        }
+        .onChange(of: workspace.library) { _, value in
+            guard workspace.active, workspace.availability == .ready else { return }
+            #if DEBUG
+            if !SyntheticNativePreview.enabled { displayList = value }
+            #else
+            displayList = value
+            #endif
+        }
         .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
             if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopReading() }
         }
@@ -366,7 +338,7 @@ struct ReceiptHome: View {
     }
     private var title: String {
         switch workspace.flow {
-        case .wallet: workspace.library && workspace.searchQuery.isEmpty ? "Receipts" : ""
+        case .wallet: workspace.library && !workspace.searching && workspace.searchQuery.isEmpty ? "Receipts" : ""
         case .review: "Review receipt"
         case .detail: "Receipt"
         case .failed: "Import needs attention"
@@ -500,11 +472,11 @@ struct ReceiptHome: View {
 
     private var wallet: some View {
         Group {
-            if workspace.library && workspace.flow == .wallet {
-                ReceiptPurchaseHistoryView(workspace: workspace) { record in
+            if (workspace.library || workspace.searching) && workspace.flow == .wallet {
+                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }) { record in
                     deleteTarget = record; delete = true
                 }
-            } else if workspace.library {
+            } else if workspace.library || workspace.searching {
                 ReceiptSearchDetailView(workspace: workspace)
             } else {
                 ReceiptWalletScene(workspace: workspace) { record in
@@ -527,7 +499,7 @@ struct ReceiptHome: View {
 }
 
 /// Illustration only: no fake receipt data or competing action.
-private struct WalletInformationView: View {
+struct WalletInformationView: View {
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {

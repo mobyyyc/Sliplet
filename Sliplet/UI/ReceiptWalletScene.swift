@@ -140,8 +140,9 @@ struct ReceiptWalletScene: View {
                                 VStack(spacing: 24) {
                                     EmptyWalletArtwork().frame(width: 240, height: 190)
                                     VStack(spacing: 10) {
-                                        Text(workspace.receipts.isEmpty ? "A place for your receipts" : "Your wallet is clear").font(.title2.weight(.semibold))
-                                        Text(workspace.receipts.isEmpty ? "Import a photo. Keep the details." : "Open List to browse archived receipts.").font(.body)
+                                        Text(workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty ? "No matching receipts" : workspace.receipts.isEmpty ? "A place for your receipts" : "Your wallet is clear").font(.title2.weight(.semibold))
+                                        Text(workspace.hasBrowseFilters ? "Try changing or clearing your filters." : "Import a photo. Keep the details.")
+                                        if workspace.hasBrowseFilters { Button("Clear filters", action: workspace.resetBrowseFilters).buttonStyle(ReceiptSecondaryStyle()) }
                                     }.multilineTextAlignment(.center)
                                     Label("Private · on this device", systemImage: "lock").font(.footnote).padding(.top, 4)
                                 }
@@ -505,7 +506,7 @@ struct ReceiptWalletScene: View {
         typeSize.isAccessibilitySize ? 0 : [-1.0, 0.7, -0.5, 1.1][index % 4]
     }
     private func walletPocket(_ jump: @escaping () -> Void) -> some View {
-        WalletCrown(count: records.count, jumpToLatest: jump).fixedSize(horizontal: false, vertical: true)
+        WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty, jumpToLatest: jump).fixedSize(horizontal: false, vertical: true)
             .allowsHitTesting(presented == nil)
     }
     private func pocketBacking(in geometry: GeometryProxy) -> some View {
@@ -716,6 +717,7 @@ private struct WalletReadingContent: View, Equatable {
 
 private struct WalletCrown: View {
     let count: Int
+    var filtered = false
     var jumpToLatest: () -> Void
     @Environment(\.colorScheme) private var scheme
     var body: some View {
@@ -724,7 +726,7 @@ private struct WalletCrown: View {
                 Text("Wallet").font(.system(.title2, design: .serif, weight: .semibold))
                     .shadow(color: .white.opacity(scheme == .dark ? 0.08 : 0.25), radius: 0, y: 1)
                     .accessibilityIdentifier("walletHeading")
-                Text("\(count) saved").font(.subheadline).lineLimit(1).minimumScaleFactor(0.6)
+                Text(filtered ? "\(count) matching" : "\(count) saved").font(.subheadline).lineLimit(1).minimumScaleFactor(0.6)
             }
             Spacer(minLength: 6)
             if count > 3 {
@@ -740,7 +742,7 @@ private struct WalletCrown: View {
         .background { LeatherWalletSurface() }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walletPocket")
-        .accessibilityLabel("Wallet, \(count) saved receipts")
+        .accessibilityLabel(filtered ? "Wallet, \(count) matching receipts" : "Wallet, \(count) saved receipts")
     }
 }
 
@@ -989,18 +991,20 @@ struct PaperRule: Shape {
 struct ReceiptWalletSettingsView: View {
     @Bindable var workspace: ReceiptWorkspace
     @State private var backupMode: ReceiptBackupMode?
+    @State private var information = false
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
             Form {
-                Section("Collections") {
-                    Button("Archive", systemImage: "archivebox") {
-                        workspace.collection = "Archive"; workspace.library = true; dismiss()
-                    }.accessibilityIdentifier("openArchive")
-                    Button("Starred", systemImage: "star") {
-                        workspace.collection = "Starred"; workspace.library = true; dismiss()
-                    }.accessibilityIdentifier("openStarred")
+                Section("Browsing") {
+                    Picker("Display", selection: Binding(get: { workspace.library }, set: { value in
+                        if value != workspace.library { workspace.searching = false; workspace.searchPresented = false; workspace.searchQuery = ""; workspace.switchReceiptView() }
+                    })) {
+                        Text("Wallet").tag(false)
+                        Text("List").tag(true)
+                    }.accessibilityIdentifier("receiptDisplayMode")
                 }
+                Section { Button("Wallet information", systemImage: "info.circle") { information = true } }
                 ReceiptAppLockSettings()
                 Section {
                     NavigationLink {
@@ -1029,6 +1033,7 @@ struct ReceiptWalletSettingsView: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .disabled(workspace.saving && !workspace.backupBusy)
         }.tint(.primary)
+            .sheet(isPresented: $information) { WalletInformationView() }
             .sheet(item: $backupMode, onDismiss: { workspace.cancelBackup() }) { mode in ReceiptBackupView(workspace: workspace, mode: mode) }
             .onChange(of: workspace.active) { _, active in if !active { backupMode = nil } }
     }

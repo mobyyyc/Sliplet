@@ -41,7 +41,7 @@ import XCTest
         XCTAssertEqual(model.monthFilter, .value("2026-10")); XCTAssertEqual(model.browsing.receiptCount, 0)
         model.collection = "Starred"; model.searchQuery = "milk"
         model.resetBrowseFilters()
-        XCTAssertEqual(model.collection, "Starred"); XCTAssertEqual(model.searchQuery, "milk")
+        XCTAssertEqual(model.collection, "All receipts"); XCTAssertEqual(model.searchQuery, "milk")
         XCTAssertEqual(model.monthFilter, .all)
     }
     func testWalletFocusFollowsIdentityAcrossDateEditsArchiveAndRemoval() throws {
@@ -72,6 +72,32 @@ import XCTest
         model.showCollection("Archive"); let archived = try XCTUnwrap(model.browsing.rows.first)
         model.browseAnchor = .init(rowID: archived.id, receiptID: record.id, y: 200); model.walletFocus = nil
         model.switchReceiptView()
-        XCTAssertNil(model.walletFocus); XCTAssertTrue(model.receipts[0].isArchived); XCTAssertEqual(model.collection, "Archive")
+        XCTAssertNotNil(model.walletFocus); XCTAssertTrue(model.receipts[0].isArchived); XCTAssertEqual(model.collection, "Archive")
     }
+    func testSharedMonthAndTotalScopeProduceIdenticalWalletAndListIdentities() throws {
+        let model = ReceiptWorkspace(); let record = SearchFixture.record(); model.receipts = [record]
+        var extra = ReceiptBrowsingFilter(); extra.minimum = "3.00"; extra.maximum = "3.00"
+        model.applyBrowseFilters(merchant: .all, month: .value("2026-10"), archived: false, extra: extra)
+        XCTAssertEqual(model.walletReceipts.map(\.id), model.browsing.rows.map { $0.record.id })
+        XCTAssertEqual(model.walletReceipts.count, 1)
+        extra.maximum = "2.99"; extra.minimum = ""
+        model.applyBrowseFilters(merchant: .all, month: .all, archived: false, extra: extra)
+        XCTAssertTrue(model.walletReceipts.isEmpty); XCTAssertEqual(model.browsing.receiptCount, 0)
+        model.resetBrowseFilters(); XCTAssertEqual(model.walletReceipts.count, 1)
+    }
+    func testDateBoundsAreInclusiveAndAmountScopeNeverMixesCurrencies() throws {
+        let record = SearchFixture.record(); let date = try XCTUnwrap(record.current.fields.purchaseDate)
+        let calendar = Calendar(identifier: .gregorian)
+        let exact = try XCTUnwrap(calendar.date(from: DateComponents(year: date.year, month: date.month, day: date.day)))
+        var filter = ReceiptBrowsingFilter(); filter.dateMode = .day; filter.start = exact
+        XCTAssertTrue(filter.accepts(record))
+        filter.dateMode = .range; filter.end = exact; XCTAssertTrue(filter.accepts(record))
+        filter.end = calendar.date(byAdding: .day, value: -1, to: exact)!; XCTAssertNotNil(filter.validation)
+        filter.dateMode = .any; filter.minimum = "3.00"; filter.maximum = "3.00"
+        XCTAssertTrue(filter.accepts(record))
+        filter.currency = try ReceiptCurrency(code: "USD", minorUnitScale: 2)
+        XCTAssertFalse(filter.accepts(record))
+        filter.minimum = "invalid"; XCTAssertNotNil(filter.validation); XCTAssertFalse(filter.accepts(record))
+    }
+
 }
