@@ -754,10 +754,11 @@ import Vision
         app.terminate()
     }
     func testLongWalletReceiptBottomClearsRaisedActions() {
-        let app = launch("long-wallet")
+        let app = launch("long-wallet", extra: ["--search-long-paper"])
         XCTAssertGreaterThanOrEqual(app.frame.maxY - app.buttons["import"].frame.maxY, 40)
-        let paper = app.buttons["receipt-1"]
-        XCTAssertTrue(paper.waitForExistence(timeout: 20)); paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.07)).tap()
+        let paper = app.buttons.matching(NSPredicate(format: "identifier == 'receipt-2' AND label CONTAINS '382.54'")).firstMatch
+        XCTAssertTrue(paper.waitForExistence(timeout: 20))
+        paper.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)).tap()
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
         let footer = app.descendants(matching: .any)["receiptPaperTotal"]
         for _ in 0..<10 {

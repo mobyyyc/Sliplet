@@ -19,7 +19,10 @@ struct ReceiptHome: View {
     @State private var walletInformation = false
     @AppStorage("receiptDisplayList") private var displayList = false
     @FocusState private var editing: String?
+    @FocusState private var searchFocused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     private func anchoredImportChoices<Trigger: View>(@ViewBuilder trigger: () -> Trigger) -> some View {
         trigger()
@@ -55,29 +58,6 @@ struct ReceiptHome: View {
                     Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 }
             }
-            .overlay(alignment: .top) {
-                if workspace.availability == .ready && !workspace.privacyCovered && workspace.flow == .wallet {
-                    // Keep the screen-wide fade in place while native search swaps the scroll surface.
-                    Rectangle()
-                        .fill(workspace.searching || workspace.library
-                              ? AnyShapeStyle(Color(uiColor: .systemGroupedBackground))
-                              : AnyShapeStyle(.ultraThinMaterial))
-                        .mask(LinearGradient(stops: [
-                            .init(color: .black, location: 0),
-                            .init(color: .black, location: 0.45),
-                            .init(color: .clear, location: 1),
-                        ], startPoint: .top, endPoint: .bottom))
-                        .frame(height: 144)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .ignoresSafeArea(.container, edges: .top)
-                        .transaction { transaction in
-                            transaction.animation = nil
-                            transaction.disablesAnimations = true
-                        }
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -104,14 +84,14 @@ struct ReceiptHome: View {
                     }
                     if workspace.flow == .wallet {
                         ToolbarItem(placement: .topBarLeading) {
-                            Text(workspace.searching ? "Search" : workspace.library ? "Receipts" : "Wallet")
+                            Text(workspace.library ? "Receipts" : "Wallet")
                                 .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
                                 .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                                 .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
                         }.sharedBackgroundVisibility(.hidden)
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             Button("Search", systemImage: "magnifyingglass") {
-                                workspace.searching = true; workspace.searchPresented = true
+                                openSearch()
                             }.accessibilityIdentifier("receiptSearch")
                             Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
                                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -190,7 +170,11 @@ struct ReceiptHome: View {
             }
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) {
-                    bottomActions.modifier(ReceiptActionBarLayout())
+                    if workspace.flow == .wallet && workspace.searching {
+                        searchBar.modifier(ReceiptActionBarLayout())
+                    } else {
+                        bottomActions.modifier(ReceiptActionBarLayout())
+                    }
                 }
             }
             .fullScreenCover(isPresented: $camera, onDismiss: {
@@ -262,9 +246,6 @@ struct ReceiptHome: View {
         )) {
             Button("OK", role: .cancel) { workspace.dismissCheckpointError() }
         } message: { Text(workspace.importCheckpointError ?? "") }
-        .transaction(value: workspace.searching) { transaction in
-            if !workspace.searching { transaction.animation = nil; transaction.disablesAnimations = true }
-        }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             workspace.refreshCalendarGrouping()
         }
@@ -297,6 +278,64 @@ struct ReceiptHome: View {
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }
+    private func openSearch() {
+        withoutSearchAnimation {
+            workspace.searching = true
+            searchFocused = true
+        }
+    }
+
+    private func closeSearch() {
+        withoutSearchAnimation {
+            searchFocused = false
+            workspace.endSearch()
+        }
+    }
+
+    private func withoutSearchAnimation(_ updates: () -> Void) {
+        // The navigation toolbar is not part of the search presentation.
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction, updates)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            if ReceiptAccessibility.reduceTransparency(reduceTransparency) || ReceiptAccessibility.contrast(colorSchemeContrast) == .increased {
+                searchField.background(Color(uiColor: .secondarySystemGroupedBackground), in: .capsule)
+                    .overlay { Capsule().stroke(.primary.opacity(0.35), lineWidth: 1).allowsHitTesting(false) }
+            } else {
+                searchField.glassEffect(.regular, in: .capsule)
+            }
+            Button("Close search", systemImage: "xmark", action: closeSearch)
+                .labelStyle(.iconOnly)
+                .buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 48))
+                .accessibilityIdentifier("close")
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 9) {
+            Image(systemName: "magnifyingglass").accessibilityHidden(true)
+            TextField("Merchant, item or code", text: $workspace.searchQuery)
+                .focused($searchFocused)
+                .submitLabel(.search)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .accessibilityAddTraits(.isSearchField)
+                .accessibilityIdentifier("receiptSearchField")
+                .onSubmit { searchFocused = false }
+            if !workspace.searchQuery.isEmpty {
+                Button("Clear text", systemImage: "xmark.circle.fill") { workspace.searchQuery = "" }
+                    .labelStyle(.iconOnly).buttonStyle(.plain)
+                    .frame(minWidth: 44, minHeight: 44)
+            }
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, workspace.searchQuery.isEmpty ? 14 : 3)
+        .frame(minHeight: 48)
+    }
+
     @ViewBuilder private var bottomActions: some View {
         switch workspace.flow {
         case .wallet:

@@ -115,11 +115,11 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         model.receipts = [dated(future), current, dated(try ReceiptDate(year: 2025, month: 1, day: 1))]
         XCTAssertEqual(model.walletReceipts.last?.id, current.id)
         XCTAssertEqual(Set(model.walletLayout.sections.map(\.id)).count, model.walletLayout.sections.count)
-        model.searching = true; model.searchPresented = true; model.searchQuery = "milk"
+        model.searching = true; model.searchQuery = "milk"
         model.walletScrollOffset = 450; model.walletAnchorID = current.id
         model.walletFocus = ReceiptWalletFocus(receiptID: current.id, y: 140)
         model.endSearch()
-        XCTAssertFalse(model.searching); XCTAssertFalse(model.searchPresented); XCTAssertEqual(model.searchQuery, "")
+        XCTAssertFalse(model.searching); XCTAssertEqual(model.searchQuery, "")
         XCTAssertNil(model.walletScrollOffset); XCTAssertNil(model.walletFocus); XCTAssertNil(model.walletAnchorID)
         XCTAssertNil(model.browseAnchor)
         XCTAssertEqual(model.walletLayout.sections.last?.title, "Today")

@@ -38,7 +38,7 @@ import XCTest
         XCTAssertFalse(app.buttons["walletTab"].exists)
         capture(app, "shared-list-toolbar"); app.terminate()
     }
-    func testSearchKeepsNativeToolbarAndReturnsToMatchingReceipt() {
+    func testSearchKeepsToolbarAndReturnsToMatchingReceipt() {
         let app = launch(true)
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("milk\n")
@@ -56,7 +56,7 @@ import XCTest
         XCTAssertTrue(app.descendants(matching: .any)["filterStartDate"].exists); XCTAssertTrue(app.descendants(matching: .any)["filterEndDate"].exists)
         capture(app, "shared-date-range-filter"); app.buttons["Cancel"].tap(); app.terminate()
     }
-    func testTodayIsVisibleInitiallyAndAfterNativeSearchCancel() {
+    func testTodayIsVisibleInitiallyAndAfterSearchCancel() {
         checkRecentWallet(id: "today", title: "Today", arguments: ["--t05-light", "--today-wallet"])
     }
 
@@ -77,9 +77,14 @@ import XCTest
         let newest = app.buttons["receipt-2"]; XCTAssertTrue(newest.isHittable)
         let position = newest.frame.minY
         app.buttons["receiptSearch"].tap()
-        let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("synthetic\n")
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.typeText(id == "latest" ? "synthetic" : "synthetic\n")
+        if id == "latest" { XCTAssertTrue(app.keyboards.firstMatch.exists) }
+        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
         app.buttons["close"].tap()
         XCTAssertTrue(recent.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
         XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
         XCTAssertEqual(newest.frame.minY, position, accuracy: 4)

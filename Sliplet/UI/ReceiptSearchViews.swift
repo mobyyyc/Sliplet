@@ -115,8 +115,7 @@ struct ReceiptPurchaseHistoryView: View {
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
                 .autocorrectionDisabled().scrollDismissesKeyboard(.interactively)
-                .scrollEdgeEffectStyle(.soft, for: .bottom)
-                .scrollEdgeEffectHidden(true, for: .top)
+                .scrollEdgeEffectStyle(.soft, for: .vertical)
                 .coordinateSpace(name: "receiptBrowse")
                 .opacity(pendingRestore == nil ? 1 : 0)
                 .task(id: pendingRestore?.rowID) {
@@ -151,7 +150,6 @@ struct ReceiptPurchaseHistoryView: View {
                 }
             }
         }
-        .modifier(ReceiptNativeSearch(workspace: workspace))
     }
 
     private var resultCount: some View {
@@ -360,22 +358,5 @@ struct ReceiptSearchContext: View {
                     }
                 }
         }
-    }
-}
-
-private struct ReceiptNativeSearch: ViewModifier {
-    @Bindable var workspace: ReceiptWorkspace
-    @ViewBuilder func body(content: Content) -> some View {
-        if workspace.searching {
-            content.searchable(text: $workspace.searchQuery, isPresented: $workspace.searchPresented,
-                               placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or code")
-                .searchPresentationToolbarBehavior(.avoidHidingContent)
-                .onChange(of: workspace.searchPresented) { _, presented in
-                    if !presented && workspace.flow == .wallet {
-                        var transaction = Transaction(animation: nil); transaction.disablesAnimations = true
-                        withTransaction(transaction) { workspace.endSearch() }
-                    }
-                }
-        } else { content }
     }
 }

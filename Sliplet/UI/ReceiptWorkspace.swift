@@ -48,7 +48,6 @@ final class ReceiptWorkspace {
     var walletMonthID: String?
     var walletJumpID: String?
     var searching = false
-    var searchPresented = false
     var browsingFilter = ReceiptBrowsingFilter() { didSet { if browsingFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var hasBrowseFilters: Bool { merchantFilter != .all || monthFilter != .all || includeArchived || collection != "All receipts" || browsingFilter.active }
     var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true) } } }
@@ -242,7 +241,7 @@ final class ReceiptWorkspace {
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil; walletFocus = nil; walletMonthID = nil; walletJumpID = nil
-        searching = false; searchPresented = false; browsingFilter = ReceiptBrowsingFilter()
+        searching = false; browsingFilter = ReceiptBrowsingFilter()
         searchQuery = ""; searchMatch = nil; includeArchived = false
         searchFiltersExpanded = false; searchReturnID = nil; browseAnchor = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
@@ -295,7 +294,7 @@ final class ReceiptWorkspace {
         walletMonthID = nil; walletJumpID = nil; browseAnchor = nil; searchReturnID = nil
     }
     func endSearch() {
-        searching = false; searchPresented = false; searchQuery = ""
+        searching = false; searchQuery = ""
         resetHomeToNewest()
     }
     func refreshCalendarGrouping() { refreshBrowsing() }

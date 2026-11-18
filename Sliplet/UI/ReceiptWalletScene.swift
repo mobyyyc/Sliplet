@@ -630,7 +630,6 @@ private struct WalletReadingScene: View {
                                                         width: max(0, geometry.size.width - 60), height: max(origin.height, fullHeight)),
                                     tilt: tilt, reduceMotion: reduceMotion)
                     .allowsHitTesting(false).accessibilityRepresentation { EmptyView() }
-                readerScreenEdges(in: geometry).opacity(expanded ? 1 : 0)
             }
             .onChange(of: reviewInput, initial: true) { _, value in
                 if contentReady { retainedInput = value }
@@ -642,20 +641,6 @@ private struct WalletReadingScene: View {
                 if !reading { returnCanvasY = canvasY }
             }
         }
-    }
-    @ViewBuilder private func readerScreenEdges(in geometry: GeometryProxy) -> some View {
-        let top = max(0, geometry.frame(in: .global).minY)
-        let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows).first(where: \.isKeyWindow)
-        let end = (window?.bounds.height ?? (geometry.frame(in: .global).maxY + geometry.safeAreaInsets.bottom)) - top
-        ZStack(alignment: .topLeading) {
-            Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
-                .frame(width: max(0, geometry.size.width), height: top + 16).offset(y: -top)
-            Rectangle().fill(.ultraThinMaterial)
-                .mask(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom))
-                .frame(width: max(0, geometry.size.width), height: 64).offset(y: end - 64)
-        }.allowsHitTesting(false).accessibilityHidden(true)
     }
 }
 
@@ -1097,11 +1082,10 @@ private extension View {
         let top = geometry.safeAreaInsets.top
         let bottom = geometry.safeAreaInsets.bottom
         // Scroll beneath the system bars; preserve safe resting positions with content margins.
-        // ReceiptHome owns the persistent top fade across search and wallet.
+        // Use the same native soft edges as lists and receipt detail.
         return self
             .scrollClipDisabled()
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
-            .scrollEdgeEffectHidden(true, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .vertical)
             .contentMargins(.top, top, for: .scrollContent)
             .contentMargins(.bottom, bottom, for: .scrollContent)
             .frame(width: geometry.size.width, height: geometry.size.height + top + bottom)
