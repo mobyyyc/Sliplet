@@ -56,7 +56,7 @@ struct ReceiptHome: View {
                 }
             }
             .navigationTitle(title)
-            .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library && !workspace.searching && workspace.searchQuery.isEmpty ? .large : .inline)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
@@ -81,12 +81,11 @@ struct ReceiptHome: View {
                     }
                     if workspace.flow == .wallet {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button("Settings", systemImage: "gearshape") {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                settings = true
-                            }
-                                .accessibilityIdentifier("walletSettings")
-                        }
+                            Text(workspace.searching ? "Search" : workspace.library ? "Receipts" : "Wallet")
+                                .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
+                        }.sharedBackgroundVisibility(.hidden)
                         ToolbarItemGroup(placement: .topBarTrailing) {
                             Button("Search", systemImage: "magnifyingglass") {
                                 workspace.searching = true; workspace.searchPresented = true
@@ -96,6 +95,15 @@ struct ReceiptHome: View {
                                 workspace.searchFiltersExpanded = true
                             }.accessibilityIdentifier("searchFilters")
                         }
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Settings", systemImage: "gearshape") {
+                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                settings = true
+                            }
+                                .accessibilityIdentifier("walletSettings")
+                        }
+
                     }
                     if workspace.flow == .detail {
                         if workspace.selected != nil {
@@ -338,7 +346,7 @@ struct ReceiptHome: View {
     }
     private var title: String {
         switch workspace.flow {
-        case .wallet: workspace.library && !workspace.searching && workspace.searchQuery.isEmpty ? "Receipts" : ""
+        case .wallet: ""
         case .review: "Review receipt"
         case .detail: "Receipt"
         case .failed: "Import needs attention"
@@ -482,12 +490,7 @@ struct ReceiptHome: View {
                 ReceiptWalletScene(workspace: workspace) { record in
                     deleteTarget = record; delete = true
                 }
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    if workspace.receipts.filter({ !$0.isArchived }).isEmpty && workspace.flow == .wallet {
-                        Text("Wallet").font(.largeTitle.weight(.bold)).frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 16).accessibilityAddTraits(.isHeader)
-                    }
-                }
+
             }
         }
     }

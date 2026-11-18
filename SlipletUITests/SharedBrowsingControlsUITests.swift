@@ -13,6 +13,9 @@ import XCTest
         let app = launch()
         XCTAssertTrue(app.buttons["walletSettings"].isHittable)
         XCTAssertTrue(app.buttons["receiptSearch"].isHittable)
+        XCTAssertLessThan(app.buttons["receiptSearch"].frame.midX, app.buttons["searchFilters"].frame.midX)
+        XCTAssertLessThan(app.buttons["searchFilters"].frame.midX, app.buttons["walletSettings"].frame.midX)
+        XCTAssertLessThan(app.staticTexts["browseTitle"].frame.midX, app.buttons["receiptSearch"].frame.minX)
         XCTAssertFalse(app.buttons["walletMonths"].exists); XCTAssertFalse(app.buttons["allReceipts"].exists)
         app.buttons["searchFilters"].tap()
         let maximum = app.textFields["filterMaximum"]

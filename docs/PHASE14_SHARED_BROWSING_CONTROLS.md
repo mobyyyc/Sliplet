@@ -4,7 +4,7 @@ Owner-requested revision, November 17, 2026.
 
 ## Interaction
 
-Wallet and List share the same browsing toolbar: Settings on the leading side; Search and Filters together on the trailing side. Remove the standalone month selector, information button and view-switch button. Display mode moves into Settings. Keep receipt import as the bottom primary action in either mode.
+Wallet and List share the same browsing toolbar: A compact Wallet / Receipts / Search title on the leading side; Search and Filters grouped on the trailing side, followed by a separate Settings button at the far right. Remove the standalone month selector, information button and view-switch button. Display mode moves into Settings. Keep receipt import as the bottom primary action in either mode.
 
 Search uses the same query and scope in either mode. Filters apply to both the paper wallet and list. A filtered empty wallet must offer Clear filters rather than suggest that receipts have disappeared.
 
@@ -22,7 +22,7 @@ Verify shared results, month/exact-date/inclusive-range boundaries, amount/curre
 
 ## Implementation and scoped verification · November 18, 2026
 
-The shared toolbar is implemented: separate leading Settings, grouped trailing Search and Filters. Month jumping and the display toggle no longer occupy the toolbar. Settings contains a persistent Wallet/List choice and wallet information. Import remains the bottom primary action in both views. Search temporarily presents the native result list without changing the preferred display mode; closing search restores ordinary browsing. Native search uses avoidHidingContent to retain the toolbar, without a custom duplicate control bar.
+The shared toolbar is implemented: grouped trailing Search and Filters followed by separate far-right Settings, with a compact leading title. Month jumping and the display toggle no longer occupy the toolbar. Settings contains a persistent Wallet/List choice and wallet information. Import remains the bottom primary action in both views. Search temporarily presents the native result list without changing the preferred display mode; closing search restores ordinary browsing. Native search uses avoidHidingContent to retain the toolbar, without a custom duplicate control bar.
 
 The native filter Form provides collection, merchant, month, specific day, inclusive date range and receipt-total minimum/maximum in an explicit currency. Apply/Cancel is transactional. Invalid or reversed amounts/date ranges block Apply. Wallet and List derive the same receipt identities from one cached result set. Active conditions have compact labels and can be cleared; filtered empty states offer Clear filters. Wallet counts distinguish matching receipts from saved receipts. Search keyboard dismissal precedes filter/settings presentation.
 
@@ -33,3 +33,5 @@ Next roadmap task remains P14-04 Purchase overview, pending owner approval and e
 Fictional Simulator screenshots: [List toolbar](design/phase14/evidence/shared-controls/shared-list-toolbar.png), [active search](design/phase14/evidence/shared-controls/shared-active-search.png), [date range](design/phase14/evidence/shared-controls/shared-date-range-filter.png), [empty filter result](design/phase14/evidence/shared-controls/shared-wallet-empty-filter.png).
 
 The signed Release build was installed in place on the paired iPhone 15 Pro on November 18, 2026 using the existing com.mobyyyc.RcpLens identity. No uninstall or wallet replacement was performed. Existing-receipt visibility and owner interaction acceptance are not claimed by the installation result.
+
+The owner refined the placement on November 18: all actions occupy the upper right, ordered Search, Filters, then a separated Settings control. The leading title indicates Wallet, Receipts or Search. The redundant large List heading and empty-wallet heading are removed to preserve vertical space. Native UI checks verify button order and the existing search/filter/display-mode journeys.
