@@ -56,4 +56,33 @@ import XCTest
         XCTAssertTrue(app.descendants(matching: .any)["filterStartDate"].exists); XCTAssertTrue(app.descendants(matching: .any)["filterEndDate"].exists)
         capture(app, "shared-date-range-filter"); app.buttons["Cancel"].tap(); app.terminate()
     }
+    func testTodayIsVisibleInitiallyAndAfterNativeSearchCancel() {
+        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "wallet", "--t05-light", "--today-wallet"]
+        app.launch(); XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 60))
+        let today = app.staticTexts["walletSection-today"]
+        XCTAssertTrue(today.waitForExistence(timeout: 15))
+        capture(app, "today-wallet-initial")
+        XCTAssertGreaterThan(today.frame.minY, 110); XCTAssertLessThan(today.frame.maxY, app.frame.height - 120)
+        let newest = app.buttons["receipt-2"]; XCTAssertTrue(newest.isHittable)
+        let position = newest.frame.minY
+        app.buttons["receiptSearch"].tap()
+        let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("synthetic\n")
+        app.buttons["close"].tap()
+        XCTAssertTrue(today.waitForExistence(timeout: 10))
+        XCTAssertGreaterThan(today.frame.minY, 110); XCTAssertLessThan(today.frame.maxY, app.frame.height - 120)
+        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
+        XCTAssertEqual(newest.frame.minY, position, accuracy: 4)
+        capture(app, "today-wallet-after-search-cancel")
+        app.buttons["walletSettings"].tap()
+        XCTAssertTrue(app.buttons["receiptDisplayMode"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["paperAppearanceSetting"].isHittable)
+        XCTAssertTrue(app.staticTexts["Display"].exists)
+        for _ in 0..<6 {
+            if app.buttons["walletInformationSetting"].isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(app.buttons["walletInformationSetting"].isHittable)
+        capture(app, "settings-information-last"); app.buttons["Done"].tap(); app.terminate()
+    }
+
 }

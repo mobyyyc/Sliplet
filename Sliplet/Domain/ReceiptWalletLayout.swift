@@ -21,8 +21,8 @@ struct ReceiptWalletLayout {
     var lastOffset: CGFloat { offsets.last ?? 0 }
     var height: CGFloat { offsets.isEmpty ? 0 : lastOffset + 244 }
 
-    init(records: [ReceiptRecord] = []) {
-        self.init(entries: records.map { ($0.id, ReceiptHistory.monthKey($0)) })
+    init(records: [ReceiptRecord] = [], today: ReceiptDate = ReceiptBrowsingPeriod.today()) {
+        self.init(entries: records.map { ($0.id, ReceiptBrowsingPeriod.key($0, today: today)) })
     }
     init(entries: [(id: UUID, month: String?)]) {
         receiptIDs = entries.map(\.id)
@@ -35,14 +35,14 @@ struct ReceiptWalletLayout {
                 offset += Self.pitch
                 if entries[index].month != entries[index - 1].month {
                     let key = entries[start].month
-                    sections.append(Section(id: key ?? "undated", title: key.map(ReceiptHistory.monthTitle) ?? "Date unavailable", indices: start..<index))
+                    sections.append(Section(id: key ?? "undated", title: key.map(ReceiptBrowsingPeriod.title) ?? "Date unavailable", indices: start..<index))
                     start = index; offset += Self.monthGap
                 }
             }
             offsets.append(offset); sectionIndices.append(sections.count)
         }
         if let last = entries.last {
-            sections.append(Section(id: last.month ?? "undated", title: last.month.map(ReceiptHistory.monthTitle) ?? "Date unavailable", indices: start..<entries.count))
+            sections.append(Section(id: last.month ?? "undated", title: last.month.map(ReceiptBrowsingPeriod.title) ?? "Date unavailable", indices: start..<entries.count))
         }
         self.offsets = offsets; self.sections = sections; self.sectionIndices = sectionIndices
     }

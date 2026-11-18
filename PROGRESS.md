@@ -1,5 +1,9 @@
 # Progress
 
+## Today and Settings refinement · 2026-11-18
+
+Settings combines display options near the top and moves Wallet information to About at the bottom. Wallet/List share a local-date Today group using the existing section treatment. Native search cancellation resets home to newest and suppresses inherited content-transition animation. Twenty-two focused unit methods and three distinct fictional UI journeys passed across scoped runs. Device optical smoothness remains an owner check. [Behavior, verification and screenshots](docs/PHASE14_TODAY_AND_SETTINGS.md).
+
 ## Shared Wallet/List controls · 2026-11-18
 
 Owner-requested revision replaces month/view/collection toolbar controls with separate Settings and grouped Search/Filters. Both views share date, store, collection and currency-specific total filters. Display preference moves into Settings. Twenty focused unit methods passed and two fictional UI journeys verify navigation, filter reset, search return and native date controls. Production Release builds pass. [Behavior and verification scope](docs/PHASE14_SHARED_BROWSING_CONTROLS.md).

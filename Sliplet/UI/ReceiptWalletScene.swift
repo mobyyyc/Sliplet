@@ -996,36 +996,38 @@ struct ReceiptWalletSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Browsing") {
-                    Picker("Display", selection: Binding(get: { workspace.library }, set: { value in
-                        if value != workspace.library { workspace.searching = false; workspace.searchPresented = false; workspace.searchQuery = ""; workspace.switchReceiptView() }
+                Section("Display") {
+                    Picker("Receipt view", selection: Binding(get: { workspace.library }, set: { value in
+                        if value != workspace.library {
+                            workspace.endSearch(); workspace.switchReceiptView(); workspace.resetHomeToNewest()
+                        }
                     })) {
                         Text("Wallet").tag(false)
                         Text("List").tag(true)
                     }.accessibilityIdentifier("receiptDisplayMode")
+                    Picker("Receipt paper", selection: Binding(get: { workspace.walletSettings.paperAppearance }, set: { appearance in
+                        var settings = workspace.walletSettings; settings.paperAppearance = appearance
+                        workspace.setWalletSettings(settings)
+                    })) {
+                        ForEach(ReceiptPaperAppearance.allCases) { Text($0.title).tag($0) }
+                    }.accessibilityIdentifier("paperAppearanceSetting")
                 }
-                Section { Button("Wallet information", systemImage: "info.circle") { information = true } }
-                ReceiptAppLockSettings()
-                Section {
+                Section("Recognition") {
                     NavigationLink {
                         ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
                     } label: {
                         LabeledContent("AI recognition", value: workspace.aiConnection.settingsSummary)
                     }.accessibilityIdentifier("aiRecognitionSettings")
                 }
+                ReceiptAppLockSettings()
                 ReceiptBackupSettingsSection(workspace: workspace, mode: $backupMode)
-                Section {
-                    Picker("Receipt paper", selection: Binding(get: { workspace.walletSettings.paperAppearance }, set: { appearance in
-                        var settings = workspace.walletSettings
-                        settings.paperAppearance = appearance
-                        workspace.setWalletSettings(settings)
-                    })) {
-                        ForEach(ReceiptPaperAppearance.allCases) { Text($0.title).tag($0) }
-                    }.accessibilityIdentifier("paperAppearanceSetting")
-                } header: { Text("Appearance") } footer: { Text("Keep receipts white, or let the paper follow Light and Dark Mode.") }
                 Section("Receipt actions") {
                     LabeledContent("Swipe left", value: "Delete")
                     LabeledContent("Swipe right", value: "Archive")
+                }
+                Section("About") {
+                    Button("Wallet information", systemImage: "info.circle") { information = true }
+                        .accessibilityIdentifier("walletInformationSetting")
                 }
                 if let notice = workspace.notice { Section { Text(notice) } }
             }

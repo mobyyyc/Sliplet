@@ -40,6 +40,7 @@ final class ReceiptWorkspace {
     private(set) var orderedReceipts: [ReceiptRecord] = []
     private(set) var walletReceipts: [ReceiptRecord] = []
     private(set) var walletLayout = ReceiptWalletLayout()
+    private var walletGroupingDay = ReceiptBrowsingPeriod.today()
     var walletScrollOffset: CGFloat?
     var walletAnchorID: UUID?
     var walletAnchorY: CGFloat?
@@ -254,11 +255,15 @@ final class ReceiptWorkspace {
         browseAmountTitle = filter.hasAmount ? filter.currency.code + " " + (filter.minimum.isEmpty ? "≤ " + filter.maximum : filter.maximum.isEmpty ? "≥ " + filter.minimum : filter.minimum + " – " + filter.maximum) : nil
         let results = searchIndex.results(query: searchQuery, collection: collection,
             includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter).filter { browsingFilter.accepts($0.record) }
-        browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles)
-        let papers = results.map(\.record).reversed()
-        if walletReceipts != Array(papers) {
-            walletReceipts = Array(papers)
-            walletLayout = ReceiptWalletLayout(records: walletReceipts)
+        let today = ReceiptBrowsingPeriod.today()
+        browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles, today: today)
+        let chronological = Array(results.map(\.record).reversed())
+        // Today is the visible end of the pocket; even a future-dated receipt cannot split its month into duplicate sections.
+        let papers = chronological.filter { $0.current.fields.purchaseDate != today }
+            + chronological.filter { $0.current.fields.purchaseDate == today }
+        if walletReceipts != papers || walletGroupingDay != today {
+            walletReceipts = papers; walletGroupingDay = today
+            walletLayout = ReceiptWalletLayout(records: papers, today: today)
         }
         if resetAnchor {
             if let target = walletAnchorID.flatMap({ walletLayout.indexByID[$0] == nil ? nil : $0 }) ?? walletReceipts.last?.id {
@@ -284,6 +289,15 @@ final class ReceiptWorkspace {
     func showCollection(_ value: String) {
         collection = value; library = true
     }
+    func resetHomeToNewest() {
+        walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil; walletFocus = nil
+        walletMonthID = nil; walletJumpID = nil; browseAnchor = nil; searchReturnID = nil
+    }
+    func endSearch() {
+        searching = false; searchPresented = false; searchQuery = ""
+        resetHomeToNewest()
+    }
+    func refreshCalendarGrouping() { refreshBrowsing() }
     func switchReceiptView() {
         if library {
             if let anchor = browseAnchor, anchor.receiptID != walletAnchorID, walletLayout.indexByID[anchor.receiptID] != nil {

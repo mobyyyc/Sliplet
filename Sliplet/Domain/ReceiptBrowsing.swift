@@ -18,7 +18,7 @@ struct ReceiptBrowsingSnapshot {
     let sections: [Section]
     let indexByID: [String: Int]
     let firstRowByReceipt: [UUID: String]
-    init(results: [ReceiptSearchIndex.Result] = [], monthTitles: [String: String] = [:]) {
+    init(results: [ReceiptSearchIndex.Result] = [], monthTitles: [String: String] = [:], today: ReceiptDate = ReceiptBrowsingPeriod.today()) {
         receiptCount = results.count
         rows = results.flatMap { result in
             if result.matches.isEmpty || result.matches.first?.basis == .merchant {
@@ -30,9 +30,9 @@ struct ReceiptBrowsingSnapshot {
         var first: [UUID: String] = [:]
         for row in rows where first[row.record.id] == nil { first[row.record.id] = row.id }
         firstRowByReceipt = first
-        let groups = Dictionary(grouping: rows) { ReceiptHistory.monthKey($0.record) ?? "" }
+        let groups = Dictionary(grouping: rows) { ReceiptBrowsingPeriod.key($0.record, today: today) ?? "" }
         sections = groups.keys.sorted(by: >).map {
-            Section(id: $0, title: $0.isEmpty ? "Date unavailable" : monthTitles[$0] ?? ReceiptHistory.monthTitle($0), rows: groups[$0]!)
+            Section(id: $0, title: $0.isEmpty ? "Date unavailable" : monthTitles[$0] ?? ReceiptBrowsingPeriod.title($0), rows: groups[$0]!)
         }
     }
     /// Keep the same purchase after edits; after removal prefer its next surviving neighbor.

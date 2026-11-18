@@ -370,7 +370,10 @@ private struct ReceiptNativeSearch: ViewModifier {
                                placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or code")
                 .searchPresentationToolbarBehavior(.avoidHidingContent)
                 .onChange(of: workspace.searchPresented) { _, presented in
-                    if !presented && workspace.flow == .wallet { workspace.searching = false; workspace.searchQuery = "" }
+                    if !presented && workspace.flow == .wallet {
+                        var transaction = Transaction(animation: nil); transaction.disablesAnimations = true
+                        withTransaction(transaction) { workspace.endSearch() }
+                    }
                 }
         } else { content }
     }

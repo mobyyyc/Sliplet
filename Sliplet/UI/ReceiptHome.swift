@@ -239,6 +239,12 @@ struct ReceiptHome: View {
         )) {
             Button("OK", role: .cancel) { workspace.dismissCheckpointError() }
         } message: { Text(workspace.importCheckpointError ?? "") }
+        .transaction(value: workspace.searching) { transaction in
+            if !workspace.searching { transaction.animation = nil; transaction.disablesAnimations = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            workspace.refreshCalendarGrouping()
+        }
         .onAppear {
             #if DEBUG
             if !SyntheticNativePreview.enabled { workspace.library = displayList }

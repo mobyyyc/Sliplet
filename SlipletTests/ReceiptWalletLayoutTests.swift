@@ -80,4 +80,42 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         XCTAssertEqual(workspace.walletLayout.sections.map(\.id), ["undated"])
         XCTAssertEqual(workspace.walletLayout.receiptIDs, [second.id])
     }
+    private func dated(_ date: ReceiptDate) -> ReceiptRecord {
+        let base = SearchFixture.record(); var fields = base.current.fields; fields.purchaseDate = date
+        return ReceiptRecord(id: base.id, createdAt: base.createdAt, updatedAt: base.updatedAt, original: base.original, asset: base.asset,
+            revisions: [.init(id: UUID(), createdAt: base.createdAt, fields: fields, review: .draft)])
+    }
+    func testTodayUsesTheSameSectionGeometryAndLeavesEarlierPurchasesInTheirMonth() throws {
+        let today = try ReceiptDate(year: 2026, month: 11, day: 18)
+        let records = [dated(try ReceiptDate(year: 2026, month: 10, day: 1)), dated(try ReceiptDate(year: 2026, month: 11, day: 1)), dated(today), dated(today)]
+        let layout = ReceiptWalletLayout(records: records, today: today)
+        XCTAssertEqual(layout.sections.map(\.id), ["2026-10", "2026-11", "today"])
+        XCTAssertEqual(layout.sections.last?.title, "Today"); XCTAssertEqual(layout.sections.last?.count, 2)
+        XCTAssertEqual(layout.offsets[2] - layout.offsets[1], ReceiptWalletLayout.pitch + ReceiptWalletLayout.monthGap)
+        let snapshot = ReceiptBrowsingSnapshot(results: ReceiptSearchIndex(records).results(query: ""), today: today)
+        XCTAssertEqual(snapshot.sections.map(\.id), ["today", "2026-11", "2026-10"])
+        XCTAssertEqual(snapshot.sections[1].rows.count, 1)
+        let tomorrow = try ReceiptDate(year: 2026, month: 11, day: 19)
+        let next = ReceiptWalletLayout(records: records, today: tomorrow)
+        XCTAssertFalse(next.sections.contains { $0.id == "today" })
+        XCTAssertEqual(next.sections.last?.count, 3)
+    }
+    @MainActor func testSearchCancelResetsHomeAndFutureDatesCannotDuplicateTodayMonthSections() throws {
+        let today = ReceiptBrowsingPeriod.today()
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .autoupdatingCurrent
+        let future = ReceiptBrowsingPeriod.today(now: calendar.date(byAdding: .day, value: 1, to: Date())!)
+        let model = ReceiptWorkspace(); let current = dated(today)
+        model.receipts = [dated(future), current, dated(try ReceiptDate(year: 2025, month: 1, day: 1))]
+        XCTAssertEqual(model.walletReceipts.last?.id, current.id)
+        XCTAssertEqual(Set(model.walletLayout.sections.map(\.id)).count, model.walletLayout.sections.count)
+        model.searching = true; model.searchPresented = true; model.searchQuery = "milk"
+        model.walletScrollOffset = 450; model.walletAnchorID = current.id
+        model.walletFocus = ReceiptWalletFocus(receiptID: current.id, y: 140)
+        model.endSearch()
+        XCTAssertFalse(model.searching); XCTAssertFalse(model.searchPresented); XCTAssertEqual(model.searchQuery, "")
+        XCTAssertNil(model.walletScrollOffset); XCTAssertNil(model.walletFocus); XCTAssertNil(model.walletAnchorID)
+        XCTAssertNil(model.browseAnchor)
+        XCTAssertEqual(model.walletLayout.sections.last?.title, "Today")
+    }
+
 }
