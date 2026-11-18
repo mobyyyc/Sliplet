@@ -17,7 +17,25 @@ final class ReceiptWorkspace {
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
         walletReceipts = orderedReceipts.reversed().filter { !$0.isArchived }
+        let previousWallet = walletLayout
         walletLayout = ReceiptWalletLayout(records: walletReceipts)
+        browseMerchants = Array(Set(receipts.compactMap { $0.current.fields.merchant })).sorted()
+        browseMonths = Array(Set(receipts.compactMap(ReceiptHistory.monthKey))).sorted(by: >)
+        var titles = Dictionary(uniqueKeysWithValues: walletLayout.sections.map { ($0.id, $0.title) })
+        for month in browseMonths where titles[month] == nil { titles[month] = ReceiptHistory.monthTitle(month) }
+        browseMonthTitles = titles
+        if walletReceipts.isEmpty {
+            walletFocus = nil; walletAnchorID = nil; walletAnchorY = nil; walletScrollOffset = nil; walletMonthID = nil
+        }
+        refreshBrowsing()
+        if let anchor = walletAnchorID, let previousIndex = previousWallet.indexByID[anchor], !walletReceipts.isEmpty {
+            let nextID = walletLayout.indexByID[anchor] == nil
+                ? walletLayout.receiptIDs[min(previousIndex, walletReceipts.count - 1)] : anchor
+            let nextIndex = walletLayout.indexByID[nextID]!
+            if nextID != anchor || previousWallet.offsets[previousIndex] != walletLayout.offsets[nextIndex] {
+                walletFocus = ReceiptWalletFocus(receiptID: nextID, y: walletAnchorY)
+            }
+        }
     } }
     private(set) var searchIndex = ReceiptSearchIndex()
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
@@ -26,12 +44,21 @@ final class ReceiptWorkspace {
     private(set) var walletLayout = ReceiptWalletLayout()
     var walletScrollOffset: CGFloat?
     var walletAnchorID: UUID?
+    var walletAnchorY: CGFloat?
+    var walletFocus: ReceiptWalletFocus?
     var walletMonthID: String?
     var walletJumpID: String?
-    var searchQuery = ""
+    var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var searchFiltersExpanded = false
     var searchReturnID: String?
-    var includeArchived = false
+    var browseAnchor: ReceiptBrowsingAnchor?
+    private(set) var browsing = ReceiptBrowsingSnapshot()
+    private(set) var browseMerchants: [String] = []
+    private(set) var browseMonths: [String] = []
+    private(set) var browseMonthTitles: [String: String] = [:]
+    private(set) var browseVersion = 0
+    @ObservationIgnored private var updatingBrowseFilters = false
+    var includeArchived = false { didSet { if includeArchived != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var searchMatch: ReceiptSearchIndex.Match?
     var selected: ReceiptRecord?
     var draft = ReceiptReviewDraft() {
@@ -112,10 +139,10 @@ final class ReceiptWorkspace {
     var sessionID = UUID()
     var privacyCovered = false
     var library = false
-    var collection = "All receipts"
+    var collection = "All receipts" { didSet { if collection != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var walletSettings = ReceiptWalletSettings()
-    var merchantFilter: ReceiptHistoryChoice = .all
-    var monthFilter: ReceiptHistoryChoice = .all
+    var merchantFilter: ReceiptHistoryChoice = .all { didSet { if merchantFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
+    var monthFilter: ReceiptHistoryChoice = .all { didSet { if monthFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var active = false
     @ObservationIgnored private var store: ReceiptStore?
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -209,10 +236,48 @@ final class ReceiptWorkspace {
         draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; detailLine = nil; splitVisible = false; sourceLineIDs = []
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
-        walletScrollOffset = nil; walletAnchorID = nil; walletMonthID = nil; walletJumpID = nil
+        walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil; walletFocus = nil; walletMonthID = nil; walletJumpID = nil
         searchQuery = ""; searchMatch = nil; includeArchived = false
-        searchFiltersExpanded = false; searchReturnID = nil
+        searchFiltersExpanded = false; searchReturnID = nil; browseAnchor = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
+    }
+    private func refreshBrowsing(resetAnchor: Bool = false) {
+        guard !updatingBrowseFilters else { return }
+        let previous = browsing
+        browsing = ReceiptBrowsingSnapshot(results: searchIndex.results(query: searchQuery, collection: collection,
+            includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter), monthTitles: browseMonthTitles)
+        browseAnchor = resetAnchor ? nil : browsing.restored(browseAnchor, from: previous)
+        if library, let selected, let match = searchMatch {
+            let hits = browsing.rows.filter { $0.record.id == selected.id }
+            searchMatch = hits.first(where: { $0.match?.itemID == match.itemID })?.match ?? hits.first?.match
+        }
+        searchReturnID = browseAnchor?.rowID
+        browseVersion += 1
+    }
+    func applyBrowseFilters(merchant: ReceiptHistoryChoice, month: ReceiptHistoryChoice, archived: Bool) {
+        updatingBrowseFilters = true
+        merchantFilter = merchant; monthFilter = month; includeArchived = archived
+        updatingBrowseFilters = false
+        refreshBrowsing(resetAnchor: true)
+    }
+    func resetBrowseFilters() { applyBrowseFilters(merchant: .all, month: .all, archived: false) }
+    func showCollection(_ value: String) {
+        collection = value; library = true
+    }
+    func switchReceiptView() {
+        if library {
+            if let anchor = browseAnchor, anchor.receiptID != walletAnchorID, walletLayout.indexByID[anchor.receiptID] != nil {
+                walletFocus = ReceiptWalletFocus(receiptID: anchor.receiptID, y: nil)
+            }
+            library = false
+        } else {
+            if searchQuery.isEmpty, collection == "All receipts", merchantFilter == .all, monthFilter == .all,
+               let anchor = walletAnchorID, let rowID = browsing.firstRowByReceipt[anchor] {
+                browseAnchor = ReceiptBrowsingAnchor(rowID: rowID, receiptID: anchor, y: 0)
+                searchReturnID = rowID
+            }
+            library = true
+        }
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
@@ -552,7 +617,6 @@ final class ReceiptWorkspace {
 
     func edit() {
         guard let input = savedReviewDraft, image != nil, !saving else { return }
-        searchMatch = nil
         draft = input
         reviewBaseline = draft
         flow = .review; errorMessage = nil
@@ -624,14 +688,22 @@ final class ReceiptWorkspace {
                 try lease.check()
                 guard let self, self.isCurrent(session) else { return }
                 // Reflect the committed identity before refreshing. A failed list must not allow duplicate creation on retry.
-                if inputFromDetail { self.detailLine = nil; self.searchMatch = nil }
+                if inputFromDetail { self.detailLine = nil }
                 if old == nil, importID != nil {
                     self.pendingImportID = nil; self.hasPendingImport = false; self.importCheckpointError = nil
                 }
                 self.selected = saved; self.readerInput = savedInput; self.readerRevisionID = saved.current.id
                 self.draft = ReceiptReviewDraft(); self.flow = .detail
                 if let index = self.receipts.firstIndex(where: { $0.id == saved.id }) { self.receipts[index] = saved }
-                else { self.receipts.append(saved) }
+                else {
+                    self.receipts.append(saved)
+                    self.walletAnchorID = saved.id; self.walletAnchorY = nil
+                    self.walletFocus = ReceiptWalletFocus(receiptID: saved.id, y: nil)
+                    if let rowID = self.browsing.firstRowByReceipt[saved.id] {
+                        self.browseAnchor = ReceiptBrowsingAnchor(rowID: rowID, receiptID: saved.id, y: 0)
+                        self.searchReturnID = rowID
+                    }
+                }
                 let records = try await self.refreshedList(store)
                 guard self.isCurrent(session) else { return }
                 self.receipts = records

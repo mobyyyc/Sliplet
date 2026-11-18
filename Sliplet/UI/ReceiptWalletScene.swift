@@ -61,6 +61,11 @@ struct ReceiptDepartureGeometry {
     }
 }
 
+private struct WalletStackOrigin: Equatable {
+    let revision: UUID
+    let y: CGFloat
+}
+
 private struct WalletDepartingPaper: Identifiable {
     let record: ReceiptRecord
     let index: Int
@@ -156,7 +161,11 @@ struct ReceiptWalletScene: View {
                                         var transaction = Transaction(animation: nil)
                                         transaction.disablesAnimations = true
                                         withTransaction(transaction) {
-                                            walletScroll.scrollTo(y: workspace.walletScrollOffset ?? latestOffset)
+                                            if let focus = workspace.walletFocus, layout.indexByID[focus.receiptID] != nil {
+                                                let target = focusOffset(focus, geometry: geometry, calibration: 0)
+                                                walletScroll.scrollTo(y: target); workspace.walletScrollOffset = target
+                                                workspace.walletFocus = nil
+                                            } else { walletScroll.scrollTo(y: workspace.walletScrollOffset ?? latestOffset) }
                                         }
                                     }
                                 }
@@ -180,6 +189,16 @@ struct ReceiptWalletScene: View {
                     .swipeActionsContainer()
                     .onChange(of: jumpToNewest) { _, _ in
                         withAnimation(motion) { proxy.scrollTo("walletEnd", anchor: .bottom) }
+                    }
+                    .onChange(of: workspace.walletFocus) { _, focus in
+                        guard let focus, presented == nil, positioned, layout.indexByID[focus.receiptID] != nil else { return }
+                        let calibration = (stackSceneY ?? stackTop(in: geometry)) + scrollOffset - stackTop(in: geometry)
+                        let target = focusOffset(focus, geometry: geometry, calibration: calibration)
+                        var transaction = Transaction(animation: nil); transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            walletScroll.scrollTo(y: target); workspace.walletScrollOffset = target
+                            workspace.walletFocus = nil
+                        }
                     }
                     .onChange(of: workspace.walletJumpID) { _, id in
                         guard let id, let section = layout.sections.first(where: { $0.id == id }) else { return }
@@ -262,6 +281,11 @@ struct ReceiptWalletScene: View {
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
             .coordinateSpace(name: "walletScene")
             .animation(motion, value: layout.receiptIDs)
+            .onChange(of: workspace.walletLayout.receiptIDs) { _, ids in
+                if ids.isEmpty && presented == nil {
+                    positioned = false; stackSceneY = nil; scrollOffset = 0; openingOffset = 0
+                }
+            }
             .onChange(of: workspace.selected) { _, current in
                 guard let current, presented?.id == current.id else { return }
                 presented = current
@@ -273,6 +297,7 @@ struct ReceiptWalletScene: View {
                     if presented?.id != record.id { preparePresentation(record, geometry: geometry) }
                 } else if presented != nil {
                     let returningID = presented?.id
+                    prepareUpdatedReturn(in: geometry)
                     walletScroll.scrollTo(y: openingOffset)
                     readerSettled = false
                     withAnimation(motion, completionCriteria: .removed) { expanded = false } completion: {
@@ -281,6 +306,9 @@ struct ReceiptWalletScene: View {
                         transaction.disablesAnimations = true
                         withTransaction(transaction) {
                             presented = nil; departingPapers = []; retainedRecords = nil; retainedLayout = nil
+                            if workspace.walletReceipts.isEmpty {
+                                positioned = false; stackSceneY = nil; scrollOffset = 0; openingOffset = 0
+                            }
                         }
                     }
                 }
@@ -306,6 +334,7 @@ struct ReceiptWalletScene: View {
         selectedLayer = (snapshot.firstIndex { $0.id == record.id } ?? snapshot.count) + 1
         selectedTilt = elastic ? tilt(selectedLayer - 1) : 0
         origin = selectedFrame
+        workspace.walletAnchorID = record.id; workspace.walletAnchorY = selectedFrame.minY
         departingPapers = snapshot.enumerated().compactMap { index, neighbour in
             guard neighbour.id != record.id, let frame = frames[neighbour.id],
                   frame.maxY > -geometry.safeAreaInsets.top - 48,
@@ -323,6 +352,50 @@ struct ReceiptWalletScene: View {
         readerSettled = false
         presented = record
     }
+    private func focusOffset(_ focus: ReceiptWalletFocus, geometry: GeometryProxy, calibration: CGFloat) -> CGFloat {
+        guard let index = layout.indexByID[focus.receiptID] else { return max(0, scrollOffset) }
+        let curve = projection(in: geometry), desiredY = focus.y ?? curve.readingY
+        let top = stackTop(in: geometry)
+        let maximum = max(0, top + contentHeight + walletHeight + 20 - tuckedDepth - geometry.size.height)
+        var target = scrollOffset
+        // The leather follows normal scrolling by a small bounded amount.
+        for _ in 0..<4 {
+            let drift = reduceMotion ? 0 : -22 * tanh(target / 400)
+            let logical = elastic ? curve.logicalPosition(desiredY - drift) : desiredY - drift
+            target = min(maximum, max(0, top + offset(index) + calibration - logical))
+        }
+        return target
+    }
+    private func prepareUpdatedReturn(in geometry: GeometryProxy) {
+        guard let focus = workspace.walletFocus, !workspace.walletReceipts.isEmpty else { return }
+        let calibration = (stackSceneY ?? stackTop(in: geometry)) + openingOffset - stackTop(in: geometry)
+        // All departing copies remain invisible while the fresh home layout is prepared.
+        retainedRecords = workspace.walletReceipts; retainedLayout = workspace.walletLayout
+        guard layout.indexByID[focus.receiptID] != nil else { workspace.walletFocus = nil; return }
+        openingOffset = focusOffset(focus, geometry: geometry, calibration: calibration)
+        workspace.walletScrollOffset = openingOffset
+        let base = stackTop(in: geometry) - openingOffset + calibration
+        let curve = projection(in: geometry)
+        let drift = reduceMotion ? 0 : -22 * tanh(openingOffset / 400)
+        let frames = Dictionary(uniqueKeysWithValues: visibleIndices(curve, baseY: base).map { index in
+            let y = base + offset(index)
+            return (records[index].id, CGRect(x: 30, y: (elastic ? curve.position(y) : y) + drift,
+                width: max(0, geometry.size.width - 60), height: previewHeight))
+        })
+        if let selected = presented, let index = layout.indexByID[selected.id], let frame = frames[selected.id] {
+            origin = frame; selectedLayer = index + 1; selectedTilt = elastic ? tilt(index) : 0
+        }
+        departingPapers = records.enumerated().compactMap { index, record in
+            guard record.id != presented?.id, let frame = frames[record.id] else { return nil }
+            return WalletDepartingPaper(record: record, index: index, frame: frame,
+                travel: ReceiptDepartureGeometry.travel(frame: frame, selected: origin,
+                    viewportHeight: geometry.size.height, topInset: geometry.safeAreaInsets.top,
+                    bottomInset: geometry.safeAreaInsets.bottom))
+        }
+        walletFrame.origin.y = geometry.size.height - walletHeight - 20 + drift
+        walletTravel = geometry.size.height + geometry.safeAreaInsets.bottom + 60 - walletFrame.minY
+        workspace.walletFocus = nil
+    }
     private func projection(in geometry: GeometryProxy) -> ReceiptStackProjection {
         let fullHeight = geometry.size.height + geometry.safeAreaInsets.top + geometry.safeAreaInsets.bottom
         return ReceiptStackProjection(viewportHeight: geometry.size.height,
@@ -331,39 +404,57 @@ struct ReceiptWalletScene: View {
     }
     private func paperStack(in geometry: GeometryProxy) -> some View {
         let snapshot = records
+        let renderLayout = layout
+        let isElastic = elastic
+        let height = previewHeight, header = headingHeight
+        let plain = ReceiptWalletPlainLayout(grouped: renderLayout, paperHeight: height, headingHeight: header)
         let curve = projection(in: geometry)
         let baseY = stackSceneY ?? stackTop(in: geometry)
-        let visible = visibleIndices(curve, baseY: baseY)
+        let visible = isElastic
+            ? renderLayout.visibleIndices(lower: curve.logicalPosition(-300 + endBounce) - endBounce - baseY,
+                                          upper: curve.logicalPosition(curve.viewportHeight + 100 + endBounce) - endBounce - baseY)
+            : plain.visibleIndices(lower: -80 - baseY, upper: curve.viewportHeight + 80 - baseY)
+        // SwiftUI can evaluate a departing child after the workspace has changed.
+        // Capture its offsets and section together with its record, rather than indexing
+        // the live layout from a deferred ForEach/overlay closure.
+        let papers = visible.map { index in
+            let logicalY = baseY + (isElastic ? renderLayout.offsets[index] : plain.offset(index))
+            let y = isElastic ? curve.displayedPosition(logicalY, endPull: endBounce) : logicalY
+            let section = renderLayout.sections[renderLayout.sectionIndices[index]]
+            return (index: index, record: snapshot[index], y: y,
+                    section: section.indices.lowerBound == index ? section : nil,
+                    tilt: isElastic ? tilt(index) : 0)
+        }
         return ZStack(alignment: .topLeading) {
-            ForEach(visible.map { (index: $0, record: snapshot[$0]) }, id: \.record.id) { index, record in
-                let logicalY = baseY + offset(index)
-                let y = elastic ? curve.displayedPosition(logicalY, endPull: endBounce) : logicalY
-                card(record, index: index, geometry: geometry)
-                    .frame(height: previewHeight)
-                    .id(record.id).zIndex(revealedID == record.id ? Double(records.count + 1) : Double(index + 1))
-                    .rotationEffect(.degrees(elastic ? tilt(index) : 0))
+            ForEach(papers, id: \.record.id) { paper in
+                card(paper.record, index: paper.index, geometry: geometry)
+                    .frame(height: height)
+                    .id(paper.record.id)
+                    .zIndex(revealedID == paper.record.id ? Double(snapshot.count + 1) : Double(paper.index + 1))
+                    .rotationEffect(.degrees(paper.tilt))
                     .overlay(alignment: .topLeading) {
-                        let section = layout.sections[layout.sectionIndices[index]]
-                        if section.indices.lowerBound == index {
-                            monthHeading(section).offset(y: -headingHeight)
-                        }
+                        if let section = paper.section { monthHeading(section).offset(y: -header) }
                     }
-                    .offset(y: y - baseY + pocketMotion)
+                    .offset(y: paper.y - baseY + pocketMotion)
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .frame(height: contentHeight, alignment: .topLeading)
-        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("walletScene")).minY } action: {
-            // The live ScrollView still relayouts behind the frozen transition.
-            // Discarding its new origin leaves the projection stale until a swipe.
-            // Presentation/return use separate frozen frames, so keep this current.
-            stackSceneY = $0
+        .frame(height: isElastic ? renderLayout.height : plain.height, alignment: .topLeading)
+        .onGeometryChange(for: WalletStackOrigin.self) {
+            WalletStackOrigin(revision: renderLayout.revision, y: $0.frame(in: .named("walletScene")).minY)
+        } action: { measurement in
+            guard layout.revision == measurement.revision else { return }
+            let value = measurement.y
+            stackSceneY = value
             if presented == nil {
-                let logical = (elastic ? curve.logicalPosition(curve.readingY) : curve.readingY) - $0
-                if !layout.receiptIDs.isEmpty {
-                    let index = min(layout.receiptIDs.count - 1, elastic ? layout.lowerBound(logical) : plainLayout.lowerBound(logical))
-                    workspace.walletMonthID = layout.sections[layout.sectionIndices[index]].id
-                    workspace.walletAnchorID = layout.receiptIDs[index]
+                let logical = (isElastic ? curve.logicalPosition(curve.readingY) : curve.readingY) - value
+                if !renderLayout.receiptIDs.isEmpty {
+                    let index = min(renderLayout.receiptIDs.count - 1,
+                                    isElastic ? renderLayout.lowerBound(logical) : plain.lowerBound(logical))
+                    workspace.walletMonthID = renderLayout.sections[renderLayout.sectionIndices[index]].id
+                    workspace.walletAnchorID = renderLayout.receiptIDs[index]
+                    let logicalY = value + (isElastic ? renderLayout.offsets[index] : plain.offset(index))
+                    workspace.walletAnchorY = (isElastic ? curve.displayedPosition(logicalY, endPull: endBounce) : logicalY) + pocketMotion
                 }
             }
         }
@@ -390,6 +481,7 @@ struct ReceiptWalletScene: View {
     }
     private func card(_ record: ReceiptRecord, index: Int, geometry: GeometryProxy) -> some View {
         return ReceiptSwipePaper(record: record, identifier: "receipt-\(index)") {
+            guard workspace.walletLayout.indexByID[record.id] != nil else { return }
             // Freeze the screen rectangle before navigation changes native insets.
             preparePresentation(record, geometry: geometry)
             workspace.open(record)

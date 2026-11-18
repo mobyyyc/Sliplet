@@ -1,5 +1,9 @@
 # Progress
 
+## P14-03 browsing and search verified in Simulator · 2026-11-17
+
+Collections and filters now have clear native entry points, including during active search. Results lead with merchant/price; optional evidence lives in Match details. Navigation, date corrections and Wallet/List switching retain receipt identity and position. Verification found and repaired an empty-wallet deferred-layout crash, hidden search controls and a small menu hit area. Twelve distinct UI methods passed across the acceptance selection and targeted repairs; 18 final unit methods passed. Three native wallet samples remain close to P14-02 in clock/CPU usage. Physical-phone smoothness and human VoiceOver acceptance remain unmeasured. P14-04 purchase overview is next for approval. [Audit, results and evidence](docs/PHASE14_BROWSING_AND_SEARCH.md).
+
 ## P14-02 receipt organization verified in Simulator · 2026-11-17
 
 Wallet/List now uses a circular upper-right glass button. The continuous paper wallet has cached month sections and direct month/year navigation, including Date unavailable. Detail returns and Wallet-to-List anchors preserve browsing position. Deterministic separated geometry fixes the large-text return shift. Seven UI methods, 15 unit methods and 88 browser checks passed. Native 1,000-receipt snapshots mounted 15–16 papers; measured 30-receipt round-trip clock time differs by +0.3% and CPU by +3.3% from the baseline. Frame/hitch timing and physical-device acceptance remain unmeasured. P14-03 is next for approval. [Implementation results](docs/PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).

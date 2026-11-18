@@ -6,7 +6,7 @@ Planned on November 17, 2026. The owner approved P14-01 and requested efficient 
 
 As the collection grows, users should recognize individual receipts, orient themselves in time and reach an old purchase directly from everyday browsing. The owner wants to balance the wallet's tactile paper presentation with convenient access. Purchase overviews and further UI/UX refinement belong in the same phase.
 
-## Current implementation observations
+## Initial audit before P14-01
 
 - ReceiptWalletScene renders a continuous chronological stack with an elastic projection. Nearby papers separate in a reading zone and compress at the wallet opening. Visible rendering is bounded, but every unarchived receipt belongs to this one stack. Month boundaries and a date-jump control are absent from the home scene.
 - ReceiptPurchaseHistoryView already groups the library by month and offers merchant/month filters and search. ReceiptHome currently opens that surface through the magnifying-glass action named All receipts. The relationship between browsing and searching needs a clearer first-level presentation.
@@ -65,6 +65,10 @@ Eighty-eight browser checks passed across collections of 5, 50, 200 and 1,000 fi
 
 Browsing efficiency and running cost are acceptance criteria throughout Phase 14. P14-02 must reuse bounded native rendering, cache month geometry outside scroll updates and verify receipt-identity restoration. P14-03 retains quick period/search access and browsing context. P14-04 prepares summaries on data changes. P14-06 compares resource measurements and owner-observed responsiveness with the same journeys.
 
+## P14-03 result
+
+Browsing uses direct collection choices and a transactional native filter sheet, including controls during active search. Search detail emphasizes the matched purchase and hides optional evidence in Match details. Receipt identity and screen position survive navigation and date changes. Twelve distinct UI methods passed across the acceptance selection and targeted repairs; 18 final unit methods passed. Native wallet clock/CPU samples remain close to P14-02. [Implementation, audit repairs and verification](PHASE14_BROWSING_AND_SEARCH.md).
+
 ## Next approval
 
-P14-03 · Browsing, search and return flow. Extend context preservation to filters, collections, editing and receipt organization changes after Main approval.
+P14-04 · Purchase overview. Confirm which drafts, archived records, refunds and possible duplicates enter the totals before implementation. Show different currencies separately and make every summary open its contributing receipts.

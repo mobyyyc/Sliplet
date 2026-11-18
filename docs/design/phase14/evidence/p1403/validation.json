@@ -1,0 +1,36 @@
+{
+  "fictionalReceiptsOnly": true,
+  "cloudCalls": 0,
+  "simulator": "iPhone 15 Pro / iOS 27.0",
+  "sdk": "iOS Simulator 27.2",
+  "uiDistinctMethodsPassedAcrossRuns": 12,
+  "uiAcceptanceBeforeHitAreaFix": {
+    "totalTestCount": 12,
+    "passedTests": 11,
+    "failedTests": 1,
+    "skippedTests": 0
+  },
+  "uiAfterHitAreaFix": {
+    "totalTestCount": 3,
+    "passedTests": 3,
+    "failedTests": 0,
+    "skippedTests": 0
+  },
+  "unit": {
+    "totalTestCount": 18,
+    "passedTests": 18,
+    "failedTests": 0,
+    "skippedTests": 0
+  },
+  "finalUIRuntimeWarnings": [],
+  "unitRuntimeWarnings": [],
+  "walletRoundTrip": {
+    "iterations": 3,
+    "clockSeconds": 1.802593577,
+    "cpuSeconds": 0.4875264627,
+    "p1402ClockSeconds": 1.801453873,
+    "p1402CPUSeconds": 0.4885657853
+  },
+  "physicalDeviceAcceptance": "not performed",
+  "frameOrHitchMeasurement": "not available in this Simulator run"
+}

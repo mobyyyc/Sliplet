@@ -56,7 +56,7 @@ struct ReceiptHome: View {
                 }
             }
             .navigationTitle(title)
-            .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library ? .large : .inline)
+            .navigationBarTitleDisplayMode(workspace.flow == .wallet && workspace.library && workspace.searchQuery.isEmpty ? .large : .inline)
             .toolbar {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
@@ -90,6 +90,15 @@ struct ReceiptHome: View {
                                 }
                             }
                         }
+                        if workspace.library {
+                            ToolbarItem(placement: .topBarLeading) { ReceiptCollectionMenu(workspace: workspace) }
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button { workspace.searchFiltersExpanded = true } label: {
+                                    Image(systemName: workspace.merchantFilter != .all || workspace.monthFilter != .all || (workspace.includeArchived && workspace.collection != "Archive")
+                                          ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+                                }.accessibilityLabel("Filters").accessibilityIdentifier("searchFilters")
+                            }
+                        }
                         if !workspace.library && !workspace.walletLayout.sections.isEmpty {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button { walletMonths = true } label: {
@@ -102,7 +111,7 @@ struct ReceiptHome: View {
                                 }.accessibilityLabel("Jump to month").accessibilityIdentifier("walletMonths")
                             }
                         }
-                        if typeSize.isAccessibilitySize {
+                        if workspace.library || typeSize.isAccessibilitySize {
                             ToolbarItem(placement: .topBarTrailing) {
                                 Menu {
                                     Button("Settings", systemImage: "gearshape") { settings = true }
@@ -124,12 +133,7 @@ struct ReceiptHome: View {
                         ToolbarSpacer(.fixed, placement: .topBarTrailing)
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
-                                if !workspace.library, workspace.searchQuery.isEmpty,
-                                   workspace.collection == "All receipts", workspace.merchantFilter == .all,
-                                   workspace.monthFilter == .all, let anchor = workspace.walletAnchorID {
-                                    workspace.searchReturnID = "receipt-" + anchor.uuidString
-                                }
-                                workspace.library.toggle()
+                                workspace.switchReceiptView()
                             } label: {
                                 Image(systemName: workspace.library ? "wallet.bifold" : "list.bullet")
                                     .font(.body.weight(.semibold))
@@ -159,12 +163,14 @@ struct ReceiptHome: View {
                         }
                     }
                     #if DEBUG
-                    if SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && workspace.flow == .wallet {
+                    if SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && workspace.flow == .wallet && workspace.receipts.isEmpty {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button("Import fictional image") {
+                            Button("Import fictional image", systemImage: "doc.badge.plus") {
                                 let bytes = SyntheticNativePreview.fixture(index: 0).0
                                 workspace.startImport { bytes }
-                            }.accessibilityIdentifier("searchDemoImport")
+                            }
+                            .labelStyle(.iconOnly)
+                            .accessibilityIdentifier("searchDemoImport")
                         }
                     }
                     if ReceiptUploadFixture.enabled && workspace.flow == .wallet {
@@ -250,6 +256,7 @@ struct ReceiptHome: View {
             }
             .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
             .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
+            .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
             .sheet(isPresented: $walletMonths) {
                 ReceiptWalletMonths(sections: workspace.walletLayout.sections, selected: workspace.walletMonthID) { section in
                     workspace.walletJumpID = section.id
@@ -359,7 +366,7 @@ struct ReceiptHome: View {
     }
     private var title: String {
         switch workspace.flow {
-        case .wallet: workspace.library ? (workspace.searchQuery.isEmpty ? workspace.collection : "Search") : ""
+        case .wallet: workspace.library && workspace.searchQuery.isEmpty ? "Receipts" : ""
         case .review: "Review receipt"
         case .detail: "Receipt"
         case .failed: "Import needs attention"
@@ -555,7 +562,7 @@ struct ReceiptSummary: View {
     private var merchant: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(record.current.fields.merchant ?? "Merchant missing").font(.headline).fixedSize(horizontal: false, vertical: true)
-            Text(ExactInput.dateText(record.current.fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote)
+            Text(ExactInput.dateText(record.current.fields.purchaseDate).nilIfEmpty ?? "Date missing").font(.footnote).foregroundStyle(.secondary)
         }
     }
     var body: some View {

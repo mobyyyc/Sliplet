@@ -2,7 +2,7 @@
 
 ## Phase 14 · In progress 2026-11-17
 
-P14-01 design and P14-02 receipt organization are complete. The owner selected month sections and a circular upper-right Wallet/List button, without a permanent control row. Native month/year jumping, missing-date access and bounded paper rendering are verified in Simulator. Seven UI methods, 15 unit methods and 88 browser checks passed. The 1,000-receipt snapshots mounted 15–16 papers. P14-03 browsing/search/return integration is next for approval in Main. [Phase 14 roadmap](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-02 results](docs/PHASE14_RECEIPT_ORGANIZATION_IMPLEMENTATION.md).
+P14-01 design, P14-02 receipt organization and P14-03 browsing/search/return are complete in Simulator. Wallet/List remains a circular upper-right button. Collections and transactional filters are directly available, including during native search. Query, scope and receipt position survive reading/editing/history navigation. P14-03 has passing evidence for 12 distinct UI methods across the acceptance selection and focused fixes; 18 final unit methods passed. The 30-receipt wallet clock/CPU samples remain close to P14-02. P14-04 purchase overview is next for approval in Main, with accounting inclusion rules to confirm before implementation. [Phase 14 roadmap](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-03 results](docs/PHASE14_BROWSING_AND_SEARCH.md).
 
 ## Phase 13 · 2026-11-14
 

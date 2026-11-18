@@ -11,7 +11,8 @@ struct ReceiptSearchDetailView: View {
         ScrollView {
             if let record = workspace.selected {
                 VStack(alignment: .leading, spacing: 20) {
-                    if let match = workspace.searchMatch {
+                    if let match = workspace.searchMatch,
+                       match.basis != .merchant || match.matchedText != record.current.fields.merchant {
                         ReceiptSearchContext(workspace: workspace, match: match)
                     }
                     VStack(alignment: .leading, spacing: 20) {
@@ -22,7 +23,7 @@ struct ReceiptSearchDetailView: View {
                         }.font(.footnote.weight(.medium)).fixedSize(horizontal: false, vertical: true)
                         ReceiptPaper(fields: record.current.fields,
                                      input: workspace.readerInput, reviewed: ReceiptCompletion.isComplete(record),
-                                     taxedMarkers: record.original.paperTaxedMarkers, editLine: { workspace.openDetailLine($0) })
+                                     taxedMarkers: record.original.paperTaxedMarkers, highlightedLineID: workspace.searchMatch?.originalOnly == false ? workspace.searchMatch?.itemID : nil, editLine: { workspace.openDetailLine($0) })
                         VStack(alignment: .leading, spacing: 18) {
                             if workspace.image == nil && workspace.errorMessage == nil { ProgressView("Loading original").font(.footnote) }
                             if let error = workspace.errorMessage { Text(error).font(.subheadline) }
@@ -47,167 +48,167 @@ struct ReceiptSearchDetailView: View {
 struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
     var requestDelete: (ReceiptRecord) -> Void
-    private var hasFilters: Bool {
-        workspace.collection != "All receipts" || workspace.includeArchived || workspace.merchantFilter != .all || workspace.monthFilter != .all
+    @State private var rowFrames: [String: CGRect] = [:]
+    @State private var pendingRestore: ReceiptBrowsingAnchor?
+    @State private var userScrolled = false
+    @State private var scrollAccess = ReceiptListScrollAccess()
+    @State private var viewportHeight: CGFloat = 1
+    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
+        self.workspace = workspace; self.requestDelete = requestDelete
+        _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
-    private var filterSummary: String {
-        var parts = [workspace.collection]
-        if workspace.collection != "Archive" { parts.append(workspace.includeArchived ? "Including archived" : "Active only") }
-        switch workspace.merchantFilter {
-        case .all: break
-        case .missing: parts.append("Merchant missing")
-        case .value(let value): parts.append(value)
-        }
-        switch workspace.monthFilter {
-        case .all: break
-        case .missing: parts.append("Date missing")
-        case .value(let value): parts.append(ReceiptHistory.monthTitle(value))
-        }
-        return parts.joined(separator: " · ")
-    }
-    private var results: [ReceiptSearchIndex.Result] {
-        workspace.searchIndex.results(query: workspace.searchQuery, collection: workspace.collection,
-            includeArchived: workspace.includeArchived, merchant: workspace.merchantFilter, month: workspace.monthFilter)
-    }
-    private var merchants: [String] { Array(Set(workspace.receipts.compactMap { $0.current.fields.merchant })).sorted() }
-    private var months: [String] { Array(Set(workspace.receipts.compactMap(ReceiptHistory.monthKey))).sorted(by: >) }
-    var body: some View {
-        let found = results
-        let groups = Dictionary(grouping: found) { ReceiptHistory.monthKey($0.record) ?? "" }
-        ScrollViewReader { proxy in
-            List {
-                Section {
-                    if workspace.collection == "All receipts" && workspace.searchQuery.isEmpty
-                        && workspace.receipts.contains(where: { !$0.isArchived && !ReceiptCompletion.isComplete($0) }) {
-                        Button("Needs review", systemImage: "exclamationmark.circle") {
-                            workspace.collection = "Needs review"
-                            workspace.includeArchived = false
-                            workspace.merchantFilter = .all
-                            workspace.monthFilter = .all
-                        }.accessibilityIdentifier("openReceiptDrafts")
-                    }
-                    Button {
-                        workspace.searchFiltersExpanded.toggle()
-                    } label: {
-                        HStack {
-                            Label("Filters", systemImage: "line.3.horizontal.decrease")
-                            Spacer()
-                            Image(systemName: workspace.searchFiltersExpanded ? "chevron.up" : "chevron.down")
-                        }.contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityIdentifier("searchFilters")
-                        .accessibilityValue(workspace.searchFiltersExpanded ? "Expanded" : "Collapsed")
-                    if workspace.searchFiltersExpanded {
-                        Picker("Collection", selection: $workspace.collection) {
-                            Text("All receipts").tag("All receipts")
-                            Text("Needs review").tag("Needs review")
-                            Text("Starred").tag("Starred")
-                            Text("Archive").tag("Archive")
-                        }.accessibilityIdentifier("collectionPicker")
-                        Picker("Store", selection: $workspace.merchantFilter) {
-                            Text("All stores").tag(ReceiptHistoryChoice.all)
-                            ForEach(merchants, id: \.self) { Text($0).tag(ReceiptHistoryChoice.value($0)) }
-                            if workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { Text("Merchant missing").tag(ReceiptHistoryChoice.missing) }
-                        }.accessibilityIdentifier("searchMerchantFilter")
-                        Picker("Month", selection: $workspace.monthFilter) {
-                            Text("All months").tag(ReceiptHistoryChoice.all)
-                            ForEach(months, id: \.self) { Text(ReceiptHistory.monthTitle($0)).tag(ReceiptHistoryChoice.value($0)) }
-                            if workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { Text("Date missing").tag(ReceiptHistoryChoice.missing) }
-                        }.accessibilityIdentifier("searchMonthFilter")
-                        if workspace.collection != "Archive" {
-                            Toggle("Include archived", isOn: $workspace.includeArchived).tint(.green).accessibilityIdentifier("searchIncludeArchived")
-                        }
-                    }
-                    Text(filterSummary).font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("searchFilterSummary")
-                    if hasFilters {
-                        Button("Reset filters") {
-                            workspace.collection = "All receipts"; workspace.includeArchived = false
-                            workspace.merchantFilter = .all; workspace.monthFilter = .all
-                        }.accessibilityIdentifier("searchClearFilters")
-                    }
-                }
-                Section {
-                    Text("\(found.count) \(found.count == 1 ? "receipt" : "receipts")")
-                        .font(.subheadline).accessibilityIdentifier("searchResultCount")
-                    if found.isEmpty {
-                        ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matching purchases",
-                            systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
-                            description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : "Try another word, SKU or filter. Archive is searchable separately."))
-                    }
-                }
-                ForEach(groups.keys.sorted(by: >), id: \.self) { key in
-                    Section {
-                        ForEach(groups[key] ?? []) { result in
-                            if result.matches.isEmpty || result.matches.first?.basis == .merchant {
-                                let merchantMatch = result.matches.first
-                                resultRow(record: result.record, match: merchantMatch) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        ReceiptSummary(record: result.record)
-                                        if let merchantMatch, merchantMatch.matchedText != result.record.current.fields.merchant {
-                                            Text("Original merchant: \(merchantMatch.matchedText)").font(.caption).foregroundStyle(.secondary)
-                                        }
-                                        if result.record.isArchived { Label("Archived", systemImage: "archivebox").font(.caption) }
-                                    }
-                                }
-                            } else {
-                                ForEach(result.matches) { match in
-                                    resultRow(record: result.record, match: match) {
-                                        ItemSearchResultLabel(match: match, record: result.record)
-                                    }
-                                }
-                            }
-                        }
-                    } header: { Text(ReceiptHistory.monthTitle(key.isEmpty ? nil : key)).foregroundStyle(Color(uiColor: .label)) }
-                }
-            }
-            .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or SKU")
-            .autocorrectionDisabled()
-            .scrollDismissesKeyboard(.interactively)
-            .scrollEdgeEffectStyle(.soft, for: .vertical)
-            .accessibilityIdentifier("receiptLibrary")
-            .onAppear {
-                if let id = workspace.searchReturnID { proxy.scrollTo(id, anchor: .center) }
-            }
-            .onChange(of: workspace.searchQuery) { _, _ in workspace.searchReturnID = nil }
-            .onChange(of: workspace.collection) { _, _ in workspace.searchReturnID = nil }
-            .onChange(of: workspace.includeArchived) { _, _ in workspace.searchReturnID = nil }
-            .onChange(of: workspace.merchantFilter) { _, _ in workspace.searchReturnID = nil }
-            .onChange(of: workspace.monthFilter) { _, _ in workspace.searchReturnID = nil }
-            // Reset only stale filters after a committed edit/deletion. Never replace a missing civil date.
-            .onChange(of: merchants) { _, values in
-                if case .value(let selected) = workspace.merchantFilter, !values.contains(selected) { workspace.merchantFilter = .all }
-                if workspace.merchantFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.merchant == nil }) { workspace.merchantFilter = .all }
-            }
-            .onChange(of: months) { _, values in
-                if case .value(let selected) = workspace.monthFilter, !values.contains(selected) { workspace.monthFilter = .all }
-                if workspace.monthFilter == .missing && !workspace.receipts.contains(where: { $0.current.fields.purchaseDate == nil }) { workspace.monthFilter = .all }
-            }
-        }
-    }
-    private func resultRow<Content: View>(record: ReceiptRecord, match: ReceiptSearchIndex.Match?,
-                                          @ViewBuilder content: () -> Content) -> some View {
-        let itemMatch = match.flatMap { $0.basis == .merchant ? nil : $0 }
-        let id = itemMatch.map { "match-" + $0.id } ?? "receipt-" + record.id.uuidString
-        let identifier = itemMatch.map { "searchMatch-" + $0.id } ?? "searchReceipt-" + record.id.uuidString
-        return Button {
-            workspace.searchReturnID = id
-            workspace.open(record, match: match)
-        } label: {
-            content()
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
-                .accessibilityElement(children: .combine)
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(identifier)
-        .id(id)
-        .receiptSwipeActions(record, identifier: identifier) { action in
-            if action == .delete { requestDelete(record) }
-            else { workspace.organize(record, action: action) }
-        }
-    }
+    private var hasFilters: Bool { workspace.merchantFilter != .all || workspace.monthFilter != .all || (workspace.includeArchived && workspace.collection != "Archive") }
 
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                List {
+                    if hasFilters {
+                        Section {
+                            ScrollView(.horizontal) {
+                                HStack(spacing: 8) {
+                                    if workspace.merchantFilter != .all {
+                                        filterChip(workspace.merchantFilter.title(missing: "Merchant missing")) {
+                                            workspace.merchantFilter = .all
+                                        }
+                                    }
+                                    if workspace.monthFilter != .all {
+                                        filterChip(workspace.monthFilter.monthTitle) { workspace.monthFilter = .all }
+                                    }
+                                    if workspace.includeArchived && workspace.collection != "Archive" {
+                                        filterChip("Including archived") { workspace.includeArchived = false }
+                                    }
+                                    Button("Clear filters", action: workspace.resetBrowseFilters)
+                                        .font(.caption).accessibilityIdentifier("searchClearFilters")
+                                }.padding(.vertical, 2)
+                            }.scrollIndicators(.hidden)
+                                .accessibilityIdentifier("searchFilterSummary")
+                        }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    }
+                    if workspace.browsing.sections.isEmpty {
+                        Section {
+                            ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matches",
+                                systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
+                                description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : hasFilters ? "Try clearing a filter or changing your search." : "Try a merchant, item or item code."))
+                        } header: { resultCount.id("browse-top") }
+                    }
+                    ForEach(workspace.browsing.sections) { section in
+                        Section {
+                            ForEach(section.rows) { row in
+                                resultRow(row, viewport: geometry.size.height)
+                            }
+                        } header: {
+                            VStack(alignment: .leading, spacing: 10) {
+                                if section.id == workspace.browsing.sections.first?.id { resultCount.id("browse-top") }
+                                Text(section.title).font(.subheadline.weight(.medium)).foregroundStyle(Color(uiColor: .label))
+                            }.textCase(nil)
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped).listSectionSpacing(16)
+                .safeAreaBar(edge: .top, spacing: 0) { ReceiptSearchScopeBar(workspace: workspace) }
+                .autocorrectionDisabled().scrollDismissesKeyboard(.interactively)
+                .scrollEdgeEffectStyle(.soft, for: .vertical)
+                .coordinateSpace(name: "receiptBrowse")
+                .opacity(pendingRestore == nil ? 1 : 0)
+                .task(id: pendingRestore?.rowID) {
+                    guard let pending = pendingRestore else { return }
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard !Task.isCancelled, pendingRestore?.rowID == pending.rowID else { return }
+                    // A future native List implementation can still show the stable row if
+                    // its backing scroll view is unavailable; never leave a blank surface.
+                    pendingRestore = nil
+                }
+                .onAppear {
+                    viewportHeight = geometry.size.height
+                    restore(using: proxy)
+                }
+                .onChange(of: workspace.browseVersion) { _, _ in
+                    if workspace.flow == .wallet {
+                        if workspace.browseAnchor == nil {
+                            pendingRestore = nil; scrollAccess.scrollToStart()
+                            proxy.scrollTo("browse-top", anchor: .top)
+                        } else { restore(using: proxy) }
+                    }
+                }
+                .onScrollPhaseChange { _, phase in
+                    if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
+                    guard phase == .idle, userScrolled, pendingRestore == nil, workspace.flow == .wallet else { return }
+                    userScrolled = false
+                    let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportHeight }
+                        .min { $0.value.minY < $1.value.minY }
+                    if let first, let index = workspace.browsing.indexByID[first.key] {
+                        remember(workspace.browsing.rows[index], viewport: viewportHeight)
+                    }
+                }
+            }
+        }
+        .searchable(text: $workspace.searchQuery, placement: .navigationBarDrawer(displayMode: .always), prompt: "Merchant, item or code")
+    }
+    private var resultCount: some View {
+        Text("\(workspace.browsing.receiptCount) \(workspace.browsing.receiptCount == 1 ? "receipt" : "receipts")")
+            .font(.caption).foregroundStyle(Color(uiColor: .secondaryLabel)).accessibilityIdentifier("searchResultCount")
+    }
+    private func restore(using proxy: ScrollViewProxy) {
+        guard let anchor = workspace.browseAnchor, workspace.browsing.indexByID[anchor.rowID] != nil else { return }
+        pendingRestore = anchor
+        proxy.scrollTo(anchor.rowID, anchor: .center)
+        completeRestore()
+    }
+    private func completeRestore() {
+        guard let anchor = pendingRestore, let frame = rowFrames[anchor.rowID], frame.maxY > 0 else { return }
+        if scrollAccess.align(row: frame, to: anchor.y) { pendingRestore = nil }
+    }
+    private func remember(_ row: ReceiptBrowsingSnapshot.Row, viewport: CGFloat) {
+        let frame = rowFrames[row.id] ?? .zero
+        workspace.browseAnchor = ReceiptBrowsingAnchor(rowID: row.id, receiptID: row.record.id, y: frame.minY)
+        workspace.searchReturnID = row.id
+    }
+    private func filterChip(_ title: String, remove: @escaping () -> Void) -> some View {
+        Button(action: remove) {
+            HStack(spacing: 5) { Text(title); Image(systemName: "xmark").font(.caption2) }
+                .font(.caption).padding(.horizontal, 10).padding(.vertical, 8)
+                .background(Color(uiColor: .secondarySystemGroupedBackground), in: .capsule)
+        }.buttonStyle(.plain).accessibilityLabel("Remove filter: " + title)
+    }
+    private func resultRow(_ row: ReceiptBrowsingSnapshot.Row, viewport: CGFloat) -> some View {
+        Button {
+            remember(row, viewport: viewport)
+            workspace.open(row.record, match: row.match)
+        } label: {
+            Group {
+                if let match = row.match, match.basis != .merchant { ItemSearchResultLabel(match: match, record: row.record) }
+                else {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ReceiptSummary(record: row.record)
+                        if let match = row.match, match.matchedText != row.record.current.fields.merchant {
+                            Text("Original name: " + match.matchedText).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 6).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle()).accessibilityElement(children: .combine)
+        }
+        .buttonStyle(.plain).accessibilityIdentifier(row.identifier).id(row.id)
+        .background {
+            ReceiptListScrollProbe { scroll in
+                scrollAccess.view = scroll
+                DispatchQueue.main.async { completeRestore() }
+            }.frame(width: 0, height: 0).accessibilityHidden(true).allowsHitTesting(false)
+        }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+            if frame.maxY >= -80 && frame.minY <= viewport + 80 { rowFrames[row.id] = frame }
+            else { rowFrames.removeValue(forKey: row.id) }
+            if pendingRestore?.rowID == row.id { completeRestore() }
+        }
+        .onDisappear { rowFrames.removeValue(forKey: row.id) }
+        .receiptSwipeActions(row.record, identifier: row.identifier) { action in
+            remember(row, viewport: viewport)
+            if action == .delete { requestDelete(row.record) }
+            else { workspace.organize(row.record, action: action) }
+        }
+    }
 }
 
 private struct ItemSearchResultLabel: View {
@@ -247,12 +248,8 @@ private struct ItemSearchResultLabel: View {
                 Label("Archived", systemImage: "archivebox").font(.caption).foregroundStyle(.secondary)
             }
             if match.originalOnly {
-                Text(match.unparsed ? "Original text · not linked to a current purchase" : "Original extraction · removed from current receipt")
+                Label("Original text only", systemImage: "doc.text.magnifyingglass")
                     .font(.caption).foregroundStyle(.secondary)
-            } else if match.basis == .original {
-                Text("Original description match").font(.caption).foregroundStyle(.secondary)
-            } else if match.basis == .originalSKU {
-                Text("Original SKU match").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -262,26 +259,35 @@ struct ReceiptSearchMatchLabel: View {
     let match: ReceiptSearchIndex.Match
     let record: ReceiptRecord
     private var item: ReceiptLine? { record.current.fields.items.first { $0.id == match.itemID } }
+    private var evidenceTitle: String {
+        switch match.basis {
+        case .sku: "Matched code"
+        case .originalSKU: "Original code"
+        case .original, .rawText: "Original text"
+        case .merchant: "Merchant name"
+        case .corrected: "Matched text"
+        }
+    }
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(match.title).font(.body.weight(.medium)).fixedSize(horizontal: false, vertical: true)
-            if match.originalOnly {
-                Text(match.unparsed ? "Original text · not linked to a current purchase" : "Original extraction · removed from current receipt").font(.caption)
-            } else if let item {
-                Text(item.amount.map { "\($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" }
-                     ?? "Amount missing").font(.subheadline.monospacedDigit())
-                if let sku = item.sku { Text("SKU \(sku)").font(.caption) }
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 10) {
+                PurchaseItemHeading(name: item?.paperName ?? match.title, code: item?.sku)
+                if let amount = item?.amount {
+                    Text(PurchasePresentation.price(amount)).font(.title2.weight(.semibold).monospacedDigit())
+                }
+                if match.originalOnly {
+                    Label("Original text only", systemImage: "doc.text.magnifyingglass").font(.subheadline).foregroundStyle(.secondary)
+                    Text(match.unparsed ? "This text is not linked to a current item." : "This item is no longer in the edited receipt.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
             }
-            switch match.basis {
-            case .original: Text("Original description: \(match.matchedText)").font(.caption)
-            case .rawText: Text("Original text: \(match.matchedText)").font(.caption)
-            case .originalSKU: Text("Original SKU: \(match.matchedText)").font(.caption)
-            case .sku: Text("Matched SKU: \(match.matchedText)").font(.caption)
-            case .merchant:
-                if match.matchedText != record.current.fields.merchant { Text("Original merchant: \(match.matchedText)").font(.caption) }
-            case .corrected: Text("Current purchase description").font(.caption)
+            if match.matchedText != (item?.paperName ?? match.title) || [.sku, .originalSKU, .original, .rawText].contains(match.basis) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(evidenceTitle).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                    Text(match.matchedText).font(.body).fixedSize(horizontal: false, vertical: true)
+                }
             }
-        }.foregroundStyle(.primary).accessibilityElement(children: .combine)
+        }.foregroundStyle(.primary)
     }
 }
 
@@ -295,40 +301,34 @@ struct ReceiptSearchContext: View {
         Button { workspace.searchMatch = nil } label: { Image(systemName: "xmark").frame(minWidth: 44, minHeight: 44).contentShape(Rectangle()) }
             .buttonStyle(.plain).accessibilityLabel("Dismiss match")
     }
-    private func originalButton(iconOnly: Bool) -> some View {
+    private var originalButton: some View {
         Button { workspace.showSource(ids: match.sourceLineIDs) } label: {
-            Group {
-                if iconOnly { Image(systemName: "doc.viewfinder").frame(minWidth: 44, minHeight: 44) }
-                else { Label("View matched original", systemImage: "doc.viewfinder").frame(minHeight: 44) }
-            }.contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityLabel("View matched original").disabled(workspace.image == nil).accessibilityIdentifier("searchOriginal")
+            Label("Original", systemImage: "doc.viewfinder")
+        }.buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("View matched original")
+            .disabled(workspace.image == nil).accessibilityIdentifier("searchOriginal")
     }
 
+    @ViewBuilder private func historyButton(_ record: ReceiptRecord) -> some View {
+        if !match.originalOnly, let itemID = match.itemID, record.current.fields.items.contains(where: { $0.id == itemID }) {
+            Button("Purchase history", systemImage: "clock.arrow.circlepath") { history = true }
+                .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("searchPurchaseHistory")
+        }
+    }
     var body: some View {
         if let record = workspace.selected {
-            Group {
-                if typeSize.isAccessibilitySize {
-                    HStack(spacing: 12) {
-                        Button { details = true } label: { Text("Match").font(.headline).frame(minHeight: 44).contentShape(Rectangle()) }
-                            .buttonStyle(.plain).accessibilityLabel("View search match details").accessibilityValue(match.title).accessibilityIdentifier("searchMatchDetails")
-                        Spacer(minLength: 0)
-                        originalButton(iconOnly: true)
-                        dismissButton
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack { Text(match.originalOnly ? "Matched original evidence" : "Search match").font(.caption.weight(.semibold)); Spacer(); dismissButton }
-                        Text(match.title).font(.headline).lineLimit(2)
-                        Text(match.originalOnly ? "Original evidence only" : "Current receipt match").font(.caption)
-                        Button { details = true } label: { Text("Match details").frame(minHeight: 44).contentShape(Rectangle()) }
-                            .buttonStyle(.plain).accessibilityIdentifier("searchMatchDetails")
-                        originalButton(iconOnly: false)
-                    }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(record.current.fields.items.first(where: { $0.id == match.itemID })?.paperName ?? match.title).font(.subheadline.weight(.semibold)).lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                        if match.originalOnly { Text("Original text only").font(.caption).foregroundStyle(.secondary) }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                    Button { details = true } label: { Image(systemName: "info.circle").frame(width: 44, height: 44) }
+                        .buttonStyle(.plain).accessibilityLabel("Match details").accessibilityIdentifier("searchMatchDetails")
+                    dismissButton
                 }
-                if !match.originalOnly, let itemID = match.itemID,
-                   record.current.fields.items.contains(where: { $0.id == itemID }) {
-                    Button("Purchase history", systemImage: "clock.arrow.circlepath") { history = true }
-                        .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("searchPurchaseHistory")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) { originalButton; historyButton(record) }.fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 8) { originalButton; historyButton(record) }
                 }
             }.padding(.horizontal, 20).padding(.bottom, 10)
                 .sheet(isPresented: $history) {

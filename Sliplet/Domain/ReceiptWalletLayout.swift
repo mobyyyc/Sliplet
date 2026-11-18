@@ -2,6 +2,7 @@ import Foundation
 
 /// Built once per receipt update. Scroll frames use binary searches over cached offsets.
 struct ReceiptWalletLayout {
+    let revision = UUID()
     struct Section: Identifiable, Equatable {
         let id: String
         let title: String
