@@ -20,6 +20,8 @@ struct ReceiptHome: View {
     @AppStorage("receiptDisplayList") private var displayList = false
     @FocusState private var editing: String?
     @FocusState private var searchFocused: Bool
+    @State private var keyboardVisible = false
+    @State private var closingSearch = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -249,6 +251,20 @@ struct ReceiptHome: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             workspace.refreshCalendarGrouping()
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+            keyboardVisible = false
+            guard closingSearch else { return }
+            closingSearch = false
+            if workspace.flow == .wallet && workspace.searching {
+                withoutSearchAnimation { workspace.endSearch() }
+            }
+        }
+        .onChange(of: workspace.searching) { _, searching in
+            if !searching { closingSearch = false }
+        }
         .onAppear {
             #if DEBUG
             if !SyntheticNativePreview.enabled { workspace.library = displayList }
@@ -279,6 +295,7 @@ struct ReceiptHome: View {
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }
     private func openSearch() {
+        guard !closingSearch else { return }
         withoutSearchAnimation {
             workspace.searching = true
             searchFocused = true
@@ -286,9 +303,12 @@ struct ReceiptHome: View {
     }
 
     private func closeSearch() {
+        guard !closingSearch else { return }
+        // Keep the results scroll view mounted until the keyboard stops resizing the safe area.
+        closingSearch = keyboardVisible
         withoutSearchAnimation {
             searchFocused = false
-            workspace.endSearch()
+            if !closingSearch { workspace.endSearch() }
         }
     }
 
@@ -311,7 +331,7 @@ struct ReceiptHome: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 48))
                 .accessibilityIdentifier("close")
-        }
+        }.allowsHitTesting(!closingSearch)
     }
 
     private var searchField: some View {

@@ -75,19 +75,27 @@ import XCTest
         capture(app, id + "-wallet-initial")
         XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         let newest = app.buttons["receipt-2"]; XCTAssertTrue(newest.isHittable)
-        let position = newest.frame.minY
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10))
         field.typeText(id == "latest" ? "synthetic" : "synthetic\n")
-        if id == "latest" { XCTAssertTrue(app.keyboards.firstMatch.exists) }
+        let keyboard = app.keyboards.firstMatch
+        if id == "latest" {
+            XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
+        } else {
+            XCTAssertTrue(keyboard.waitForNonExistence(timeout: 5))
+        }
         XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
         app.buttons["close"].tap()
         XCTAssertTrue(recent.waitForExistence(timeout: 10))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
-        XCTAssertEqual(newest.frame.minY, position, accuracy: 4)
+        let pocket = app.otherElements["walletPocket"]
+        XCTAssertTrue(pocket.exists)
+        XCTAssertTrue(newest.isHittable)
+        XCTAssertLessThan(newest.frame.midY, pocket.frame.minY, "The newest receipt should be readable above the pocket")
+        XCTAssertGreaterThan(newest.frame.maxY, pocket.frame.minY, "The newest receipt should still be tucked into the pocket")
         capture(app, id + "-wallet-after-search-cancel")
         guard id == "today" else { app.terminate(); return }
         app.buttons["walletSettings"].tap()
