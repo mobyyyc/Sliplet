@@ -77,6 +77,7 @@ private struct WalletDepartingPaper: Identifiable {
 /// One retained scene: papers leave in their screen order while the selected paper lifts in place.
 struct ReceiptWalletScene: View {
     @Bindable var workspace: ReceiptWorkspace
+    var openOverview: (String) -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var presented: ReceiptRecord?
     @State private var expanded = false
@@ -436,7 +437,10 @@ struct ReceiptWalletScene: View {
                     .zIndex(revealedID == paper.record.id ? Double(snapshot.count + 1) : Double(paper.index + 1))
                     .rotationEffect(.degrees(paper.tilt))
                     .overlay(alignment: .topLeading) {
-                        if let section = paper.section { monthHeading(section).offset(y: -header) }
+                        if let section = paper.section {
+                            let month = ReceiptHistory.monthKey(paper.record)
+                            monthHeading(section, month: month).offset(y: -header)
+                        }
                     }
                     .offset(y: paper.y - baseY + pocketMotion)
             }
@@ -470,15 +474,28 @@ struct ReceiptWalletScene: View {
         }
         return plainLayout.visibleIndices(lower: -80 - baseY, upper: curve.viewportHeight + 80 - baseY)
     }
-    private func monthHeading(_ section: ReceiptWalletLayout.Section) -> some View {
-        HStack(spacing: 6) {
+    private func monthHeading(_ section: ReceiptWalletLayout.Section, month: String?) -> some View {
+        let label = HStack(spacing: 6) {
             Text(section.title).fontWeight(.semibold)
             Text("· \(section.count)").foregroundStyle(.secondary)
+            if month != nil { Image(systemName: "chart.bar").accessibilityHidden(true) }
         }
         .font(.caption).lineLimit(1).minimumScaleFactor(0.6)
         .padding(.horizontal, 12).padding(.vertical, 7)
         .background(.regularMaterial, in: .capsule)
-        .accessibilityElement(children: .combine).accessibilityAddTraits(.isHeader)
+
+        return Group {
+            if let month {
+                Button { openOverview(month) } label: {
+                    label.frame(minHeight: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the purchase overview for this month")
+            } else {
+                label.accessibilityElement(children: .combine)
+            }
+        }
+        .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier("walletSection-" + section.id)
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -68,10 +68,10 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "wallet"] + arguments
         app.launch(); XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 60))
-        let recent = app.staticTexts["walletSection-" + id]
+        let recent = app.buttons["walletSection-" + id]
         XCTAssertTrue(recent.waitForExistence(timeout: 15))
         XCTAssertTrue(recent.label.contains(title))
-        XCTAssertFalse(app.staticTexts["walletSection-" + (id == "today" ? "latest" : "today")].exists)
+        XCTAssertFalse(app.buttons["walletSection-" + (id == "today" ? "latest" : "today")].exists)
         capture(app, id + "-wallet-initial")
         XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
         let newest = app.buttons["receipt-2"]; XCTAssertTrue(newest.isHittable)

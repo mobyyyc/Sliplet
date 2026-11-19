@@ -40,7 +40,7 @@ import XCTest
         XCTAssertEqual(toggle.frame.width, toggle.frame.height, accuracy: 2)
         XCTAssertGreaterThan(toggle.frame.midX, app.frame.width * 0.8)
         jump(app, "2026-09")
-        XCTAssertTrue(app.staticTexts["walletSection-2026-09"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["walletSection-2026-09"].waitForExistence(timeout: 5))
         capture(app, "P14-02-month-boundary-light")
         roundTrip(app)
         let paper = papers(app).allElementsBoundByIndex.first { $0.isHittable && $0.frame.minY > 130 }
@@ -65,14 +65,14 @@ import XCTest
             XCTAssertGreaterThan(mounted, 0)
             XCTAssertLessThanOrEqual(mounted, 36)
             jump(app, "2026-11")
-            XCTAssertTrue(app.staticTexts["walletSection-2026-11"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["walletSection-2026-11"].waitForExistence(timeout: 5))
             XCTAssertLessThanOrEqual(papers(app).count, 36)
             if count >= 200 {
                 app.buttons["walletMonths"].tap()
                 app.buttons["walletYear"].tap()
                 app.buttons["2025"].tap()
                 app.buttons["walletMonth-2025-12"].tap()
-                XCTAssertTrue(app.staticTexts["walletSection-2025-12"].waitForExistence(timeout: 5))
+                XCTAssertTrue(app.buttons["walletSection-2025-12"].waitForExistence(timeout: 5))
                 roundTrip(app)
             }
             measured.append(["receipts": count, "mountedAtInitialPosition": mounted, "mountedAfterJump": papers(app).count])

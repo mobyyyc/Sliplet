@@ -17,6 +17,9 @@ struct ReceiptHome: View {
     @State private var settings = false
     @State private var recoveryAISettings = false
     @State private var walletInformation = false
+    @State private var purchaseOverview: ReceiptOverviewNavigation?
+    @State private var presentedPurchaseOverview: ReceiptOverviewNavigation?
+    @State private var overviewReceiptID: UUID?
     @AppStorage("receiptDisplayList") private var displayList = false
     @FocusState private var editing: String?
     @FocusState private var searchFocused: Bool
@@ -66,7 +69,7 @@ struct ReceiptHome: View {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : "Wallet", systemImage: "chevron.left") {
+                            Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
                                 if workspace.flow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
                                 else if workspace.flow == .preparingUpload && workspace.importStep > 0 {
                                     workspace.importForward = false; workspace.importStep -= 1
@@ -230,6 +233,17 @@ struct ReceiptHome: View {
             .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
+            .sheet(item: $presentedPurchaseOverview, onDismiss: finishOverviewPresentation) { navigation in
+                if workspace.privacyCovered {
+                    ReceiptLockScreen()
+                } else {
+                    ReceiptPurchaseOverviewView(navigation: navigation, records: workspace.orderedReceipts,
+                                                revision: workspace.purchaseOverviewRevision) { id in
+                        overviewReceiptID = id
+                        presentedPurchaseOverview = nil
+                    }
+                }
+            }
             .sheet(isPresented: $recoveryAISettings) {
                 NavigationStack {
                     ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
@@ -260,6 +274,12 @@ struct ReceiptHome: View {
             closingSearch = false
             if workspace.flow == .wallet && workspace.searching {
                 withoutSearchAnimation { workspace.endSearch() }
+            }
+        }
+        .onChange(of: workspace.flow) { _, flow in
+            if flow == .wallet && overviewReceiptID != nil {
+                overviewReceiptID = nil
+                presentedPurchaseOverview = workspace.active && !workspace.privacyCovered ? purchaseOverview : nil
             }
         }
         .onChange(of: workspace.searching) { _, searching in
@@ -294,6 +314,27 @@ struct ReceiptHome: View {
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }
+    private func showPurchaseOverview(_ month: String) {
+        guard workspace.flow == .wallet, !workspace.searching, !workspace.privacyCovered else { return }
+        let navigation = ReceiptOverviewNavigation(month: month)
+        purchaseOverview = navigation
+        presentedPurchaseOverview = navigation
+    }
+
+    private func finishOverviewPresentation() {
+        guard let id = overviewReceiptID else {
+            purchaseOverview = nil
+            return
+        }
+        if workspace.active, !workspace.privacyCovered, !workspace.saving,
+           let record = workspace.orderedReceipts.first(where: { $0.id == id }) {
+            workspace.open(record)
+        } else {
+            overviewReceiptID = nil
+            purchaseOverview = nil
+        }
+    }
+
     private func openSearch() {
         guard !closingSearch else { return }
         withoutSearchAnimation {
@@ -569,13 +610,13 @@ struct ReceiptHome: View {
     private var wallet: some View {
         Group {
             if (workspace.library || workspace.searching) && workspace.flow == .wallet {
-                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }) { record in
+                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }, openOverview: showPurchaseOverview) { record in
                     deleteTarget = record; delete = true
                 }
-            } else if workspace.library || workspace.searching {
+            } else if workspace.library || workspace.searching || overviewReceiptID != nil {
                 ReceiptSearchDetailView(workspace: workspace)
             } else {
-                ReceiptWalletScene(workspace: workspace) { record in
+                ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview) { record in
                     deleteTarget = record; delete = true
                 }
 

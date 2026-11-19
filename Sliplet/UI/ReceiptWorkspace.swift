@@ -13,6 +13,7 @@ final class ReceiptWorkspace {
     var availability: Availability = .closed
     var flow: Flow = .wallet
     var receipts: [ReceiptRecord] = [] { didSet {
+        purchaseOverviewRevision += 1
         if let preparedSearchIndex { searchIndex = preparedSearchIndex; self.preparedSearchIndex = nil }
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
@@ -38,6 +39,7 @@ final class ReceiptWorkspace {
     private(set) var searchIndex = ReceiptSearchIndex()
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
     private(set) var orderedReceipts: [ReceiptRecord] = []
+    private(set) var purchaseOverviewRevision = 0
     private(set) var walletReceipts: [ReceiptRecord] = []
     private(set) var walletLayout = ReceiptWalletLayout()
     private var walletGroupingDay = ReceiptBrowsingPeriod.today()
