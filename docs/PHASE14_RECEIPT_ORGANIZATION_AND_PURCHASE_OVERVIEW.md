@@ -69,6 +69,20 @@ Browsing efficiency and running cost are acceptance criteria throughout Phase 14
 
 Browsing uses direct collection choices and a transactional native filter sheet, including controls during active search. Search detail emphasizes the matched purchase and hides optional evidence in Match details. Receipt identity and screen position survive navigation and date changes. Twelve distinct UI methods passed across the acceptance selection and targeted repairs; 18 final unit methods passed. Native wallet clock/CPU samples remain close to P14-02. [Implementation, audit repairs and verification](PHASE14_BROWSING_AND_SEARCH.md).
 
+## P14-04 result
+
+The purchase overview groups reviewed receipts by purchase month and currency. Archive status has no effect on totals. Negative reviewed totals reduce spending in their own month. Identical originals with matching reviewed fields count once. Each currency total and merchant subtotal leads to its receipts.
+
+## P14-05 interaction audit
+
+| Observation and reproduction | Change | Simulator check |
+| --- | --- | --- |
+| At the resting position of a 30-receipt wallet, the recent section heading can sit offscreen. | The wallet pocket provides a 44-point Purchase overview action alongside Jump to newest. Month headings in Wallet and List still open their own month. | Open the overview without scrolling the wallet and follow the month total. |
+| In a month with repeated imports, excluded copies mix with the counted receipts. On the drill-down page, the period and total are hard to recover at a glance. | Lead with the period, amount and count. Put duplicate copies behind a labeled disclosure after contributing receipts. | Compare the visible row count to the total, expand copies, open a copy after scrolling, and confirm that it is still visible on return. |
+| A wallet containing only undated receipts has no dated heading that opens the overview. The overview sheet can render at the default text size when the wallet uses an accessibility size. | Undated groups open their own receipt list. The sheet uses the wallet’s Dynamic Type size. The month control can stack its label and selected value, and announces the selected month. | Launch an all-undated wallet at the largest accessibility text size with Reduce Motion. Open its list, return to overview, and check the excluded count and the measured heights of the receipt rows and month control. |
+
+The owner confirmed the search-dismissal fade fix on the iPhone 15 Pro. P14-05 uses fictional Simulator receipts. Physical-device acceptance and scale measurements are part of P14-06.
+
 ## Next approval
 
-P14-04 · Purchase overview. Confirm which drafts, archived records, refunds and possible duplicates enter the totals before implementation. Show different currencies separately and make every summary open its contributing receipts.
+P14-06 · Scale and owner acceptance. Exercise 10, 50, 200 and 1,000 fictional receipts, then verify the affected journeys in an approved iPhone walkthrough.

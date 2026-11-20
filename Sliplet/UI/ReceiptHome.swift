@@ -241,7 +241,7 @@ struct ReceiptHome: View {
                                                 revision: workspace.purchaseOverviewRevision) { id in
                         overviewReceiptID = id
                         presentedPurchaseOverview = nil
-                    }
+                    }.dynamicTypeSize(typeSize)
                 }
             }
             .sheet(isPresented: $recoveryAISettings) {
@@ -314,9 +314,12 @@ struct ReceiptHome: View {
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }
-    private func showPurchaseOverview(_ month: String) {
-        guard workspace.flow == .wallet, !workspace.searching, !workspace.privacyCovered else { return }
-        let navigation = ReceiptOverviewNavigation(month: month)
+    private func showPurchaseOverview(_ month: String?) {
+        guard workspace.flow == .wallet, !workspace.searching, !workspace.privacyCovered, !workspace.saving else { return }
+        let today = ReceiptBrowsingPeriod.today()
+        let currentMonth = String(format: "%04d-%02d", today.year, today.month)
+        let navigation = ReceiptOverviewNavigation(month: month ?? currentMonth)
+        if month == nil { navigation.path = [.undated] }
         purchaseOverview = navigation
         presentedPurchaseOverview = navigation
     }

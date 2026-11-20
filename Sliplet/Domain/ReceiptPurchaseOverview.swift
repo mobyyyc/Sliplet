@@ -9,14 +9,18 @@ struct ReceiptPurchaseOverview: Sendable {
     }
 
     struct Summary: Sendable {
-        var entries: [Entry] = []
+        private(set) var entries: [Entry] = []
+        private(set) var copies: [Entry] = []
         private(set) var count = 0
         private(set) var net = Decimal.zero
         private var scale: UInt8 = 0
 
         mutating func add(_ entry: Entry, amount: Decimal, minorUnitScale: UInt8) {
+            if entry.isDuplicate {
+                copies.append(entry)
+                return
+            }
             entries.append(entry)
-            guard !entry.isDuplicate else { return }
             count += 1
             scale = max(scale, minorUnitScale)
             net += amount

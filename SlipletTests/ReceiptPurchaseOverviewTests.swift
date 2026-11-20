@@ -48,8 +48,10 @@ final class ReceiptPurchaseOverviewTests: XCTestCase {
         let summary = try XCTUnwrap(overview.months["2026-10"]?.currencies["CAD"]?.all)
         XCTAssertEqual(summary.net, Decimal(string: "10.75"))
         XCTAssertEqual(summary.count, 3)
-        XCTAssertEqual(summary.entries.count, 4)
-        let excluded = try XCTUnwrap(summary.entries.first(where: \.isDuplicate))
+        XCTAssertEqual(summary.entries.count, 3)
+        XCTAssertEqual(summary.copies.count, 1)
+        XCTAssertTrue(summary.entries.allSatisfy { !$0.isDuplicate })
+        let excluded = try XCTUnwrap(summary.copies.first)
         XCTAssertTrue([first.id, copy.id].contains(excluded.id))
         XCTAssertEqual(overview.months["2026-09"]?.currencies["CAD"]?.all.count, 1)
     }

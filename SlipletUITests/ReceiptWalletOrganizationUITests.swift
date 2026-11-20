@@ -53,7 +53,7 @@ import XCTest
             XCTAssertEqual(paper.frame.minY, before.minY, accuracy: 2)
         }
         jump(app, "undated")
-        XCTAssertTrue(app.staticTexts["walletSection-undated"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["walletSection-undated"].waitForExistence(timeout: 5))
         capture(app, "P14-02-undated")
         app.terminate()
     }

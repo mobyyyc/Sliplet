@@ -21,6 +21,7 @@ import SwiftUI
     var month: String
     var path: [Destination] = []
     var receiptPosition: UUID?
+    var showingCopies = false
     var overview: ReceiptPurchaseOverview?
     var loadedRevision: Int?
 
@@ -55,7 +56,7 @@ struct ReceiptPurchaseOverviewView: View {
             }
             .navigationDestination(for: ReceiptOverviewNavigation.Destination.self) { destination in
                 if navigation.loadedRevision == revision, let overview = navigation.overview {
-                    receiptList(entries(in: overview, for: destination), title: destination.title)
+                    drillDown(destination, overview: overview)
                 } else {
                     ProgressView("Loading receipts")
                         .navigationTitle(destination.title)
@@ -78,7 +79,10 @@ struct ReceiptPurchaseOverviewView: View {
             }
         }
         .onChange(of: navigation.path) { _, path in
-            if path.isEmpty { navigation.receiptPosition = nil }
+            if path.isEmpty {
+                navigation.receiptPosition = nil
+                navigation.showingCopies = false
+            }
         }
         .tint(.primary)
     }
@@ -87,18 +91,14 @@ struct ReceiptPurchaseOverviewView: View {
         let month = overview.months[navigation.month] ?? .init()
         return List {
             Section {
-                Picker("Month", selection: $navigation.month) {
-                    ForEach(Set(overview.monthKeys + [navigation.month]).sorted(by: >), id: \.self) { key in
-                        Text(ReceiptHistory.monthTitle(key)).tag(key)
-                    }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("purchaseOverviewMonth")
+                monthPicker(overview.monthKeys)
             }
 
             if month.currencies.isEmpty {
-                ContentUnavailableView("No reviewed receipts", systemImage: "doc.text",
-                                       description: Text("Finished receipts for this month appear here."))
+                Text("No reviewed receipts this month")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .listRowBackground(Color.clear)
             }
 
@@ -116,6 +116,7 @@ struct ReceiptPurchaseOverviewView: View {
                             .padding(.vertical, 8)
                             .accessibilityElement(children: .combine)
                         }
+                        .accessibilityHint("Shows the receipts included in this total")
                         .accessibilityIdentifier("purchaseOverviewTotal-" + code)
                     }
                     Section("By merchant · \(code)") {
@@ -135,6 +136,7 @@ struct ReceiptPurchaseOverviewView: View {
                                     }
                                     .accessibilityElement(children: .combine)
                                 }
+                                .accessibilityHint("Shows the receipts for this merchant")
                                 .accessibilityIdentifier("purchaseOverviewMerchant-" + code + "-" + name)
                             }
                         }
@@ -160,47 +162,114 @@ struct ReceiptPurchaseOverviewView: View {
         .listStyle(.insetGrouped)
     }
 
-    private func entries(in overview: ReceiptPurchaseOverview, for destination: ReceiptOverviewNavigation.Destination)
-        -> [ReceiptPurchaseOverview.Entry] {
+    private func monthPicker(_ months: [String]) -> some View {
+        let title = ReceiptHistory.monthTitle(navigation.month)
+        return Menu {
+            Picker("Month", selection: $navigation.month) {
+                ForEach(Set(months + [navigation.month]).sorted(by: >), id: \.self) { key in
+                    Text(ReceiptHistory.monthTitle(key)).tag(key)
+                }
+            }
+        } label: {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    Text("Month").fixedSize()
+                    Spacer(minLength: 0)
+                    HStack(spacing: 6) {
+                        Text(title)
+                        Image(systemName: "chevron.up.chevron.down").accessibilityHidden(true)
+                    }
+                    .fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Month").font(.subheadline).foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption.weight(.semibold))
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
+            .foregroundStyle(.primary)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Month")
+        .accessibilityValue(title)
+        .accessibilityIdentifier("purchaseOverviewMonth")
+    }
+
+    @ViewBuilder private func drillDown(_ destination: ReceiptOverviewNavigation.Destination, overview: ReceiptPurchaseOverview) -> some View {
         let month = overview.months[navigation.month]
         switch destination {
-        case .month(let code): return month?.currencies[code]?.all.entries ?? []
-        case .merchant(let code, let name): return month?.currencies[code]?.merchants[name]?.entries ?? []
-        case .needsReview: return month?.needsReview ?? []
-        case .undated: return overview.undated
+        case .month(let code):
+            let summary = month?.currencies[code]?.all ?? .init()
+            receiptList(summary.entries, copies: summary.copies, title: destination.title, period: true, amount: summary.amount(currency: code))
+        case .merchant(let code, let name):
+            let summary = month?.currencies[code]?.merchants[name] ?? .init()
+            receiptList(summary.entries, copies: summary.copies, title: destination.title, period: true, amount: summary.amount(currency: code))
+        case .needsReview:
+            receiptList(month?.needsReview ?? [], title: destination.title, period: true)
+        case .undated:
+            receiptList(overview.undated, title: destination.title, period: false)
         }
     }
 
-    private func receiptList(_ entries: [ReceiptPurchaseOverview.Entry], title: String) -> some View {
+    private func receiptList(_ entries: [ReceiptPurchaseOverview.Entry], copies: [ReceiptPurchaseOverview.Entry] = [],
+                             title: String, period: Bool, amount: String? = nil) -> some View {
         ScrollView {
             if entries.isEmpty {
                 ContentUnavailableView("No receipts here", systemImage: "doc.text")
             } else {
+                VStack(alignment: .leading, spacing: 5) {
+                    if period {
+                        Text(ReceiptHistory.monthTitle(navigation.month)).font(.subheadline.weight(.medium))
+                        .accessibilityIdentifier("purchaseOverviewDrillMonth")
+                    }
+                    if let amount {
+                        Text(amount).font(.title2.weight(.semibold).monospacedDigit())
+                            .accessibilityLabel("Net spending, \(amount)")
+                    }
+                    Text(receiptCount(entries.count)).font(.footnote).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .contain)
+                .padding(.horizontal, 20).padding(.top, 14).padding(.bottom, 8)
+
                 LazyVStack(spacing: 10) {
-                    ForEach(entries) { entry in
-                        Button { openReceipt(entry.id) } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                ReceiptSummary(record: entry.record)
-                                if entry.isDuplicate {
-                                    Text("Duplicate copy · excluded").font(.caption).foregroundStyle(.secondary)
-                                } else if ReceiptCompletion.isComplete(entry.record),
-                                          let total = entry.record.current.fields.total, total.minorUnits < 0 {
-                                    Text("Refund").font(.caption).foregroundStyle(.secondary)
+                    ForEach(entries, content: receiptRow)
+                    if !copies.isEmpty {
+                        Button {
+                            navigation.showingCopies.toggle()
+                        } label: {
+                            HStack(alignment: .center, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(copies.count == 1 ? "1 duplicate copy" : "\(copies.count) duplicate copies")
+                                        .font(.subheadline.weight(.medium))
+                                    Text("Excluded from totals").font(.footnote).foregroundStyle(.secondary)
                                 }
+                                Spacer(minLength: 4)
+                                Image(systemName: navigation.showingCopies ? "chevron.up" : "chevron.down")
+                                    .font(.subheadline.weight(.semibold)).accessibilityHidden(true)
                             }
                             .padding(14)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
-                            .contentShape(.rect(cornerRadius: 16))
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .id(entry.id)
                         .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("purchaseOverviewReceipt-" + entry.id.uuidString)
+                        .accessibilityValue(navigation.showingCopies ? "Expanded" : "Collapsed")
+                        .accessibilityIdentifier("purchaseOverviewCopies")
+                        if navigation.showingCopies {
+                            ForEach(copies, content: receiptRow)
+                        }
                     }
                 }
                 .scrollTargetLayout()
-                .padding(20)
+                .padding(.horizontal, 20).padding(.bottom, 20)
             }
         }
         .scrollPosition(id: $navigation.receiptPosition, anchor: .top)
@@ -208,6 +277,28 @@ struct ReceiptPurchaseOverviewView: View {
         .scrollEdgeEffectStyle(.soft, for: .vertical)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityIdentifier("purchaseOverviewReceiptList")
+    }
+
+    private func receiptRow(_ entry: ReceiptPurchaseOverview.Entry) -> some View {
+        Button { openReceipt(entry.id) } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                ReceiptSummary(record: entry.record)
+                if entry.isDuplicate {
+                    Text("Duplicate copy").font(.caption).foregroundStyle(.secondary)
+                } else if let total = entry.record.current.fields.total, total.minorUnits < 0, ReceiptCompletion.isComplete(entry.record) {
+                    Text("Refund").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: .rect(cornerRadius: 16))
+            .contentShape(.rect(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+        .id(entry.id)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("purchaseOverviewReceipt-" + entry.id.uuidString)
     }
 
     private func receiptCount(_ count: Int) -> String {

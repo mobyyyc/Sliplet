@@ -60,7 +60,9 @@ import CryptoKit
         }
         let merchant = mode == "purchase-history" ? "FICTIONAL HISTORY STORE" : ["SYNTHETIC CORNER", "SYNTHETIC MARKET", "SYNTHETIC STORE"][index % 3]
         let date: String
-        if ProcessInfo.processInfo.arguments.contains("--today-wallet"), index < 2 {
+        if ProcessInfo.processInfo.arguments.contains("--p1405-undated") {
+            date = ""
+        } else if ProcessInfo.processInfo.arguments.contains("--today-wallet"), index < 2 {
             let day = Calendar.current.date(byAdding: .day, value: -index, to: Date())!
             date = ReceiptBrowsingFilter.key(day)
         } else { date = String(format: "2026-10-%02d", 7 - index % 3) }

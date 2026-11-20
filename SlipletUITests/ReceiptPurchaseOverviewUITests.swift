@@ -43,6 +43,14 @@ import XCTest
         XCTAssertTrue(listEntry.waitForExistence(timeout: 10))
         listEntry.tap()
         XCTAssertTrue(total.waitForExistence(timeout: 10))
+
+        let month = app.buttons["purchaseOverviewMonth"]
+        month.tap()
+        let earlierMonth = app.buttons.matching(NSPredicate(
+            format: "label == %@ AND identifier != %@", "October 2026", "listOverview-2026-10")).firstMatch
+        XCTAssertTrue(earlierMonth.waitForExistence(timeout: 5))
+        earlierMonth.tap()
+        XCTAssertEqual(month.value as? String, "October 2026")
     }
 
     func testDrillDownRestoresAScrolledReceiptInDarkMode() {
@@ -50,11 +58,7 @@ import XCTest
         app.launchArguments = ["--t05-synthetic-preview", "many", "--t05-dark"]
         app.launch()
         XCTAssertTrue(app.staticTexts["30 saved"].waitForExistence(timeout: 60))
-        app.buttons["walletSettings"].tap()
-        app.buttons["receiptDisplayMode"].tap()
-        app.buttons["List"].tap()
-        app.buttons["Done"].tap()
-        let entry = app.buttons["listOverview-latest"]
+        let entry = app.buttons["walletPurchaseOverview"]
         XCTAssertTrue(entry.waitForExistence(timeout: 10))
         entry.tap()
 
@@ -63,11 +67,15 @@ import XCTest
         total.tap()
         let rows = receiptRows(app)
         XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10))
-        let firstID = rows.firstMatch.identifier
-        app.scrollViews.firstMatch.swipeUp()
+        XCTAssertEqual(rows.count, 3, "Only the receipts included in the total should appear at first")
+        XCTAssertTrue(app.staticTexts["purchaseOverviewDrillMonth"].exists)
+        let copies = app.buttons["purchaseOverviewCopies"]
+        XCTAssertTrue(copies.isHittable)
+        copies.tap()
+        app.scrollViews["purchaseOverviewReceiptList"].swipeUp()
         guard let target = rows.allElementsBoundByIndex.first(where: {
-            $0.identifier != firstID && $0.isHittable && $0.frame.minY > 140 && $0.frame.maxY < 650
-        }) else { return XCTFail("Expected a visible receipt below the initial scroll position") }
+            $0.label.contains("Duplicate copy") && $0.isHittable && $0.frame.minY > 140 && $0.frame.maxY < 650
+        }) else { return XCTFail("Expected a visible duplicate below the initial scroll position") }
         let targetID = target.identifier
         capture(app, "purchase-overview-drilldown-dark")
         target.tap()
@@ -76,6 +84,34 @@ import XCTest
         let restored = app.buttons[targetID]
         XCTAssertTrue(restored.waitForExistence(timeout: 10))
         XCTAssertTrue(restored.isHittable)
+    }
+
+    func testUndatedReceiptsRemainReachableAtTheLargestTextSize() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--t05-light", "--t05-large-text", "--t05-reduce-motion", "--p1405-undated"]
+        app.launch()
+        let entry = app.buttons["walletPurchaseOverview"]
+        XCTAssertTrue(entry.waitForExistence(timeout: 60))
+        XCTAssertGreaterThanOrEqual(entry.frame.height, 44)
+        entry.tap()
+        XCTAssertTrue(app.navigationBars["Date unavailable"].waitForExistence(timeout: 10))
+        let receipt = receiptRows(app).firstMatch
+        XCTAssertTrue(receipt.waitForExistence(timeout: 10))
+        XCTAssertTrue(receipt.isHittable)
+        XCTAssertGreaterThan(receipt.frame.height, 150, "The sheet must inherit accessibility-size receipt text")
+        capture(app, "undated-large-text")
+        app.navigationBars["Date unavailable"].buttons.firstMatch.tap()
+        let month = app.buttons["purchaseOverviewMonth"]
+        XCTAssertTrue(month.waitForExistence(timeout: 10))
+        XCTAssertTrue(month.isHittable)
+        XCTAssertGreaterThan(month.frame.height, 72, "The selected month should wrap onto its own line")
+        capture(app, "overview-large-text")
+        let undated = app.buttons["purchaseOverviewUndated"]
+        for _ in 0..<4 where !undated.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(undated.isHittable)
+        XCTAssertFalse(app.buttons["purchaseOverviewTotal-CAD"].exists)
     }
 
     private func receiptRows(_ app: XCUIApplication) -> XCUIElementQuery {

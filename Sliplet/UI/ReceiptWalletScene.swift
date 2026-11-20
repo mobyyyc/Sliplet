@@ -77,7 +77,7 @@ private struct WalletDepartingPaper: Identifiable {
 /// One retained scene: papers leave in their screen order while the selected paper lifts in place.
 struct ReceiptWalletScene: View {
     @Bindable var workspace: ReceiptWorkspace
-    var openOverview: (String) -> Void
+    var openOverview: (String?) -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var presented: ReceiptRecord?
     @State private var expanded = false
@@ -478,23 +478,17 @@ struct ReceiptWalletScene: View {
         let label = HStack(spacing: 6) {
             Text(section.title).fontWeight(.semibold)
             Text("· \(section.count)").foregroundStyle(.secondary)
-            if month != nil { Image(systemName: "chart.bar").accessibilityHidden(true) }
+            Image(systemName: "chart.bar").accessibilityHidden(true)
         }
         .font(.caption).lineLimit(1).minimumScaleFactor(0.6)
         .padding(.horizontal, 12).padding(.vertical, 7)
         .background(.regularMaterial, in: .capsule)
 
-        return Group {
-            if let month {
-                Button { openOverview(month) } label: {
-                    label.frame(minHeight: 44).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Opens the purchase overview for this month")
-            } else {
-                label.accessibilityElement(children: .combine)
-            }
+        return Button { openOverview(month) } label: {
+            label.frame(minHeight: 44).contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityHint(month == nil ? "Shows receipts awaiting a purchase date" : "Opens the purchase overview for this month")
         .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier("walletSection-" + section.id)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -525,7 +519,9 @@ struct ReceiptWalletScene: View {
         typeSize.isAccessibilitySize ? 0 : [-1.0, 0.7, -0.5, 1.1][index % 4]
     }
     private func walletPocket(_ jump: @escaping () -> Void) -> some View {
-        WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty, jumpToLatest: jump).fixedSize(horizontal: false, vertical: true)
+        WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty,
+                    showOverview: { openOverview(records.last.flatMap(ReceiptHistory.monthKey)) }, jumpToLatest: jump)
+            .fixedSize(horizontal: false, vertical: true)
             .allowsHitTesting(presented == nil)
     }
     private func pocketBacking(in geometry: GeometryProxy) -> some View {
@@ -722,10 +718,11 @@ private struct WalletReadingContent: View, Equatable {
 private struct WalletCrown: View {
     let count: Int
     var filtered = false
+    var showOverview: () -> Void
     var jumpToLatest: () -> Void
     @Environment(\.colorScheme) private var scheme
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("Wallet").font(.system(.title2, design: .serif, weight: .semibold))
                     .shadow(color: .white.opacity(scheme == .dark ? 0.08 : 0.25), radius: 0, y: 1)
@@ -733,11 +730,15 @@ private struct WalletCrown: View {
                 Text(filtered ? "\(count) matching" : "\(count) saved").font(.subheadline).lineLimit(1).minimumScaleFactor(0.6)
             }
             Spacer(minLength: 6)
+            Button("Purchase overview", systemImage: "chart.bar", action: showOverview)
+                .labelStyle(.iconOnly)
+                .buttonStyle(ReceiptSecondaryStyle(circular: true))
+                .accessibilityIdentifier("walletPurchaseOverview")
             if count > 3 {
-                Button(action: jumpToLatest) { Image(systemName: "arrow.down") }
-                    .buttonStyle(ReceiptSecondaryStyle()).accessibilityLabel("Jump to newest receipt").accessibilityIdentifier("latestReceipt")
-            } else {
-                Image(systemName: "wallet.bifold").font(.title2.weight(.light)).opacity(0.75).accessibilityHidden(true)
+                Button("Jump to newest receipt", systemImage: "arrow.down", action: jumpToLatest)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(ReceiptSecondaryStyle(circular: true))
+                    .accessibilityIdentifier("latestReceipt")
             }
         }
         .foregroundStyle(scheme == .dark ? Color(red: 0.99, green: 0.92, blue: 0.83) : Color(red: 0.12, green: 0.06, blue: 0.03))

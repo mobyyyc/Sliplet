@@ -1,8 +1,8 @@
 # Task registry
 
-## Phase 14 · In progress 2026-11-18
+## Phase 14 · In progress 2026-11-19
 
-P14-01 design, P14-02 receipt organization and P14-03 browsing/search/return are complete in Simulator. Wallet/List remains a circular upper-right button. Collections and transactional filters are directly available, including during native search. Query, scope and receipt position survive reading/editing/history navigation. P14-03 has passing evidence for 12 distinct UI methods across the acceptance selection and focused fixes; 18 final unit methods passed. The 30-receipt wallet clock/CPU samples remain close to P14-02. The owner subsequently requested unified Settings/Search/Filters controls and cross-view merchant/date/amount filters; [the shared-controls revision](docs/PHASE14_SHARED_BROWSING_CONTROLS.md) supersedes the earlier toolbar arrangement. The [Today and Settings refinement](docs/PHASE14_TODAY_AND_SETTINGS.md) adds local-day grouping, newest positioning on native search cancellation and consolidated settings. P14-04 purchase overview is next for approval in Main, with accounting inclusion rules to confirm before implementation. [Phase 14 roadmap](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-03 results](docs/PHASE14_BROWSING_AND_SEARCH.md).
+P14-01 through P14-05 are complete in Simulator. Wallet and List use shared search and filters. Display choices are in Settings. The purchase overview opens from month headings or the wallet pocket, and each subtotal links to its receipts. The owner verified the search-dismissal fade on iPhone. P14-06 scale and owner acceptance is next for approval in Main. [Roadmap and P14-05 audit](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-03 results](docs/PHASE14_BROWSING_AND_SEARCH.md).
 
 ## Phase 13 · 2026-11-14
 

@@ -48,7 +48,7 @@ struct ReceiptSearchDetailView: View {
 struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
     var openSettings: () -> Void
-    var openOverview: (String) -> Void
+    var openOverview: (String?) -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
@@ -56,7 +56,7 @@ struct ReceiptPurchaseHistoryView: View {
     @State private var scrollAccess = ReceiptListScrollAccess()
     @State private var viewportHeight: CGFloat = 1
     init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {},
-         openOverview: @escaping (String) -> Void, requestDelete: @escaping (ReceiptRecord) -> Void) {
+         openOverview: @escaping (String?) -> Void, requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace; self.openSettings = openSettings; self.openOverview = openOverview
         self.requestDelete = requestDelete
         _pendingRestore = State(initialValue: workspace.browseAnchor)
@@ -156,11 +156,12 @@ struct ReceiptPurchaseHistoryView: View {
     }
 
     @ViewBuilder private func sectionHeading(_ section: ReceiptBrowsingSnapshot.Section) -> some View {
-        if !workspace.searching, let record = section.rows.first?.record, let month = ReceiptHistory.monthKey(record) {
+        if !workspace.searching, let record = section.rows.first?.record {
+            let month = ReceiptHistory.monthKey(record)
             Button { openOverview(month) } label: {
                 HStack(spacing: 7) {
                     Text(section.title)
-                    Image(systemName: "chart.bar").font(.caption)
+                    Image(systemName: "chart.bar").font(.caption).accessibilityHidden(true)
                 }
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.primary)
@@ -169,7 +170,7 @@ struct ReceiptPurchaseHistoryView: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(.isHeader)
-            .accessibilityHint("Opens the purchase overview for this month")
+            .accessibilityHint(month == nil ? "Shows receipts awaiting a purchase date" : "Opens the purchase overview for this month")
             .accessibilityIdentifier("listOverview-" + section.id)
         } else {
             Text(section.title).font(.subheadline.weight(.medium)).foregroundStyle(Color(uiColor: .label))
