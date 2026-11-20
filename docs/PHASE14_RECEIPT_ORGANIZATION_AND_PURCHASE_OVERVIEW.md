@@ -83,6 +83,25 @@ The purchase overview groups reviewed receipts by purchase month and currency. A
 
 The owner confirmed the search-dismissal fade fix on the iPhone 15 Pro. P14-05 uses fictional Simulator receipts. Physical-device acceptance and scale measurements are part of P14-06.
 
-## Next approval
+## P14-06 Simulator acceptance
 
-P14-06 · Scale and owner acceptance. Exercise 10, 50, 200 and 1,000 fictional receipts, then verify the affected journeys in an approved iPhone walkthrough.
+The iPhone 15 Pro Simulator on iOS 27.0 ran six UI journeys against the isolated fictional store. At each size the test seeded and reopened the persisted wallet, dragged the stack, opened and returned to a paper at its prior height, checked the monthly total and count, followed a total to an individual receipt and back, and queried the full collection for the same item. The 200- and 1,000-receipt cases also opened a matching receipt from the preceding year. The other two journeys exercised the largest accessibility text size with Reduce Motion and reached the total of a 31-item receipt above the bottom actions.
+
+| Receipts | Mounted papers before → after drag | Relaunch to wallet | Drag and sample | Open and return | Open overview | Search results ready |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10 | 8 → 10 | 4.47 s | 2.55 s | 2.95 s | 1.90 s | 1.83 s |
+| 50 | 8 → 10 | 4.49 s | 2.55 s | 2.92 s | 1.89 s | 1.86 s |
+| 200 | 8 → 10 | 4.43 s | 2.54 s | 2.93 s | 1.86 s | 1.85 s |
+| 1,000 | 8 → 10 | 4.13 s | 2.55 s | 2.96 s | 1.88 s | 1.79 s |
+
+The table records one sample per size. The 10- and 50-receipt runs used light mode, and the 200- and 1,000-receipt runs used dark mode. Relaunch starts a fresh process after seeding. Times include XCTest actions, idle waits and accessibility queries. Mounted-paper counts are accessibility snapshots at two positions. The earlier 30-receipt CPU baseline used a different navigation route. Frame timing, CPU and memory at each scale, and physical iPhone responsiveness remain open.
+
+## P14-06 iPhone walkthrough
+
+With the signed update installed in place, verify these journeys on iPhone 15 Pro:
+
+1. From the wallet pocket, open Purchase overview, change month, tap a total or merchant, and open a receipt. Confirm that returning retains the month and the visible receipt.
+2. Search with the keyboard visible, close search, and confirm the native top fade and the latest receipt position. Open a long receipt and scroll until the total is readable above the bottom actions.
+3. Check overview and wallet controls with preferred Large Text, Reduce Motion and VoiceOver. Listen for the overview action, selected month, totals and duplicate-copy disclosure, when available.
+
+Record owner observations separately from the Simulator run. Phase 14 closes after the owner walkthrough.

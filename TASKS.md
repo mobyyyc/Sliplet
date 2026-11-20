@@ -1,8 +1,8 @@
 # Task registry
 
-## Phase 14 · In progress 2026-11-19
+## Phase 14 · In progress 2026-11-20
 
-P14-01 through P14-05 are complete in Simulator. Wallet and List use shared search and filters. Display choices are in Settings. The purchase overview opens from month headings or the wallet pocket, and each subtotal links to its receipts. The owner verified the search-dismissal fade on iPhone. P14-06 scale and owner acceptance is next for approval in Main. [Roadmap and P14-05 audit](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md) · [P14-03 results](docs/PHASE14_BROWSING_AND_SEARCH.md).
+P14-01 through P14-05 are complete in Simulator. P14-06 passed the Simulator walkthrough at 10, 50, 200 and 1,000 fictional receipts, plus targeted long-receipt and accessibility checks. The owner previously verified the search-dismissal fade on iPhone. The new build’s physical walkthrough is pending. [Scale samples and walkthrough](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md#p14-06-simulator-acceptance).
 
 ## Phase 13 · 2026-11-14
 
