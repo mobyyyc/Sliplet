@@ -215,7 +215,16 @@ struct ReceiptReviewView: View {
 
     @ViewBuilder private func blocker(open: @escaping (ReceiptReviewSection) -> Void) -> some View {
         if let target = reconciliationResult.firstTarget, let message = reconciliationResult.issues.first {
-            Button { open(target) } label: {
+            Button {
+                if target == .receipt, workspace.selected == nil,
+                   workspace.draft.merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   let check = checks.first(where: { $0.target == .receipt && $0.requiresCorrection }) {
+                    editing.wrappedValue = nil
+                    focusedCheck = check
+                } else {
+                    open(target)
+                }
+            } label: {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(.orange).accessibilityHidden(true)
@@ -232,7 +241,7 @@ struct ReceiptReviewView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("reviewBlocker")
-            .accessibilityHint("Jumps to the field that needs attention")
+            .accessibilityHint("Opens the field that needs attention")
         }
     }
 

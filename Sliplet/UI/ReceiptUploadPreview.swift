@@ -238,13 +238,20 @@ struct ReceiptUploadPreview: View {
                 Button("Manage AI connection") { settings = true }
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .accessibilityIdentifier("importAISettings")
+                guidance("About reading methods", text: "On-device uses Apple Vision offline. AI uses your connected provider and API allowance. You’ll hide sensitive details and check the image before uploading.")
             } else {
-                methodCard("AI reading", subtitle: workspace.aiConnection.settingsSummary, icon: "sparkles",
-                           setup: workspace.aiConnection.settingsActionTitle) { settings = true }
-                    .accessibilityIdentifier("importAISettings")
+                guidance("About reading methods", text: "Apple Vision reads receipts offline on this iPhone. For optional AI reading, connect Gemini with your own API key.")
+                Button {
+                    settings = true
+                } label: {
+                    Label(workspace.aiConnection.settingsActionTitle, systemImage: "sparkles")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("importAISettings")
             }
-            guidance("About reading methods", text: "On-device uses Apple Vision offline. AI uses your connected provider and API allowance. You’ll hide sensitive details and check the image before uploading.")
-                .padding(.top, 10)
         }
     }
 
@@ -260,18 +267,17 @@ struct ReceiptUploadPreview: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func methodCard(_ title: String, subtitle: String, icon: String, selected: Bool = false,
-                            setup: String? = nil, action: @escaping () -> Void) -> some View {
+    private func methodCard(_ title: String, subtitle: String, icon: String, selected: Bool,
+                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon).font(.title2).frame(width: 30)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title).font(.headline)
                     Text(subtitle).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    if let setup { Text(setup).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true) }
                 }
                 Spacer(minLength: 0)
-                Image(systemName: setup == nil ? (selected ? "checkmark.circle.fill" : "circle") : "chevron.right")
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .font(.title3).accessibilityHidden(true)
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22))

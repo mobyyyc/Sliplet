@@ -646,8 +646,8 @@ struct WalletInformationView: View {
                 Section("Storage") {
                     Text("Receipts stay on this device. Export a password-encrypted backup in Settings so you can restore them later. Automatic backup is excluded.")
                 }
-                Section("Before you leave") {
-                    Text("Save your draft before leaving the app. Backgrounding clears unsaved work.")
+                Section("Unfinished work") {
+                    Text("If you leave during an import, look for Continue import in the wallet. Save edits to existing receipts before leaving the app.")
                 }
                 #if DEBUG
                 if !SyntheticNativePreview.enabled {

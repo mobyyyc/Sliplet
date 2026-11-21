@@ -4,7 +4,7 @@
 
 Phase 15 is closed. P16-01 is complete in Simulator. The first run reached review through system Photos and on-device OCR without an AI key. A merchant outside the local directory initially blocked finalization. Restoring the import, correcting that one field, saving and locating the receipt after relaunch passed. Four existing camera and browsing checks also passed. [Audit and proposed priorities](docs/PHASE16_FIRST_RECEIPT_AUDIT.md).
 
-P16-02 · First receipt awaits approval. Follow it with P16-03 · Recovery and data preservation, P16-04 · iPhone candidate and walkthrough, and P16-05 · Small pilot decision.
+P16-02 · First receipt is complete in Simulator. The required merchant check offers original header choices and keeps Cancel transactional. Both fictional Photos imports saved and reopened from item search. [Implementation and verification](docs/PHASE16_FIRST_RECEIPT.md). P16-03 · Recovery and data preservation awaits approval. P16-04 · iPhone candidate and walkthrough and P16-05 · Small pilot decision follow.
 
 ## Phase 14 · In progress 2026-11-20
 

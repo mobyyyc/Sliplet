@@ -141,7 +141,13 @@ struct ReceiptWalletScene: View {
                                     EmptyWalletArtwork().frame(width: 240, height: 190)
                                     VStack(spacing: 10) {
                                         Text(workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty ? "No matching receipts" : workspace.receipts.isEmpty ? "A place for your receipts" : "Your wallet is clear").font(.title2.weight(.semibold))
-                                        Text(workspace.hasBrowseFilters ? "Try changing or clearing your filters." : "Import a photo. Keep the details.")
+                                        if workspace.hasBrowseFilters {
+                                            Text("Try changing or clearing your filters.")
+                                        } else if workspace.hasPendingImport {
+                                            Text("Tap Continue import to pick up where you left off.")
+                                        } else {
+                                            Text("Tap + to import a receipt.")
+                                        }
                                         if workspace.hasBrowseFilters { Button("Clear filters", action: workspace.resetBrowseFilters).buttonStyle(ReceiptSecondaryStyle()) }
                                     }.multilineTextAlignment(.center)
                                     Label("Private · on this device", systemImage: "lock").font(.footnote).padding(.top, 4)

@@ -7,6 +7,33 @@ final class ReceiptFocusedGuidanceTests: XCTestCase {
             ReceiptOCRLine(id: UUID(), text: String($0), engineConfidence: nil)
         }, revision: 3))
     }
+    func testMerchantHeadingSuggestionsKeepExactSourceAndExcludeNonHeaderText() throws {
+        let e = try extraction("""
+            Rivermint Market
+            RIVERMINT MARKET
+            123 SAMPLE ROAD
+            TEL: 555-555-0140
+            M5X 1A1
+            CASHIER 5
+            CAD
+            2026-11-20
+            ROLLED OATS 4.29
+            Some later text
+            TOTAL 4.29
+            """)
+        let observedHeading = try XCTUnwrap(e.rawOCR.first)
+        XCTAssertEqual(ReceiptParser.merchantHeadingCandidates(from: e.rawOCR), [observedHeading])
+        XCTAssertNil(e.fields.merchant)
+        XCTAssertFalse(ReceiptReviewDraft(fields: e.fields).canFinalize)
+    }
+
+    func testMerchantHeadingSuggestionsLimitChoicesWithoutSelectingAnAmbiguousName() throws {
+        let e = try extraction("COSTCO\nNO FRILLS\nVillage Market\nRivermint Market\nTEA 1.00\nTOTAL 1.00")
+        XCTAssertNil(e.fields.merchant)
+        XCTAssertEqual(ReceiptParser.merchantHeadingCandidates(from: e.rawOCR), Array(e.rawOCR.prefix(3)))
+        XCTAssertTrue(ReceiptParser.merchantHeadingCandidates(from: []).isEmpty)
+    }
+
     func testMerchantAndCurrencyConflictsMergeIntoRequiredDetailsWithAllEvidence() throws {
         let e = try extraction("COSTCO\nNOFRILLS\nCAD\nUSD\n2026-10-09\nTEA 1.00\nTOTAL 1.00")
         let d = ReceiptReviewDraft(fields: e.fields)

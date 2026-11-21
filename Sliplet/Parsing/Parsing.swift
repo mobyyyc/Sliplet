@@ -486,16 +486,39 @@ enum ReceiptParser {
         }
     }
 
-    static func parse(_ observations: [ReceiptOCRLine]) -> ParsedReceipt {
-        var result = ParsedReceipt()
-        let grouped = rows(observations)
-        // Only the early, unpriced header can select a retailer. Never search a
-        // payment footer or let a conflicting header select a parsing policy.
-        let header = grouped.prefix(12).prefix {
+    private static func merchantHeader(in grouped: [Row]) -> ArraySlice<Row> {
+        grouped.prefix(12).prefix {
             matches(moneyPattern, $0.text).isEmpty && summaryLabel($0.text) == nil
                 && first(#"^(?:DEBIT|CREDIT|PAYMENT|THANK\s+YOU)\b"#, fieldText($0.text)) == nil
         }
-        let merchantEvidence = header.compactMap { row in
+    }
+
+    /// Offer a few initial observations for an explicit merchant correction while
+    /// keeping retailer routing and the original extraction independent.
+    static func merchantHeadingCandidates(from observations: [ReceiptOCRLine]) -> [ReceiptOCRLine] {
+        let labels = #"^(?:DATE|TIME|TEL|PHONE|FAX|CASHIER|REGISTER|TERMINAL|TRANSACTION|RECEIPT|INVOICE|ORDER|STORE|LOCATION|MEMBER|GST|HST|PST|QST)\s*(?:[:#]|\d|NO\b)"#
+        let contact = #"^\d+\s+\p{L}|https?://|www\.|@|\b\d{3}[- .]\d{3}[- .]\d{4}\b|\b[A-Z]\d[A-Z][ -]?\d[A-Z]\d\b"#
+        var seen = Set<String>()
+        var candidates: [ReceiptOCRLine] = []
+        for row in merchantHeader(in: rows(observations)) {
+            for observation in row.parts {
+                let text = fieldText(observation.text).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard text.count <= 64, text.filter(\.isLetter).count >= 2,
+                      !text.contains(where: \.isNewline), ExactInput.currency(text) == nil,
+                      dateCandidates(text).isEmpty, first(labels, text) == nil, first(contact, text) == nil,
+                      seen.insert(text.lowercased()).inserted else { continue }
+                candidates.append(observation)
+                if candidates.count == 3 { return candidates }
+            }
+        }
+        return candidates
+    }
+
+    static func parse(_ observations: [ReceiptOCRLine]) -> ParsedReceipt {
+        var result = ParsedReceipt()
+        let grouped = rows(observations)
+        // The early header can select a retailer when its matches agree.
+        let merchantEvidence = merchantHeader(in: grouped).compactMap { row in
             ReceiptMerchantDirectory.match(row.text).map { (match: $0, ids: row.ids) }
         }
         let identities = Set(merchantEvidence.map { $0.match.identity })

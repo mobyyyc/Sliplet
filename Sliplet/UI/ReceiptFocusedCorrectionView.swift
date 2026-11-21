@@ -29,6 +29,8 @@ struct ReceiptFocusedCorrectionView: View {
     @State private var error: String?
     @FocusState private var editing: String?
     private let baseline: ReceiptReviewDraft
+    private let resolvingMerchant: Bool
+    private let merchantHeadings: [ReceiptOCRLine]
     private let detailLine: ReceiptWorkspace.DetailLine?
     private var browsingSavedPurchase: Bool {
         guard let detailLine else { return false }
@@ -41,12 +43,15 @@ struct ReceiptFocusedCorrectionView: View {
     init(workspace: ReceiptWorkspace, check: ReceiptReviewGuidance, detailLine: ReceiptWorkspace.DetailLine? = nil) {
         self.detailLine = detailLine
         self.workspace = workspace; self.check = check; baseline = detailLine?.input ?? workspace.draft
+        resolvingMerchant = check.target == .receipt && baseline.merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        merchantHeadings = resolvingMerchant ? ReceiptParser.merchantHeadingCandidates(from: workspace.extraction?.rawOCR ?? []) : []
         _input = State(initialValue: baseline)
         if case .line(let id) = check.target { _lineID = State(initialValue: id) }
         _purchaseDate = State(initialValue: ReceiptDateSelection.date(baseline.date) ?? Date())
     }
     private var sources: [ReceiptOCRLine] {
-        (workspace.extraction?.rawOCR ?? []).filter { check.sourceLineIDs.contains($0.id) }
+        let ids = Set(check.sourceLineIDs + merchantHeadings.map(\.id))
+        return (workspace.extraction?.rawOCR ?? []).filter { ids.contains($0.id) }
     }
     private var currentSource: ReceiptOCRLine? { sources.indices.contains(sourceIndex) ? sources[sourceIndex] : nil }
     private var isSourceGroup: Bool { if case .source = check.target { return sources.count > 1 }; return false }
@@ -56,6 +61,9 @@ struct ReceiptFocusedCorrectionView: View {
     }
     private var boxes: [ReceiptOCRBox] {
         if let assistance = currentAssistance { return [assistance.region] }
+        if let selected = merchantHeadings.first(where: { merchantText($0) == input.merchant }), let box = selected.boundingBox {
+            return [box]
+        }
         if case .source = check.target { return currentSource?.boundingBox.map { [$0] } ?? [] }
         return sources.compactMap(\.boundingBox)
     }
@@ -70,7 +78,7 @@ struct ReceiptFocusedCorrectionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if detailLine == nil { Section { Text(check.message).font(.footnote) } }
+                if detailLine == nil && !resolvingMerchant { Section { Text(check.message).font(.footnote) } }
                 if browsingSavedPurchase, let detailLine, let selected = workspace.selected {
                     savedLineOverview(detailLine, receipt: selected)
                 }
@@ -97,17 +105,20 @@ struct ReceiptFocusedCorrectionView: View {
                         } header: { Text("Missing or wrapped line") }
                     }
 
-                    if detailLine == nil { originalComparison }
+                    if detailLine == nil && !resolvingMerchant { originalComparison }
                     switch check.target {
                     case .receipt:
                         Section {
                             TextField("Merchant", text: field(\.merchant)).focused($editing, equals: "merchant").accessibilityIdentifier("focusedMerchant")
-                            Picker("Currency", selection: field(\.currency)) {
-                                Text("Choose currency").tag("")
-                                ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
+                            if !resolvingMerchant || ExactInput.currency(baseline.currency) == nil {
+                                Picker("Currency", selection: field(\.currency)) {
+                                    Text("Choose currency").tag("")
+                                    ForEach(ExactInput.currencies.keys.sorted(), id: \.self) { Text($0).tag($0) }
+                                }
+                                if let context = input.currencyContextMessage { Text(context).font(.footnote).foregroundStyle(.secondary) }
                             }
-                            if let context = input.currencyContextMessage { Text(context).font(.footnote).foregroundStyle(.secondary) }
-                        } header: { Text("Receipt details") }
+                        } header: { Text(resolvingMerchant ? "Merchant name" : "Receipt details") }
+                        if !merchantHeadings.isEmpty { merchantHeadingChoices }
                     case .date:
                         Section {
                             Text(input.date.isEmpty ? "Date not confirmed" : "Current: " + input.date)
@@ -157,7 +168,7 @@ struct ReceiptFocusedCorrectionView: View {
                             } header: { Text(detailLine == nil ? "Receipt line" : "Details") }
                         }
                     }
-                    if detailLine != nil { originalComparison }
+                    if detailLine != nil || resolvingMerchant { originalComparison }
                     if let assistance = currentAssistance {
                         Section("Reread used for this value") {
                             LabeledContent(assistance.field.title, value: assistance.value)
@@ -189,7 +200,7 @@ struct ReceiptFocusedCorrectionView: View {
             }.scrollDismissesKeyboard(.interactively).scrollEdgeEffectStyle(.soft, for: .vertical)
                 .contentMargins(.bottom, 28, for: .scrollContent)
                 .accessibilityIdentifier("focusedCorrectionForm")
-                .navigationTitle(detailLine == nil ? check.title : (editingSavedLine ? "Edit line" : "Line details"))
+                .navigationTitle(resolvingMerchant ? "Merchant" : detailLine == nil ? check.title : (editingSavedLine ? "Edit line" : "Line details"))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     if !browsingSavedPurchase {
@@ -200,7 +211,9 @@ struct ReceiptFocusedCorrectionView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button(detailLine != nil ? (input == baseline ? "Done" : "Save draft") : (check.requiresCorrection || input != baseline ? "Apply" : "Checked")) { apply() }
-                            .disabled(workspace.saving || !workspace.active || workspace.privacyCovered || workspace.image == nil || (isSourceGroup && !groupChecked && input == baseline))
+                            .disabled(workspace.saving || !workspace.active || workspace.privacyCovered || workspace.image == nil
+                                      || (resolvingMerchant && input.merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                      || (isSourceGroup && !groupChecked && input == baseline))
                             .accessibilityIdentifier("applyFocusedCorrection")
                     }
                 }
@@ -238,6 +251,37 @@ struct ReceiptFocusedCorrectionView: View {
             .dynamicTypeSize(effectiveTypeSize)
             #endif
     }
+    private func merchantText(_ heading: ReceiptOCRLine) -> String {
+        heading.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var merchantHeadingChoices: some View {
+        Section {
+            ForEach(merchantHeadings) { heading in
+                let text = merchantText(heading)
+                Button {
+                    editing = nil
+                    input.merchant = text
+                } label: {
+                    HStack {
+                        Text(text)
+                        Spacer()
+                        Image(systemName: input.merchant == text ? "checkmark.circle.fill" : "circle")
+                            .accessibilityHidden(true)
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityAddTraits(input.merchant == text ? .isSelected : [])
+                .accessibilityIdentifier("merchantHeaderCandidate")
+            }
+        } header: {
+            Text("From the receipt header")
+        } footer: {
+            Text("Choose the printed name, or enter it above.")
+        }
+    }
+
     @ViewBuilder private func savedLineOverview(_ detailLine: ReceiptWorkspace.DetailLine, receipt: ReceiptRecord) -> some View {
         let fields = receipt.current.fields
         let item = fields.items.first { $0.id == detailLine.id }
