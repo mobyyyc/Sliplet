@@ -1,5 +1,11 @@
 # Task registry
 
+## Phase 16 · First receipt and everyday use · 2026-11-20
+
+Phase 15 is closed. P16-01 is complete in Simulator. The first run reached review through system Photos and on-device OCR without an AI key. A merchant outside the local directory initially blocked finalization. Restoring the import, correcting that one field, saving and locating the receipt after relaunch passed. Four existing camera and browsing checks also passed. [Audit and proposed priorities](docs/PHASE16_FIRST_RECEIPT_AUDIT.md).
+
+P16-02 · First receipt awaits approval. Follow it with P16-03 · Recovery and data preservation, P16-04 · iPhone candidate and walkthrough, and P16-05 · Small pilot decision.
+
 ## Phase 14 · In progress 2026-11-20
 
 P14-01 through P14-05 are complete in Simulator. P14-06 passed the Simulator walkthrough at 10, 50, 200 and 1,000 fictional receipts, plus targeted long-receipt and accessibility checks. The owner previously verified the search-dismissal fade on iPhone. The new build’s physical walkthrough is pending. [Scale samples and walkthrough](docs/PHASE14_RECEIPT_ORGANIZATION_AND_PURCHASE_OVERVIEW.md#p14-06-simulator-acceptance).
