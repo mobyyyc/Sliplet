@@ -12,7 +12,7 @@ import CryptoKit
         return args[i + 1]
     }
     static var readyURL: URL { FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("t05-synthetic-preview.json") }
-    static func fixture(index: Int) -> (Data, ReceiptReviewDraft) {
+    static func fixture(index: Int, forImport: Bool = false) -> (Data, ReceiptReviewDraft) {
         if mode == "split" {
             var d = ReceiptReviewDraft()
             d.merchant = "FICTIONAL SPLIT STORE"; d.date = "2026-10-08"; d.currency = "CAD"
@@ -86,7 +86,7 @@ import CryptoKit
         let image = UIGraphicsImageRenderer(size: CGSize(width: 720, height: CGFloat(content.count * 76 + 100)), format: format).pngData { _ in
             UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 720, height: 480))
             for (i, line) in content.enumerated() {
-                (line as NSString).draw(at: CGPoint(x: 40, y: 50 + i * 76), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 32, weight: .regular), .foregroundColor: UIColor.black])
+                (line as NSString).draw(at: CGPoint(x: forImport ? 46 : 40, y: 50 + i * 76), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 32, weight: .regular), .foregroundColor: UIColor.black])
             }
         }
         var d = ReceiptReviewDraft(); d.merchant = merchant; d.date = date; d.currency = "CAD"

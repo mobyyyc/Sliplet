@@ -14,17 +14,11 @@ import XCTest
     func testInterruptedImportCanResumeAfterAppSwitchAndRelaunch() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["--t05-synthetic-preview", "resume", "--p805-upload-fixture"]
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture"]
         app.launch()
-        // The fixture lives in a separate store from production and may retain a prior failed run.
+        // Start with the baseline wallet even when another case has already saved this import fixture.
+        XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 25))
         let resume = app.buttons["resumePendingImport"]
-        let start = app.buttons["uploadFixture"]
-        XCTAssertTrue(start.waitForExistence(timeout: 20))
-        if resume.exists {
-            app.buttons["discardPendingImport"].tap()
-            app.buttons["discardPendingImportConfirm"].firstMatch.tap()
-            XCTAssertTrue(resume.waitForNonExistence(timeout: 10))
-        }
         for id in ["uploadFixture", "adjustPhotoContinue", "previewAI", "readingMethodContinue", "reviewUpload"] {
             let button = app.buttons[id]
             XCTAssertTrue(button.waitForExistence(timeout: 15))
@@ -43,7 +37,9 @@ import XCTest
         XCTAssertTrue(review.waitForExistence(timeout: 15))
         XCTAssertTrue(app.images["uploadImage"].waitForExistence(timeout: 15))
 
-        app.terminate(); app.launch()
+        app.terminate()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--p805-upload-fixture"]
+        app.launch()
         XCTAssertTrue(resume.waitForExistence(timeout: 15))
         resume.tap()
         XCTAssertTrue(review.waitForExistence(timeout: 15))

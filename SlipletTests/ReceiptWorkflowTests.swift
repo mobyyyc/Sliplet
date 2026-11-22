@@ -298,6 +298,106 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         reopened.suspend()
     }
 
+    @MainActor func testExactPhotoResumesAndOpensAnArchivedReceiptWithoutSavingAnother() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try ReceiptStore(directory: dir, keyProvider: Key())
+        let image = try SyntheticFixture.imageData()
+        let extraction = try ReceiptParser.extraction(OCRResult(lines: [], revision: 0))
+        let original = try await store.create(extraction: extraction, originalImage: image, mediaType: "image/png")
+        let archived = try await store.organize(id: original.id, expectedRevision: original.current.id, action: .archive)
+        try await store.close()
+
+        let workspace = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
+        workspace.startImport(chooseRecognition: true) { image }
+        try await wait { workspace.photoDuplicatePrompt?.id == archived.id && workspace.hasPendingImport }
+        XCTAssertNil(workspace.extraction)
+        workspace.suspend()
+        workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
+        workspace.resumePendingImport()
+        try await wait { workspace.photoDuplicatePrompt?.id == archived.id }
+        workspace.openSavedDuplicate(archived)
+        try await wait { workspace.flow == .detail && workspace.image != nil }
+        XCTAssertEqual(workspace.selected, archived)
+        XCTAssertEqual(workspace.receipts, [archived])
+        XCTAssertFalse(workspace.hasPendingImport)
+        workspace.suspend()
+        workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
+        XCTAssertFalse(workspace.hasPendingImport)
+        XCTAssertEqual(workspace.receipts, [archived])
+        workspace.suspend()
+    }
+
+    @MainActor func testExplicitExactCopyDecisionSurvivesBackgroundUntilSaving() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try ReceiptStore(directory: dir, keyProvider: Key())
+        let image = try SyntheticFixture.imageData()
+        let extraction = try ReceiptParser.extraction(OCRResult(lines: [], revision: 0))
+        let original = try await store.create(extraction: extraction, originalImage: image, mediaType: "image/png")
+        try await store.close()
+        let workspace = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
+        workspace.startImport(chooseRecognition: true) { image }
+        try await wait { workspace.photoDuplicatePrompt?.id == original.id }
+        workspace.continueDuplicatePhoto()
+        XCTAssertNil(workspace.photoDuplicatePrompt)
+        workspace.suspend()
+        workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
+        workspace.resumePendingImport()
+        try await wait { workspace.flow == .preparingUpload }
+        XCTAssertNil(workspace.photoDuplicatePrompt)
+        workspace.manualReview()
+        let input = draft()
+        workspace.updateDraft { $0 = input }
+        XCTAssertNil(workspace.duplicateBeforeImportSave)
+        workspace.save(asDraft: true)
+        try await wait { workspace.flow == .detail && !workspace.saving }
+        XCTAssertEqual(workspace.receipts.count, 2)
+        XCTAssertNotEqual(workspace.selected?.id, original.id)
+        XCTAssertFalse(workspace.hasPendingImport)
+        workspace.suspend()
+    }
+
+    @MainActor func testPossibleDuplicateRequiresMatchingBasketAndFinancialDetails() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let store = try ReceiptStore(directory: dir, keyProvider: Key())
+        let image = try SyntheticFixture.imageData()
+        var fields = draft().fields
+        fields.items.append(.init(id: UUID(), description: "FICTIONAL BREAD", sku: "ABC-12", quantity: nil,
+                                  unitPrice: nil, amount: .init(minorUnits: 330, currency: .cad),
+                                  taxMarker: nil, sourceLineIDs: []))
+        fields.subtotal = .init(minorUnits: 1260, currency: .cad)
+        fields.total = .init(minorUnits: 1380, currency: .cad)
+        let extraction = try ReceiptParser.extraction(OCRResult(lines: [], revision: 0))
+        let original = try await store.create(extraction: extraction, originalImage: image, mediaType: "image/png",
+                                              correction: fields, review: .sourceReviewed)
+        try await store.close()
+
+        var incoming = fields
+        incoming.merchant = "  Fictional  Shop "
+        incoming.items.reverse()
+        let match = ReceiptImportMatch.similarReceipt(incoming, in: [original])
+        XCTAssertEqual(match?.id, original.id)
+        // Equal totals and merchant/date are also consistent with a different purchase.
+        incoming.items[0].description = "FICTIONAL TEA"
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+        incoming = fields
+        incoming.items[1].sku = "ABC-99"
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+        incoming = fields
+        incoming.items[1].amount = nil
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+        incoming = fields
+        incoming.items[1].quantity = try .init(coefficient: 2, scale: 0)
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+        incoming = fields
+        incoming.adjustments[0].amount = .init(minorUnits: -90, currency: .cad)
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+        incoming = fields
+        incoming.items.removeLast()
+        XCTAssertNil(ReceiptImportMatch.similarReceipt(incoming, in: [original]))
+    }
+
     @MainActor func testTransientFirstCheckpointFailureStillResumesPhotoAndEdits() async throws {
         let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let bytes = try SyntheticFixture.imageData()

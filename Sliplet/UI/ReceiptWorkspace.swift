@@ -1,9 +1,7 @@
+import CryptoKit
 import Foundation
 import Observation
 import UIKit
-#if DEBUG
-import CryptoKit
-#endif
 
 /// Main-actor presentation state. Only explicit user actions persist receipts or wallet preferences.
 @MainActor @Observable
@@ -109,6 +107,32 @@ final class ReceiptWorkspace {
     private(set) var hasPendingImport = false
     private(set) var importCheckpointError: String?
     @ObservationIgnored private var pendingImportID: UUID?
+    @ObservationIgnored private var importPhotoHash: Data?
+    private var acceptedDuplicatePhoto = false
+    private var savedPhotoMatch: ReceiptRecord? {
+        guard !acceptedDuplicatePhoto, let importPhotoHash else { return nil }
+        return ReceiptImportMatch.samePhoto(importPhotoHash, in: orderedReceipts)
+    }
+    var photoDuplicatePrompt: ReceiptRecord? { flow == .preparingUpload ? savedPhotoMatch : nil }
+
+    var duplicateBeforeImportSave: ReceiptImportMatch? {
+        guard flow == .review, selected == nil, !acceptedDuplicatePhoto else { return nil }
+        if let record = savedPhotoMatch { return ReceiptImportMatch(kind: .samePhoto, record: record) }
+        return ReceiptImportMatch.similarReceipt(draft.fields, in: orderedReceipts)
+            .map { ReceiptImportMatch(kind: .similarReceipt, record: $0) }
+    }
+
+    func continueDuplicatePhoto() {
+        guard active, !privacyCovered, !saving, photoDuplicatePrompt != nil else { return }
+        acceptedDuplicatePhoto = true
+        checkpointImport()
+    }
+
+    func openSavedDuplicate(_ record: ReceiptRecord) {
+        guard selected == nil, flow == .preparingUpload || flow == .review,
+              record.asset.sha256 == importPhotoHash else { return }
+        discardPendingImport(opening: record)
+    }
     @ObservationIgnored private var checkpointWrite: Task<Void, Never>?
     @ObservationIgnored private var checkpointDelay: Task<Void, Never>?
     var image: ReceiptImage?
@@ -225,6 +249,7 @@ final class ReceiptWorkspace {
         checkpointDelay?.cancel(); checkpointDelay = nil
         let lastCheckpoint = checkpointWrite; checkpointWrite = nil
         pendingImportID = nil; hasPendingImport = false; importCheckpointError = nil
+        importPhotoHash = nil; acceptedDuplicatePhoto = false
         importCovers = []; importUsesAI = false; importAdjustment = ReceiptPhotoAdjustment()
         active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil
         aiConnection.cancel()
@@ -332,10 +357,14 @@ final class ReceiptWorkspace {
                 try Task.checkCancellation()
                 guard let self, self.isCurrent(session), self.flow == .loading else { return }
                 // Image validation is performed off the UI thread, preserving encoded bytes.
-                let decode = Task.detached(priority: .userInitiated) { try ReceiptImage.decode(data) }
-                let image = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
+                let decode = Task.detached(priority: .userInitiated) {
+                    let image = try ReceiptImage.decode(data)
+                    return (image, Data(SHA256.hash(data: data)))
+                }
+                let (image, hash) = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard self.isCurrent(session), self.flow == .loading else { return }
                 self.image = image
+                self.importPhotoHash = hash
                 self.importStep = 0
                 self.importCropping = false
                 self.importAdjustment = ReceiptPhotoAdjustment()
@@ -357,7 +386,8 @@ final class ReceiptWorkspace {
         let bounds = CGRect(x: 0, y: 0, width: 1, height: 1)
         let covers = importCovers.map { $0.intersection(bounds) }.filter { !$0.isEmpty }
         return ReceiptImportCheckpoint(id: id, fromCamera: importFromCamera, adjustment: importAdjustment,
-            step: step ?? min(importStep, 2), useAI: importUsesAI, covers: covers, review: review)
+            step: step ?? min(importStep, 2), useAI: importUsesAI, covers: covers, review: review,
+            acceptedDuplicatePhoto: acceptedDuplicatePhoto ? true : nil)
     }
 
     private func scheduleCheckpoint() {
@@ -409,8 +439,10 @@ final class ReceiptWorkspace {
         task = Task { [weak self] in
             do {
                 let (checkpoint, image) = try await store.readPendingImport()
+                let hash = await Task.detached(priority: .userInitiated) { Data(SHA256.hash(data: image.bytes)) }.value
                 guard let self, self.isCurrent(session), self.flow == .loading else { return }
                 self.pendingImportID = checkpoint.id; self.image = image
+                self.importPhotoHash = hash; self.acceptedDuplicatePhoto = checkpoint.acceptedDuplicatePhoto == true
                 self.importAdjustment = checkpoint.adjustment; self.importFromCamera = checkpoint.fromCamera
                 self.importStep = checkpoint.step; self.importForward = true; self.importCropping = false
                 self.importUsesAI = checkpoint.useAI; self.importCovers = checkpoint.covers
@@ -425,7 +457,9 @@ final class ReceiptWorkspace {
         }
     }
 
-    func discardPendingImport() {
+    func discardPendingImport() { discardPendingImport(opening: nil) }
+
+    private func discardPendingImport(opening duplicate: ReceiptRecord?) {
         guard active, !privacyCovered, !saving, let store else { return }
         task?.cancel(); worker?.cancel(); recognition?.cancel()
         checkpointDelay?.cancel(); checkpointDelay = nil
@@ -434,15 +468,21 @@ final class ReceiptWorkspace {
         task = Task { [weak self] in
             await previous?.value
             do {
+                if let duplicate {
+                    guard let saved = try await store.receipt(id: duplicate.id), saved.asset.sha256 == duplicate.asset.sha256 else {
+                        throw ReceiptStoreError.notFound
+                    }
+                }
                 try await store.discardPendingImport(permit: lease)
                 guard let self, self.isCurrent(session) else { return }
                 self.hasPendingImport = false; self.pendingImportID = nil; self.importCheckpointError = nil
                 self.saving = false; self.resetImport()
-                self.notice = "Unsaved receipt discarded."
+                if let duplicate { self.open(duplicate) }
+                else { self.notice = "Unsaved receipt discarded." }
             } catch {
                 guard let self, self.isCurrent(session) else { return }
                 self.saving = false
-                let message = "Couldn’t discard the import. Try again."
+                let message = duplicate == nil ? "Couldn’t discard the import. Try again." : "Couldn’t open the saved receipt. Your import is still here."
                 if self.flow == .wallet { self.importCheckpointError = message } else { self.errorMessage = message }
             }
         }
@@ -603,6 +643,7 @@ final class ReceiptWorkspace {
         flow = .wallet
         checkpointDelay?.cancel(); checkpointDelay = nil
         pendingImportID = nil
+        importPhotoHash = nil; acceptedDuplicatePhoto = false
         importCovers = []; importUsesAI = false
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil
         aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil

@@ -11,6 +11,20 @@ struct ReceiptHome: View {
     @State private var files = false
     @State private var discard = false
     @State private var discardPending = false
+    @State private var duplicateSave: DuplicateSave?
+    private struct DuplicateSave {
+        let match: ReceiptImportMatch
+        let asDraft: Bool
+    }
+
+    private func saveReview(asDraft: Bool) {
+        editing = nil
+        if let match = workspace.duplicateBeforeImportSave {
+            duplicateSave = DuplicateSave(match: match, asDraft: asDraft)
+        } else {
+            workspace.save(asDraft: asDraft)
+        }
+    }
     @State private var delete = false
     @State private var deleteTarget: ReceiptRecord?
     @State private var sharingReceipt = false
@@ -29,6 +43,10 @@ struct ReceiptHome: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
+    private var showsDuplicateSave: Binding<Bool> {
+        Binding(get: { duplicateSave != nil }, set: { if !$0 { duplicateSave = nil } })
+    }
+
     private func anchoredImportChoices<Trigger: View>(@ViewBuilder trigger: () -> Trigger) -> some View {
         trigger()
             .confirmationDialog("Import a receipt", isPresented: $importChoices, titleVisibility: .visible) {
@@ -40,6 +58,7 @@ struct ReceiptHome: View {
 
     var body: some View {
         let session = workspace.sessionID
+        let canReturnToImportStep = workspace.flow == .preparingUpload && workspace.importStep > 0 && workspace.photoDuplicatePrompt == nil
         NavigationStack {
             Group {
                 if workspace.privacyCovered { ReceiptLockScreen() }
@@ -69,9 +88,9 @@ struct ReceiptHome: View {
                 if workspace.availability == .ready && !workspace.privacyCovered {
                     if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button(workspace.flow == .preparingUpload ? (workspace.importStep > 0 ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
+                            Button(workspace.flow == .preparingUpload ? (canReturnToImportStep ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
                                 if workspace.flow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
-                                else if workspace.flow == .preparingUpload && workspace.importStep > 0 {
+                                else if canReturnToImportStep {
                                     workspace.importForward = false; workspace.importStep -= 1
                                     workspace.checkpointImport()
                                 }
@@ -146,7 +165,7 @@ struct ReceiptHome: View {
                     if ReceiptUploadFixture.enabled && workspace.flow == .wallet {
                         ToolbarItem(placement: .topBarLeading) {
                             Button("Fictional import") {
-                                let bytes = SyntheticNativePreview.fixture(index: 0).0
+                                let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
                                 workspace.startImport(chooseRecognition: true) { bytes }
                             }.accessibilityIdentifier("uploadFixture")
                         }
@@ -218,6 +237,23 @@ struct ReceiptHome: View {
                 Button("Discard import", role: .destructive, action: workspace.discardPendingImport)
                     .accessibilityIdentifier("discardPendingImportConfirm")
             } message: { Text("This removes the photo and progress for this import from Sliplet.") }
+            .alert(duplicateSave?.match.kind == .samePhoto ? "Photo already saved" : "Possible duplicate",
+                   isPresented: showsDuplicateSave, presenting: duplicateSave) { decision in
+                if decision.match.kind == .samePhoto {
+                    Button("Open saved receipt") { workspace.openSavedDuplicate(decision.match.record) }
+                        .accessibilityIdentifier("openSavedDuplicate")
+                }
+                Button(decision.asDraft ? "Save separate draft" : "Save separately") {
+                    if !workspace.privacyCovered { workspace.save(asDraft: decision.asDraft) }
+                }.accessibilityIdentifier("saveDuplicateSeparately")
+                Button("Keep reviewing", role: .cancel) { }
+            } message: { decision in
+                if decision.match.kind == .samePhoto {
+                    Text("This photo is already in your wallet. Opening the saved receipt discards this import.")
+                } else {
+                    Text("A saved receipt has the same store, date, total and receipt lines. If these are separate purchases, you can keep both.")
+                }
+            }
             .alert("Delete this receipt?", isPresented: $delete) {
                 Button("Delete receipt and original", role: .destructive) { if let deleteTarget { workspace.deleteReceipt(deleteTarget) }; deleteTarget = nil }
                 Button("Cancel", role: .cancel) { deleteTarget = nil }
@@ -456,12 +492,12 @@ struct ReceiptHome: View {
                     Button("Done") { editing = nil }.buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("keyboardDone")
                 }
             } else { ReceiptPairedActions {
-                Button { editing = nil; workspace.save(asDraft: true) } label: {
+                Button { saveReview(asDraft: true) } label: {
                     Text("Save draft")
                 }.buttonStyle(ReceiptSecondaryStyle())
                     .disabled(!workspace.draft.canSaveDraft || workspace.saving).accessibilityIdentifier("saveDraft")
             } primary: {
-                Button { editing = nil; workspace.save(asDraft: false) } label: {
+                Button { saveReview(asDraft: false) } label: {
                     Text("Finish")
                 }.buttonStyle(ReceiptProminentStyle())
                     .disabled(!workspace.draft.canFinalize || workspace.saving).accessibilityIdentifier("finishSave")
@@ -495,7 +531,12 @@ struct ReceiptHome: View {
                     .accessibilityHidden(true, isEnabled: workspace.flow == .review)
                 if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
             }
-        case .preparingUpload: ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
+        case .preparingUpload:
+            if let record = workspace.photoDuplicatePrompt {
+                duplicatePhoto(record)
+            } else {
+                ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
+            }
         case .loading, .reading:
             ReceiptReadingView(openingPhoto: workspace.flow == .loading,
                                usingAI: workspace.flow == .reading && workspace.aiUploadStarted) {
@@ -509,6 +550,32 @@ struct ReceiptHome: View {
             #endif
 
         case .failed: importRecovery
+        }
+    }
+
+    private func duplicatePhoto(_ record: ReceiptRecord) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Label("Photo already saved", systemImage: "doc.on.doc")
+                    .font(.title2.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                ReceiptSummary(record: record)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
+                if let error = workspace.errorMessage { Text(error).foregroundStyle(.secondary) }
+            }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollEdgeEffectStyle(.soft, for: .vertical)
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+            VStack(spacing: 12) {
+                Button("Open saved receipt") { workspace.openSavedDuplicate(record) }
+                    .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("openSavedDuplicate")
+                Button("Import another copy", action: workspace.continueDuplicatePhoto)
+                    .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("continueDuplicatePhoto")
+            }
+            .disabled(workspace.saving)
+            .modifier(ReceiptActionBarLayout())
         }
     }
 

@@ -43,12 +43,15 @@ Use the current source with an isolated fictional wallet. Start with a clean wal
 
 The required review prompt opens the affected receipt line with its original photo and existing edit controls. Tests covered cancellation, background recovery, saving and reopening a draft, exact totals, and the raw Photos import path. [Implementation and verification](PHASE17_REQUIRED_CORRECTION.md).
 
+## P17-03 · Duplicate import guidance complete
+
+The import can open a saved photo match before recognition. Different photos with matching financial details provide an advisory choice during review. The native Photos route confirmed the exact, simulated recapture and distinct basket cases. [Implementation and verification](PHASE17_DUPLICATE_IMPORT.md).
+
 ## Remaining Phase 17 tasks
 
 | Task | Deliverable and acceptance |
 | --- | --- |
-| P17-03 · Duplicate import guidance | Build on the purchase overview's saved-copy behavior to bring guidance into import. Test identical photos, a recaptured receipt, and genuine transactions at the same merchant with the same amount. An exact match offers the saved receipt. An uncertain match stays user-controlled and does not delete or merge anything. |
 | P17-04 · Value from saved receipts | Choose one feature using the audit. For return receipts, propose a manually entered deadline and an optional reminder that opens the saved receipt. For faster price comparison, use compatible products, units, currency and price basis with supporting receipt evidence. Validate the chosen path end to end and check how old saved receipts appear. |
 | P17-05 · Everyday quality and pilot decision | Rerun the agreed paths on the same fixtures and compare actions, waiting, context restoration, long and large wallets, accessibility, and interruption handling. Record phone checks after separate approval. Use those results to decide between continued personal use and a small pilot. |
 
-**Next approval** · P17-03, duplicate import guidance.
+**Next approval** · P17-04, value from saved receipts.

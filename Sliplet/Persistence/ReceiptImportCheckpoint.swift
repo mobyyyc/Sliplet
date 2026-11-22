@@ -14,6 +14,7 @@ struct ReceiptImportCheckpoint: Codable, Equatable, Sendable {
     let useAI: Bool
     let covers: [CGRect]
     let review: Review?
+    var acceptedDuplicatePhoto: Bool? = nil
 
     func validate() throws {
         func isNormalized(_ rect: CGRect) -> Bool {
