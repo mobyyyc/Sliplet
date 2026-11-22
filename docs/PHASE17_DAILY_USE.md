@@ -17,7 +17,9 @@ Phase 16 is closed at the Simulator milestone. Keep developing the everyday expe
 - Capture a receipt on real camera hardware, check orientation, switch apps during an import, finish it, and reopen it through search. Exercise the recovery path after losing connectivity. Test a consented live Gemini submission separately if that path is in scope.
 - Check physical scroll and transition smoothness, device-lock file protection, and native Files export and restore with an explicitly selected local file. Record owner observations separately from Simulator measurements. Earlier phone results apply to their respective builds.
 
-## P17-01 · Baseline the everyday journeys
+## P17-01 · Everyday baseline complete
+
+Five everyday journeys were exercised in Simulator. The first implementation priority is direct access to the source-backed editor from a required amount correction. Archived discovery and price-comparison friction follow later. [Measurements, reproduction, and ranked follow-ups](PHASE17_EVERYDAY_AUDIT.md).
 
 Use the current source with an isolated fictional wallet. Start with a clean wallet and AI disconnected for onboarding. Seed a familiar wallet for repeat use. Include a long receipt with matching items near the end, compatible and incompatible repeat purchases, an archived receipt, and an itemized receipt with ambiguous tax allocation. Keep any recordings and shared screenshots fictional. Use Simulator fixtures for recognition failures. Defer separately approved device and live-provider work to candidate verification.
 
@@ -46,4 +48,4 @@ Use the current source with an isolated fictional wallet. Start with a clean wal
 | P17-04 · Value from saved receipts | Choose one feature using the audit. For return receipts, propose a manually entered deadline and an optional reminder that opens the saved receipt. For faster price comparison, use compatible products, units, currency and price basis with supporting receipt evidence. Validate the chosen path end to end and check how old saved receipts appear. |
 | P17-05 · Everyday quality and pilot decision | Rerun the agreed paths on the same fixtures and compare actions, waiting, context restoration, long and large wallets, accessibility, and interruption handling. Record phone checks after separate approval. Use those results to decide between continued personal use and a small pilot. |
 
-**Next approval** · P17-01, the five-journey Simulator baseline.
+**Next approval** · P17-02, focused correction and import-to-save improvements.
