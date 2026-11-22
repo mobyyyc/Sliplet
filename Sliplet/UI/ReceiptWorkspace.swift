@@ -371,13 +371,18 @@ final class ReceiptWorkspace {
     func dismissCheckpointError() { importCheckpointError = nil }
 
     func flushImportCheckpoint() {
-        if checkpointDelay != nil, !saving { checkpointImport() }
+        guard !saving else { return }
+        if checkpointDelay != nil || (pendingImportID != nil && !hasPendingImport) {
+            checkpointImport()
+        }
     }
 
     func checkpointImport() {
         checkpointDelay?.cancel(); checkpointDelay = nil
         guard active, !saving, selected == nil, let id = pendingImportID, let store else { return }
-        enqueueImportCheckpoint(store: store, checkpoint: importCheckpoint(id: id))
+        // Until the first write commits, subsequent snapshots can recreate it with the same original.
+        let original = hasPendingImport ? nil : image?.bytes
+        enqueueImportCheckpoint(store: store, checkpoint: importCheckpoint(id: id), original: original)
     }
 
     private func enqueueImportCheckpoint(store: ReceiptStore, checkpoint: ReceiptImportCheckpoint, original: Data? = nil) {

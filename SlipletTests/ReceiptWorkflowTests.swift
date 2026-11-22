@@ -298,6 +298,39 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         reopened.suspend()
     }
 
+    @MainActor func testTransientFirstCheckpointFailureStillResumesPhotoAndEdits() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let bytes = try SyntheticFixture.imageData()
+        let model = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        let database = try ReceiptSQLiteDatabase(url: dir.appendingPathComponent("receipts.sqlite"), create: false)
+        try database.run("""
+            CREATE TRIGGER reject_initial_import_checkpoint BEFORE INSERT ON metadata
+            WHEN NEW.name = 'pending-import' BEGIN SELECT RAISE(ABORT, 'Fictional checkpoint failure'); END
+            """)
+        model.startImport(chooseRecognition: true) { bytes }
+        try await wait { model.importCheckpointError != nil }
+        XCTAssertEqual(model.flow, .preparingUpload)
+        XCTAssertFalse(model.hasPendingImport)
+        XCTAssertEqual(model.image?.bytes, bytes)
+        try database.run("DROP TRIGGER reject_initial_import_checkpoint")
+        try database.close()
+
+        let adjustment = ReceiptPhotoAdjustment(turns: 1, crop: CGRect(x: 0.1, y: 0.2, width: 0.6, height: 0.7))
+        model.importAdjustment = adjustment
+        model.importStep = 1
+        // Backgrounding drains the latest snapshot even before an intermediate checkpoint has written.
+        model.suspend()
+        model.activate(protectedDataAvailable: true); try await wait { model.availability == .ready }
+        XCTAssertTrue(model.hasPendingImport)
+        model.resumePendingImport(); try await wait { model.flow == .preparingUpload }
+        XCTAssertEqual(model.image?.bytes, bytes)
+        XCTAssertEqual(model.importAdjustment, adjustment)
+        XCTAssertEqual(model.importStep, 1)
+        XCTAssertTrue(model.receipts.isEmpty)
+        model.suspend()
+    }
+
     @MainActor func testDiscardClearsPendingImportAcrossSession() async throws {
         let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let model = ReceiptWorkspace(directory: dir, keyProvider: Key())

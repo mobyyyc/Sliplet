@@ -295,18 +295,16 @@ actor ReceiptStore {
         let encoded = try JSONEncoder().encode(checkpoint)
         guard encoded.count <= Self.maximumRecordBytes else { throw ReceiptStoreError.sizeLimit }
         let sealed = try cipher.seal(encoded, context: Self.pendingImportContext)
-        if let original {
+        try database.transaction {
+            if try pendingImportCheckpoint()?.id == checkpoint.id {
+                try database.run("UPDATE metadata SET value = ? WHERE name = 'pending-import'", [.blob(sealed)])
+                return
+            }
+            guard let original else { throw ReceiptStoreError.editConflict }
             guard !original.isEmpty, original.count <= Self.maximumAssetBytes else { throw ReceiptStoreError.invalidAsset }
             let photo = try cipher.seal(original, context: Self.pendingImportPhotoContext + checkpoint.id.uuidString)
-            try database.transaction {
-                try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import-photo', ?)", [.blob(photo)])
-                try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import', ?)", [.blob(sealed)])
-            }
-        } else {
-            try database.transaction {
-                guard try pendingImportCheckpoint()?.id == checkpoint.id else { throw ReceiptStoreError.editConflict }
-                try database.run("UPDATE metadata SET value = ? WHERE name = 'pending-import'", [.blob(sealed)])
-            }
+            try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import-photo', ?)", [.blob(photo)])
+            try database.run("INSERT OR REPLACE INTO metadata VALUES ('pending-import', ?)", [.blob(sealed)])
         }
     }
 
