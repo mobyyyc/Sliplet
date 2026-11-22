@@ -47,11 +47,14 @@ The required review prompt opens the affected receipt line with its original pho
 
 The import can open a saved photo match before recognition. Different photos with matching financial details provide an advisory choice during review. The native Photos route confirmed the exact, simulated recapture and distinct basket cases. [Implementation and verification](PHASE17_DUPLICATE_IMPORT.md).
 
+## P17-04 · Find archived receipts complete
+
+Search offers Include archived when the current search and filters match an archived receipt and the visible result list is empty. Returning from the receipt and its original preserves the search context. [Implementation and verification](PHASE17_ARCHIVE_SEARCH.md).
+
 ## Remaining Phase 17 tasks
 
 | Task | Deliverable and acceptance |
 | --- | --- |
-| P17-04 · Value from saved receipts | Choose one feature using the audit. For return receipts, propose a manually entered deadline and an optional reminder that opens the saved receipt. For faster price comparison, use compatible products, units, currency and price basis with supporting receipt evidence. Validate the chosen path end to end and check how old saved receipts appear. |
 | P17-05 · Everyday quality and pilot decision | Rerun the agreed paths on the same fixtures and compare actions, waiting, context restoration, long and large wallets, accessibility, and interruption handling. Record phone checks after separate approval. Use those results to decide between continued personal use and a small pilot. |
 
-**Next approval** · P17-04, value from saved receipts.
+**Next approval** · P17-05, everyday quality and pilot decision.

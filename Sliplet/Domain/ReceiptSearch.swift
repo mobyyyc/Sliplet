@@ -47,6 +47,23 @@ struct ReceiptSearchIndex: Sendable {
         let merchants: [Field]
         let items: [Item]
     }
+    private struct Query {
+        let terms: [String]
+        let literalTerms: [String]
+        let searching: Bool
+
+        init?(_ text: String) {
+            guard text.count <= 512 else { return nil }
+            terms = ReceiptSearchText.tokens(text)
+            literalTerms = ReceiptSearchText.tokens(text, expand: false)
+            searching = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if searching && terms.isEmpty { return nil }
+        }
+
+        func matches(_ fields: [Field], with more: [Field] = []) -> Bool {
+            terms.allSatisfy { term in fields.contains { $0.contains(term) } || more.contains { $0.contains(term) } }
+        }
+    }
     private var documents: [Document] = []
     var count: Int { documents.count }
 
@@ -103,34 +120,25 @@ struct ReceiptSearchIndex: Sendable {
 
     func results(query: String, collection: String = "All receipts", includeArchived: Bool = false,
                  merchant: ReceiptHistoryChoice = .all, month: ReceiptHistoryChoice = .all) -> [Result] {
-        guard query.count <= 512 else { return [] }
-        let terms = ReceiptSearchText.tokens(query)
-        let literalTerms = ReceiptSearchText.tokens(query, expand: false)
-        let searching = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        if searching && terms.isEmpty { return [] }
+        guard let query = Query(query) else { return [] }
         return documents.compactMap { document in
             let record = document.record
             guard collection == "Archive" ? record.isArchived : includeArchived || !record.isArchived,
-                  collection != "Starred" || record.isStarred,
-                  collection != "Needs review" || !ReceiptCompletion.isComplete(record),
-                  merchant.accepts(record.current.fields.merchant), month.accepts(ReceiptHistory.monthKey(record)) else { return nil }
-            if !searching { return Result(record: record, matches: []) }
-            func matches(_ fields: [Field]) -> Bool {
-                terms.allSatisfy { term in fields.contains { field in field.contains(term) } }
-            }
-            if matches(document.merchants) {
-                let field = document.merchants.first { matches([$0]) } ?? document.merchants[0]
+                  Self.accepts(record, collection: collection, merchant: merchant, month: month) else { return nil }
+            if !query.searching { return Result(record: record, matches: []) }
+            if query.matches(document.merchants) {
+                let field = document.merchants.first { query.matches([$0]) } ?? document.merchants[0]
                 return Result(record: record, matches: [.init(id: record.id.uuidString + "-merchant", itemID: nil,
                     title: record.current.fields.merchant ?? "Merchant missing", basis: .merchant, matchedText: field.text, sourceLineIDs: [], originalOnly: false)])
             }
             let hits: [Match] = document.items.compactMap { item in
-                guard matches(document.merchants + item.fields) else { return nil }
+                guard query.matches(document.merchants, with: item.fields) else { return nil }
                 let literalField = item.fields.first { field in
-                    literalTerms.contains { term in !document.merchants.contains { $0.contains(term, literal: true) }
+                    query.literalTerms.contains { term in !document.merchants.contains { $0.contains(term, literal: true) }
                         && field.contains(term, literal: true) }
                 }
                 let field = literalField ?? item.fields.first { field in
-                    terms.contains { term in !document.merchants.contains { $0.contains(term) }
+                    query.terms.contains { term in !document.merchants.contains { $0.contains(term) }
                         && field.contains(term) }
                 } ?? item.fields[0]
                 return Match(id: record.id.uuidString + item.id.uuidString, itemID: item.currentID, title: item.title,
@@ -138,6 +146,26 @@ struct ReceiptSearchIndex: Sendable {
             }
             return hits.isEmpty ? nil : Result(record: record, matches: hits)
         }
+    }
+
+    /// Probe only archived documents and stop at the first match, without constructing result rows.
+    func hasArchivedMatch(query: String, collection: String, merchant: ReceiptHistoryChoice,
+                          month: ReceiptHistoryChoice, accepting: (ReceiptRecord) -> Bool) -> Bool {
+        guard let query = Query(query), query.searching else { return false }
+        return documents.contains { document in
+            let record = document.record
+            guard record.isArchived, Self.accepts(record, collection: collection, merchant: merchant, month: month),
+                  accepting(record) else { return false }
+            return query.matches(document.merchants) || document.items.contains { query.matches(document.merchants, with: $0.fields) }
+        }
+    }
+
+    private static func accepts(_ record: ReceiptRecord, collection: String, merchant: ReceiptHistoryChoice,
+                                month: ReceiptHistoryChoice) -> Bool {
+        (collection != "Starred" || record.isStarred)
+            && (collection != "Needs review" || !ReceiptCompletion.isComplete(record))
+            && merchant.accepts(record.current.fields.merchant)
+            && month.accepts(ReceiptHistory.monthKey(record))
     }
 }
 

@@ -85,6 +85,76 @@ import XCTest
         XCTAssertTrue(model.walletReceipts.isEmpty); XCTAssertEqual(model.browsing.receiptCount, 0)
         model.resetBrowseFilters(); XCTAssertEqual(model.walletReceipts.count, 1)
     }
+    func testIncludeArchivedPreservesQueryAndFiltersForOriginalOnlyEvidence() throws {
+        let record = revised(SearchFixture.record(), date: try ReceiptDate(year: 2026, month: 10, day: 8), archived: true)
+        let model = ReceiptWorkspace()
+        model.receipts = [record]
+        model.searchQuery = "corner removed apples"
+        let merchant: ReceiptHistoryChoice = .value("FICTIONAL CORNER MART")
+        let month: ReceiptHistoryChoice = .value("2026-10")
+        var filter = ReceiptBrowsingFilter()
+        filter.dateMode = .day
+        filter.start = try XCTUnwrap(Calendar(identifier: .gregorian).date(from: .init(year: 2026, month: 10, day: 8)))
+        filter.minimum = "3.00"; filter.maximum = "3.00"
+        model.applyBrowseFilters(merchant: merchant, month: month, archived: false, scope: "Needs review", extra: filter)
+        XCTAssertTrue(model.hasArchivedSearchMatch)
+        XCTAssertEqual(model.browsing.receiptCount, 0)
+
+        model.includeArchived = true
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        XCTAssertEqual(model.browsing.receiptCount, 1)
+        let row = try XCTUnwrap(model.browsing.rows.first)
+        XCTAssertEqual(row.record.id, record.id)
+        XCTAssertTrue(row.record.isArchived)
+        XCTAssertTrue(try XCTUnwrap(row.match).originalOnly)
+        XCTAssertEqual(model.searchQuery, "corner removed apples")
+        XCTAssertEqual(model.merchantFilter, merchant)
+        XCTAssertEqual(model.monthFilter, month)
+        XCTAssertEqual(model.collection, "Needs review")
+        XCTAssertEqual(model.browsingFilter, filter)
+        XCTAssertEqual(model.receipts, [record])
+
+        model.includeArchived = false
+        XCTAssertTrue(model.hasArchivedSearchMatch)
+    }
+
+    func testArchiveShortcutRequiresAnEligibleMatchAndNoCurrentResults() throws {
+        var archived = SearchFixture.record()
+        archived.organization = .init(archived: true, starred: false)
+        let active = SearchFixture.record()
+        let model = ReceiptWorkspace()
+        model.receipts = [archived, active]
+        model.searchQuery = "milk"
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        XCTAssertEqual(model.browsing.receiptCount, 1)
+        model.receipts = [archived]
+        XCTAssertTrue(model.hasArchivedSearchMatch)
+
+        for query in ["", "  ", "…", String(repeating: "a", count: 513), "no matching evidence"] {
+            model.searchQuery = query
+            XCTAssertFalse(model.hasArchivedSearchMatch, query)
+        }
+        model.searchQuery = "milk"
+        model.applyBrowseFilters(merchant: .value("FICTIONAL DIFFERENT STORE"), month: .all, archived: false)
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        model.applyBrowseFilters(merchant: .all, month: .value("2026-11"), archived: false)
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+
+        var constraint = ReceiptBrowsingFilter()
+        constraint.maximum = "2.99"
+        model.applyBrowseFilters(merchant: .all, month: .all, archived: false, extra: constraint)
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        model.resetBrowseFilters()
+        model.collection = "Starred"
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        archived.organization?.starred = true
+        model.receipts = [archived]
+        XCTAssertTrue(model.hasArchivedSearchMatch)
+        model.collection = "Archive"
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        XCTAssertEqual(model.browsing.receiptCount, 1)
+    }
+
     func testDateBoundsAreInclusiveAndAmountScopeNeverMixesCurrencies() throws {
         let record = SearchFixture.record(); let date = try XCTUnwrap(record.current.fields.purchaseDate)
         let calendar = Calendar(identifier: .gregorian)

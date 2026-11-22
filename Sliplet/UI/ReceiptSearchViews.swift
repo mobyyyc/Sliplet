@@ -98,9 +98,7 @@ struct ReceiptPurchaseHistoryView: View {
                     }
                     if workspace.browsing.sections.isEmpty {
                         Section {
-                            ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matches",
-                                systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
-                                description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : hasFilters ? "Try clearing a filter or changing your search." : "Try a merchant, item or item code."))
+                            emptyState
                         } header: { resultCount.id("browse-top") }
                     }
                     ForEach(workspace.browsing.sections) { section in
@@ -152,6 +150,28 @@ struct ReceiptPurchaseHistoryView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        if workspace.hasArchivedSearchMatch {
+            VStack(spacing: 16) {
+                Label("Matches in archive", systemImage: "archivebox")
+                    .labelStyle(.titleAndIcon)
+                    .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
+                Button("Include archived") { workspace.includeArchived = true }
+                    .buttonStyle(ReceiptSecondaryStyle())
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("includeArchivedSearchMatches")
+            }
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
+        } else {
+            ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matches",
+                systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
+                description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : hasFilters ? "Try clearing a filter or changing your search." : "Try a merchant, item or item code."))
         }
     }
 
