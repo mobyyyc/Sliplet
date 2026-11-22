@@ -1,10 +1,14 @@
 # Task registry
 
-## Phase 16 · First receipt and everyday use · 2026-11-20
+## Phase 17 · Everyday experience, quality, and useful features · Planned
+
+P17-01 · Five-journey baseline awaits approval. P17-02 · Import and review, P17-03 · Duplicate import guidance, P17-04 · Value from saved receipts, and P17-05 · Everyday quality and pilot decision follow in order. [Roadmap and acceptance criteria](docs/PHASE17_DAILY_USE.md).
+
+## Phase 16 · First receipt and everyday use · Closed in Simulator
 
 Phase 15 is closed. P16-01 is complete in Simulator. The first run reached review through system Photos and on-device OCR without an AI key. A merchant outside the local directory initially blocked finalization. Restoring the import, correcting that one field, saving and locating the receipt after relaunch passed. Four existing camera and browsing checks also passed. [Audit and proposed priorities](docs/PHASE16_FIRST_RECEIPT_AUDIT.md).
 
-P16-02 · First receipt is complete in Simulator. The required merchant check offers original header choices and keeps Cancel transactional. Both fictional Photos imports saved and reopened from item search. [Implementation and verification](docs/PHASE16_FIRST_RECEIPT.md). P16-03 · Recovery and data preservation is complete in Simulator. A failed initial import checkpoint can recover, and a fictional wallet retained its original photos, drafts and splits through an in-place update and encrypted backup restore. [Recovery and verification](docs/PHASE16_RECOVERY.md). P16-04 · iPhone candidate and walkthrough awaits approval. P16-05 · Small pilot decision follows.
+P16-02 · First receipt is complete in Simulator. The required merchant check offers original header choices and keeps Cancel transactional. Both fictional Photos imports saved and reopened from item search. [Implementation and verification](docs/PHASE16_FIRST_RECEIPT.md). P16-03 · Recovery and data preservation is complete in Simulator. A failed initial import checkpoint can recover, and a fictional wallet retained its original photos, drafts and splits through an in-place update and encrypted backup restore. [Recovery and verification](docs/PHASE16_RECOVERY.md). P16-04 · iPhone candidate and walkthrough was skipped at the owner's direction. P16-05 · Closeout is complete. The remaining phone checks carry forward to a separately approved candidate walkthrough. The pilot decision moves to P17-05. [Closeout and device checks](docs/PHASE17_DAILY_USE.md#p16-05--phase-16-closeout).
 
 ## Phase 14 · In progress 2026-11-20
 

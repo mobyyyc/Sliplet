@@ -20,6 +20,6 @@ A regression test rejects the initial SQLite checkpoint insert, restores writes,
 
 The final run used Xcode 27.2 and iOS 27.0 Simulator. Of 94 selected unit cases, 93 passed and the device-only file-protection check was skipped. Eight distinct UI cases passed across the main run and a fresh Files rerun. In the reused Simulator, the system picker omitted the test’s expected filename field. The same export and restore test passed on the final source in a Simulator with fresh Files state. The unsigned iPhone Release build succeeded. All wallets and uploads used fictional fixtures. The AI failures were injected locally. Physical hardware, real network behavior, and phone installation remain for separate on-device verification.
 
-## Next task
+## Phase 16 closeout
 
-P16-04 is the iPhone candidate and walkthrough. Install the signed candidate over the current app when approved, then verify the existing wallet, camera and first-save workflow, returning from the background, and reopening a saved receipt. Use a new fictional receipt for the write-path checks.
+The owner skipped the P16-04 iPhone candidate and walkthrough. The [P16-05 closeout](PHASE17_DAILY_USE.md#p16-05--phase-16-closeout) carries the pending phone checks into a future, separately approved candidate walkthrough.
