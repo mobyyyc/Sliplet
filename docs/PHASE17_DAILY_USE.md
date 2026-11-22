@@ -39,13 +39,16 @@ Use the current source with an isolated fictional wallet. Start with a clean wal
 - Finish with a ranked issue list. Include reproduction, affected journey, impact, evidence, proposed change, and the test that would show improvement. Prioritize wrong totals, data loss, and blocked paths first, then frequent extra steps, then visual refinements. Carry forward findings that need confirmed phone or live-provider behavior with their verification status.
 - P17-01 passes when all five journeys have a baseline or a precise documented blocker, the follow-up work is ranked, and the first fixes and their specific regression checks are ready to approve.
 
+## P17-02 · Import and review complete
+
+The required review prompt opens the affected receipt line with its original photo and existing edit controls. Tests covered cancellation, background recovery, saving and reopening a draft, exact totals, and the raw Photos import path. [Implementation and verification](PHASE17_REQUIRED_CORRECTION.md).
+
 ## Remaining Phase 17 tasks
 
 | Task | Deliverable and acceptance |
 | --- | --- |
-| P17-02 · Import and review | Use the audit to simplify the path from import to save. A clean fixture reaches save without correction. A one-field error exposes the corresponding source, updates only the applied field and preserves the review position. Exact totals and existing draft recovery still pass. |
 | P17-03 · Duplicate import guidance | Build on the purchase overview's saved-copy behavior to bring guidance into import. Test identical photos, a recaptured receipt, and genuine transactions at the same merchant with the same amount. An exact match offers the saved receipt. An uncertain match stays user-controlled and does not delete or merge anything. |
 | P17-04 · Value from saved receipts | Choose one feature using the audit. For return receipts, propose a manually entered deadline and an optional reminder that opens the saved receipt. For faster price comparison, use compatible products, units, currency and price basis with supporting receipt evidence. Validate the chosen path end to end and check how old saved receipts appear. |
 | P17-05 · Everyday quality and pilot decision | Rerun the agreed paths on the same fixtures and compare actions, waiting, context restoration, long and large wallets, accessibility, and interruption handling. Record phone checks after separate approval. Use those results to decide between continued personal use and a small pilot. |
 
-**Next approval** · P17-02, focused correction and import-to-save improvements.
+**Next approval** · P17-03, duplicate import guidance.

@@ -3,7 +3,7 @@ import XCTest
 /// Every launch uses fictional fixtures in an isolated preview store on a task-created Simulator.
 @MainActor final class ReceiptCorrectionUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
-    private func launch(_ mode: String, light: Bool = true, large: Bool = false) -> XCUIApplication {
+    private func launch(_ mode: String, light: Bool = true, large: Bool = false, expandSuggestions: Bool = true) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", mode, "--t05-reduce-motion"]
         if light { app.launchArguments.append("--t05-light") }
@@ -11,7 +11,7 @@ import XCTest
         app.launch()
         XCTAssertTrue(app.buttons["saveDraft"].waitForExistence(timeout: 30))
         let suggestions = app.buttons["reviewSuggestions"]
-        if suggestions.exists { suggestions.tap() }
+        if expandSuggestions && suggestions.exists { suggestions.tap() }
         return app
     }
     @discardableResult private func reveal(_ element: XCUIElement, app: XCUIApplication) -> Int {
@@ -100,10 +100,15 @@ import XCTest
     }
     /// Bounded diagnosis of the previously stalled long/dark full-review return, independently launched.
     func testFocusedLongDarkApplyOriginalReturnAndFinish() {
-        let app = launch("correction-long", light: false)
-        let check = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'reviewCheck-line-' ")).firstMatch
-        check.tap()
+        let app = launch("correction-long", light: false, expandSuggestions: false)
+        XCTAssertEqual(app.buttons["reviewSuggestions"].value as? String, "Collapsed")
+        let blocker = app.buttons["reviewBlocker"]
+        XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
+        blocker.tap()
         XCTAssertTrue(app.buttons["cancelFocusedCorrection"].waitForExistence(timeout: 5))
+        let source = app.descendants(matching: .any)["focusedSourceRaster"].firstMatch
+        XCTAssertTrue(source.waitForExistence(timeout: 10))
+        XCTAssertNotNil(source.value as? String)
         let amount = app.textFields["focusedLineAmount"]; reveal(amount, app: app)
         amount.tap(); amount.typeText("1.00")
         XCTAssertEqual(amount.value as? String, "1.00")
@@ -201,9 +206,10 @@ import XCTest
         app.buttons["cancelFocusedCorrection"].tap(); app.terminate()
     }
     func testFocusedLargeTextStructureAndSourceAccess() throws {
-        let app = launch("correction-long", large: true)
-        let check = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'reviewCheck-line-' ")).firstMatch
-        reveal(check, app: app); check.tap()
+        let app = launch("correction-long", large: true, expandSuggestions: false)
+        let blocker = app.buttons["reviewBlocker"]
+        XCTAssertTrue(blocker.isHittable)
+        blocker.tap()
         XCTAssertTrue(app.buttons["cancelFocusedCorrection"].waitForExistence(timeout: 5))
         try app.performAccessibilityAudit(for: [.elementDetection, .hitRegion, .sufficientElementDescription])
         capture(app, "long-accessibility-focused")

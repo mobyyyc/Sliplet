@@ -2,7 +2,7 @@
 
 ## Phase 17 · Everyday experience, quality, and useful features
 
-P17-01 · Five-journey baseline is complete in Simulator. Direct access to source-backed correction is the first priority. P17-02 · Import and review awaits approval. P17-03 · Duplicate import guidance, P17-04 · Value from saved receipts, and P17-05 · Everyday quality and pilot decision follow. [Roadmap](docs/PHASE17_DAILY_USE.md) · [Measured baseline and priorities](docs/PHASE17_EVERYDAY_AUDIT.md).
+P17-01 · Five-journey baseline is complete in Simulator. Direct access to source-backed correction is the first priority. P17-02 · Import and review is complete in Simulator. A required line can open source-backed correction directly from the review prompt. P17-03 · Duplicate import guidance awaits approval. P17-04 · Value from saved receipts and P17-05 · Everyday quality and pilot decision follow. [Required line correction and verification](docs/PHASE17_REQUIRED_CORRECTION.md). [Roadmap](docs/PHASE17_DAILY_USE.md) · [Measured baseline and priorities](docs/PHASE17_EVERYDAY_AUDIT.md).
 
 ## Phase 16 · First receipt and everyday use · Closed in Simulator
 

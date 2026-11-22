@@ -387,6 +387,62 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(app.buttons["finishSave"].isEnabled)
     }
 
+    func testRequiredAmountOpensFocusedCorrectionAndResumesAsDraft() {
+        let app = sendAuditFixture("--p902-long-read", flags: ["--t05-light", "--p1702-missing-last-amount"])
+        let paper = app.scrollViews["paperReview"]
+        let blocker = app.buttons["reviewBlocker"]
+        let finish = app.buttons["finishSave"]
+        let cancel = app.buttons["cancelFocusedCorrection"]
+        let amount = app.textFields["focusedLineAmount"]
+        XCTAssertTrue(paper.waitForExistence(timeout: 12))
+        XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
+        XCTAssertFalse(finish.isEnabled)
+
+        let blockerPosition = blocker.frame.minY
+        blocker.tap()
+        XCTAssertTrue(cancel.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.descendants(matching: .any)["focusedSourceRaster"].firstMatch.waitForExistence(timeout: 10))
+        reveal(amount, in: app)
+        amount.tap()
+        amount.typeText("9.99")
+        cancel.tap()
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 8))
+        XCTAssertEqual(blocker.frame.minY, blockerPosition, accuracy: 5)
+        XCTAssertFalse(finish.isEnabled)
+
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        let resume = app.buttons["resumePendingImport"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        resume.tap()
+        XCTAssertTrue(paper.waitForExistence(timeout: 12))
+        XCTAssertFalse(finish.isEnabled)
+        app.buttons["saveDraft"].tap()
+        let edit = app.buttons["edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 15))
+        XCTAssertEqual(edit.label, "Continue review")
+
+        edit.tap()
+        XCTAssertTrue(blocker.waitForExistence(timeout: 12))
+        XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
+        blocker.tap()
+        XCTAssertTrue(cancel.waitForExistence(timeout: 8))
+        reveal(amount, in: app)
+        let existingAmount = amount.value as? String ?? ""
+        XCTAssertTrue(existingAmount.isEmpty || existingAmount == "Missing")
+        amount.tap()
+        amount.typeText("1.00")
+        app.buttons["applyFocusedCorrection"].tap()
+        XCTAssertTrue(cancel.waitForNonExistence(timeout: 8))
+        XCTAssertFalse(blocker.exists)
+        XCTAssertTrue(finish.isEnabled)
+        finish.tap()
+        XCTAssertTrue(app.images["receiptReviewedMark"].waitForExistence(timeout: 15))
+        app.buttons["back"].tap()
+        // The fictional wallet starts with three receipts. Finishing updates the saved draft.
+        XCTAssertTrue(app.staticTexts["4 saved"].waitForExistence(timeout: 12))
+    }
+
     func testPaperAmountMismatchCanBeSavedAsDraft() {
         let app = sendAuditFixture("--p901-clean-read")
         let paper = app.scrollViews["paperReview"]
@@ -412,19 +468,28 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(reviewSplit.waitForExistence(timeout: 5))
         reviewSplit.tap()
         XCTAssertTrue(blocker.waitForExistence(timeout: 5))
+        XCTAssertTrue(blocker.label.contains("do not match the printed total"))
         blocker.tap()
         let total = app.descendants(matching: .any)["totalField"].firstMatch
         XCTAssertTrue(total.isHittable)
+        XCTAssertFalse(app.buttons["cancelFocusedCorrection"].exists)
         XCTAssertFalse(app.buttons["finishSave"].isEnabled)
         app.buttons["back"].tap()
         XCTAssertTrue(edit.waitForExistence(timeout: 5))
         app.buttons["back"].tap()
-        let all = app.buttons["allReceipts"]
-        XCTAssertTrue(all.waitForExistence(timeout: 10)); all.tap()
-        let drafts = app.buttons["openReceiptDrafts"]
-        XCTAssertTrue(drafts.waitForExistence(timeout: 5)); drafts.tap()
-        XCTAssertTrue(app.navigationBars["Needs review"].waitForExistence(timeout: 5))
+        let search = app.buttons["receiptSearch"]
+        XCTAssertTrue(search.waitForExistence(timeout: 10)); search.tap()
+        let query = app.searchFields.firstMatch
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
+        query.typeText("FICTIONAL PREVIEW\n")
+        let result = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH 'search' AND label CONTAINS 'FICTIONAL PREVIEW' AND label CONTAINS 'Needs review'"
+        )).firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "1 receipt")
+        result.tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        XCTAssertEqual(edit.label, "Continue review")
     }
 
     func testOfflineRecoveryPreviewsAgainBeforeSending() {

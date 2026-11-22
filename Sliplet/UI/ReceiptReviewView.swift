@@ -20,8 +20,15 @@ struct ReceiptReviewView: View {
     @State private var hasShownPaper = false
     @State private var pendingTarget: ReceiptReviewSection?
 
+    private var canStartWithPaper: Bool {
+        switch reconciliationResult.firstTarget {
+        case nil, .line?: true
+        default: false
+        }
+    }
+
     var body: some View {
-        if !openedEditor, workspace.selected == nil, hasShownPaper || workspace.draft.reconciliation.issues.isEmpty {
+        if !openedEditor, workspace.selected == nil, hasShownPaper || canStartWithPaper {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if reconciliationResult.firstTarget != nil {
@@ -213,14 +220,26 @@ struct ReceiptReviewView: View {
         }
     }
 
+    private func requiredLine(for target: ReceiptReviewSection) -> EditableReceiptLine? {
+        guard case .line(let id) = target else { return nil }
+        return workspace.draft.lines.first { $0.id == id }
+    }
+
+    private func focusedCorrection(for target: ReceiptReviewSection, line: EditableReceiptLine?) -> ReceiptReviewGuidance? {
+        if let line { return .forLine(line) }
+        guard target == .receipt, workspace.selected == nil,
+              workspace.draft.merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return checks.first { $0.target == .receipt && $0.requiresCorrection }
+    }
+
     @ViewBuilder private func blocker(open: @escaping (ReceiptReviewSection) -> Void) -> some View {
         if let target = reconciliationResult.firstTarget, let message = reconciliationResult.issues.first {
+            let line = requiredLine(for: target)
+            let correction = focusedCorrection(for: target, line: line)
             Button {
-                if target == .receipt, workspace.selected == nil,
-                   workspace.draft.merchant.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   let check = checks.first(where: { $0.target == .receipt && $0.requiresCorrection }) {
+                if let correction {
                     editing.wrappedValue = nil
-                    focusedCheck = check
+                    focusedCheck = correction
                 } else {
                     open(target)
                 }
@@ -230,6 +249,9 @@ struct ReceiptReviewView: View {
                         .foregroundStyle(.orange).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Required to finish").font(.subheadline.weight(.semibold))
+                        if let name = line?.name.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty {
+                            Text(name).font(.footnote.weight(.medium))
+                        }
                         Text(message).font(.footnote).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
@@ -241,7 +263,7 @@ struct ReceiptReviewView: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("reviewBlocker")
-            .accessibilityHint("Opens the field that needs attention")
+            .accessibilityHint(correction == nil ? "Opens the field that needs attention" : "Opens editing with the original receipt")
         }
     }
 

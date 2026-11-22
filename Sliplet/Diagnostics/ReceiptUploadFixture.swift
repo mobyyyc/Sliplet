@@ -28,6 +28,7 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
         candidate["merchant"] = "FICTIONAL PREVIEW"; candidate["rows"] = [row]; candidate["total"] = "1.00"
         let longRead = ProcessInfo.processInfo.arguments.contains("--p902-long-read")
         let linkedDiscounts = ProcessInfo.processInfo.arguments.contains("--linked-discounts-fixture")
+        let missingLastAmount = ProcessInfo.processInfo.arguments.contains("--p1702-missing-last-amount")
         if longRead || linkedDiscounts || ProcessInfo.processInfo.arguments.contains("--p901-clean-read") {
             candidate["date_raw"] = "2026-10-24"
             candidate["date"] = "2026-10-24"
@@ -39,6 +40,7 @@ final class ReceiptUploadFixture: URLProtocol, @unchecked Sendable {
                     var item = row
                     item["description"] = "FICTIONAL ITEM " + String(index)
                     item["raw_text"] = "FICTIONAL ITEM " + String(index) + " 1.00"
+                    if missingLastAmount && index == 36 { item["amount"] = NSNull() }
                     return item
                 }
                 candidate["subtotal"] = "36.00"; candidate["total"] = "36.00"
