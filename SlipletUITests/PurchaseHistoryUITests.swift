@@ -126,23 +126,42 @@ import XCTest
     }
 
     func testSearchHistoryRetainsQueryAndSupportsLargeText() throws {
-        let app = launch(["--t05-large-text", "--t05-reduce-motion"])
-        app.buttons["allReceipts"].tap()
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "purchase-history", "--history-long-receipt",
+                               "--t05-large-text", "--t05-reduce-motion"]
+        app.launch()
+        let search = app.buttons["receiptSearch"]
+        XCTAssertTrue(search.waitForExistence(timeout: 30))
+        search.tap()
         let query = app.searchFields.firstMatch
         XCTAssertTrue(query.waitForExistence(timeout: 10))
-        query.tap(); query.typeText("TEST ITEM\n")
+        query.typeText("TEST ITEM\n")
         let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchMatch-'")).firstMatch
         reveal(match, app: app); match.tap()
         let history = app.buttons["searchPurchaseHistory"]
         reveal(history, app: app); history.tap()
-        XCTAssertTrue(entries(app).firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.navigationBars["Purchase history"].waitForExistence(timeout: 10))
+        let previousPurchase = entries(app).firstMatch
+        // An accessibility system size can place Other purchases below the initial viewport.
+        reveal(previousPurchase, app: app)
         try app.performAccessibilityAudit(for: [.hitRegion, .sufficientElementDescription])
-        entries(app).firstMatch.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["historyHighlightedPurchase"].waitForExistence(timeout: 10))
-        app.navigationBars.buttons.firstMatch.tap()
-        app.buttons["closePurchaseHistory"].tap()
+        let historyShot = XCTAttachment(screenshot: app.screenshot())
+        historyShot.name = "Large text purchase history"; historyShot.lifetime = .keepAlways; add(historyShot)
+        previousPurchase.tap()
+        let highlighted = app.descendants(matching: .any)["historyHighlightedPurchase"]
+        XCTAssertTrue(highlighted.waitForExistence(timeout: 10))
+        XCTAssertTrue(highlighted.isHittable)
+        let receiptBar = app.navigationBars.containing(.button, identifier: "historyReceiptOriginal").firstMatch
+        XCTAssertTrue(receiptBar.waitForExistence(timeout: 10))
+        let back = try XCTUnwrap(receiptBar.buttons.allElementsBoundByIndex.first { $0.isHittable && $0.frame.midX < 100 })
+        back.tap()
+        let close = app.buttons["closePurchaseHistory"]
+        XCTAssertTrue(close.waitForExistence(timeout: 10))
+        close.tap()
+        XCTAssertTrue(close.waitForNonExistence(timeout: 10))
         XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
         app.buttons["back"].tap()
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
         XCTAssertEqual(query.value as? String, "TEST ITEM")
         app.terminate()
     }

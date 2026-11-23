@@ -51,10 +51,8 @@ The import can open a saved photo match before recognition. Different photos wit
 
 Search offers Include archived when the current search and filters match an archived receipt and the visible result list is empty. Returning from the receipt and its original preserves the search context. [Implementation and verification](PHASE17_ARCHIVE_SEARCH.md).
 
-## Remaining Phase 17 tasks
+## P17-05 · Simulator closeout and pilot decision
 
-| Task | Deliverable and acceptance |
-| --- | --- |
-| P17-05 · Everyday quality and pilot decision | Rerun the agreed paths on the same fixtures and compare actions, waiting, context restoration, long and large wallets, accessibility, and interruption handling. Record phone checks after separate approval. Use those results to decide between continued personal use and a small pilot. |
+The five everyday journeys, duplicate handling, large wallets, system accessibility text sizes, and interruption recovery are verified in Simulator. The amount correction takes one fewer tap and archived receipt discovery takes two fewer taps on the baseline fixtures. Continue personal use through real-device verification before deciding whether to invite a small group. [Results and candidate decision](PHASE17_CLOSEOUT.md).
 
-**Next approval** · P17-05, everyday quality and pilot decision.
+**Next approval** · Install the signed candidate in place on the owner's iPhone 15 Pro and run the [device walkthrough](#keep-these-items-open-for-candidate-verification).

@@ -164,10 +164,10 @@ struct ReceiptHome: View {
                     }
                     if ReceiptUploadFixture.enabled && workspace.flow == .wallet {
                         ToolbarItem(placement: .topBarLeading) {
-                            Button("Fictional import") {
+                            Button("Fictional import", systemImage: "doc.badge.plus") {
                                 let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
                                 workspace.startImport(chooseRecognition: true) { bytes }
-                            }.accessibilityIdentifier("uploadFixture")
+                            }.labelStyle(.iconOnly).accessibilityIdentifier("uploadFixture")
                         }
                     }
                     if WorkflowTestInput.enabled {

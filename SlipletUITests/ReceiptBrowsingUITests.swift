@@ -125,18 +125,56 @@ import XCTest
         XCTAssertTrue(app.buttons["walletMonth-2026-09"].exists)
         capture(app, "edited-date-month-index"); app.terminate()
     }
-    func testLargeTextDarkSearchAndFiltersRemainReachable() {
-        let app = launch("search", flags: ["--t05-large-text", "--t05-reduce-motion", "--t05-opaque", "--t05-contrast"])
-        XCTAssertTrue(app.buttons["searchFilters"].isHittable)
+    func testLargeTextDarkSearchAndFiltersRemainReachable() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "search", "--t05-dark", "--t05-large-text",
+                               "--t05-reduce-motion", "--t05-opaque", "--t05-contrast"]
+        app.launch()
+        let searchButton = app.buttons["receiptSearch"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 30))
+        searchButton.tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
         search("creme", app: app)
-        XCTAssertGreaterThanOrEqual(app.buttons["receiptCollections"].frame.height, 44)
-        XCTAssertGreaterThanOrEqual(app.buttons["searchFilters"].frame.height, 44)
-        let first = results(app).firstMatch; reveal(first, app: app); capture(app, "large-text-dark-search")
-        first.tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
-        let original = app.buttons["searchOriginal"]; reveal(original, app: app)
-        XCTAssertGreaterThanOrEqual(original.frame.height, 44)
+        let filters = app.buttons["searchFilters"]
+        XCTAssertTrue(filters.isHittable)
+        XCTAssertEqual(filters.label, "Filters")
+        try app.performAccessibilityAudit(for: [.hitRegion])
+        let merchant = app.buttons["searchMerchantFilter"]
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        // SwiftUI's toolbar can report its smaller capsule as the AX frame.
+        // Exercise the system's extended vertical hit zone directly.
+        for verticalOffset in [-21.0, 21.0] {
+            origin.withOffset(CGVector(dx: filters.frame.midX - app.frame.minX,
+                                       dy: filters.frame.midY - app.frame.minY + verticalOffset)).tap()
+            XCTAssertTrue(merchant.waitForExistence(timeout: 8))
+            app.buttons["Cancel"].tap()
+            XCTAssertTrue(merchant.waitForNonExistence(timeout: 8))
+        }
+        filters.tap()
+        XCTAssertTrue(merchant.waitForExistence(timeout: 10))
+        capture(app, "large-text-dark-filters")
+        merchant.tap()
+        app.buttons["FICTIONAL GROVE"].tap()
+        app.buttons["applySearchFilters"].tap()
+        let storeFilter = app.buttons["Remove filter: FICTIONAL GROVE"]
+        XCTAssertTrue(storeFilter.waitForExistence(timeout: 10))
+        let first = results(app).firstMatch
+        reveal(first, app: app)
+        capture(app, "large-text-dark-search")
+        first.tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10))
+        let original = app.buttons["searchOriginal"]
+        reveal(original, app: app)
+        original.tap()
+        let done = app.buttons["sourceDone"]
+        XCTAssertTrue(done.waitForExistence(timeout: 10))
+        done.tap()
+        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
         app.buttons["back"].tap()
-        XCTAssertEqual(app.searchFields.firstMatch.value as? String, "creme")
+        let query = app.searchFields.firstMatch
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
+        XCTAssertEqual(query.value as? String, "creme")
+        XCTAssertTrue(storeFilter.exists)
         app.terminate()
     }
 }
