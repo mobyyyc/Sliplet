@@ -67,21 +67,26 @@ import CryptoKit
             date = ReceiptBrowsingFilter.key(day)
         } else { date = String(format: "2026-10-%02d", 7 - index % 3) }
         let historyScrollFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--history-long-receipt")
+        let mixedPriceFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--p1801-mixed-prices")
+        let historyItem = mixedPriceFixture ? "TEST ITEM ORGANIC WHOLE GRAIN BREAKFAST CEREAL FAMILY PACK" : "TEST ITEM"
         let names: [String]
         if mode == "long-wallet", ProcessInfo.processInfo.arguments.contains("--search-long-paper") {
             names = ["TEST MILK"] + (1...30).map { "TEST GROCERY \($0)" }
         } else if mode == "long", index == 1, ProcessInfo.processInfo.arguments.contains("--long-share-fixture") {
             names = (1...48).map { "TEST GROCERY \($0)" }
         } else if historyScrollFixture && index == 1 {
-            names = (1...18).map { "TEST GROCERY \($0)" } + ["TEST ITEM"]
+            names = (1...18).map { "TEST GROCERY \($0)" } + [historyItem]
         } else if index % 3 == 1 && mode != "purchase-history" || mode == "long-wallet" {
             names = ["TEST APPLES", "TEST BREAD", "TEST MILK", "TEST RICE", "TEST EGGS", "TEST COFFEE", "TEST PEARS", "TEST TEA"]
         } else {
-            names = ["TEST ITEM"]
+            names = [historyItem]
         }
         let amount = ExactInput.format(Int64(names.count) * 1234)
         let priceFixture = mode == "purchase-history" && ProcessInfo.processInfo.arguments.contains("--p1004-price-fixture")
-        let content = [merchant, date + " CAD"] + names.map { $0 + (priceFixture ? " 2 each @6.17 12.34" : " 12.34") } + ["SUBTOTAL " + amount, "TOTAL " + amount]
+        let currency = mixedPriceFixture && index == 2 ? "USD" : "CAD"
+        let printedRate = (priceFixture || mixedPriceFixture) && currency == "CAD"
+        let unit = mixedPriceFixture && index == 1 ? "kg" : "each"
+        let content = [merchant, date + " " + currency] + names.map { $0 + (printedRate ? " 2 \(unit) @6.17 12.34" : " 12.34") } + ["SUBTOTAL " + amount, "TOTAL " + amount]
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let image = UIGraphicsImageRenderer(size: CGSize(width: 720, height: CGFloat(content.count * 76 + 100)), format: format).pngData { _ in
             UIColor.white.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 720, height: 480))
@@ -89,12 +94,12 @@ import CryptoKit
                 (line as NSString).draw(at: CGPoint(x: forImport ? 46 : 40, y: 50 + i * 76), withAttributes: [.font: UIFont.monospacedSystemFont(ofSize: 32, weight: .regular), .foregroundColor: UIColor.black])
             }
         }
-        var d = ReceiptReviewDraft(); d.merchant = merchant; d.date = date; d.currency = "CAD"
+        var d = ReceiptReviewDraft(); d.merchant = merchant; d.date = date; d.currency = currency
         d.lines = names.map { name in
             var line = EditableReceiptLine(id: UUID(), kind: "purchase", name: name,
-                quantity: priceFixture ? "2" : "", amount: "12.34", sourceLineIDs: [])
-            if historyScrollFixture && name == "TEST ITEM" { line.sku = "123456" }
-            if priceFixture { line.unitPriceText = "6.17"; line.unit = "each" }
+                quantity: printedRate ? "2" : "", amount: "12.34", sourceLineIDs: [])
+            if (historyScrollFixture || mixedPriceFixture) && name == historyItem { line.sku = "123456" }
+            if printedRate { line.unitPriceText = "6.17"; line.unit = unit }
             return line
         }
         d.subtotal = amount; d.total = amount; d.sourceOpened = true; d.sourceChecked = true

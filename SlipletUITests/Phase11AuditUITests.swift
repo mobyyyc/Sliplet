@@ -59,8 +59,13 @@ import XCTest
     }
     func testHistoryAndPriceHierarchy() {
         let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "empty"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["A place for your receipts"].waitForExistence(timeout: 30))
+        app.terminate()
         app.launchArguments = ["--t05-synthetic-preview", "purchase-history", "--t05-light", "--p1004-price-fixture"]
         app.launch()
+        XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.buttons["receipt-0"].waitForExistence(timeout: 30))
         app.buttons["receipt-0"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
         let row = app.scrollViews["detailScreen"].buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'paperLine-'")).firstMatch
@@ -73,6 +78,9 @@ import XCTest
         capture(app, "P11-product-history")
         let compare = app.buttons["compareUnitPrices"].firstMatch
         reveal(compare, in: app); compare.tap()
+        let candidate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'historyComparePurchase-'")).firstMatch
+        XCTAssertTrue(candidate.waitForExistence(timeout: 10))
+        candidate.tap()
         XCTAssertTrue(app.navigationBars["Compare unit prices"].waitForExistence(timeout: 10))
         let confirm = app.buttons["confirmComparisonPair"]
         XCTAssertTrue(confirm.exists)

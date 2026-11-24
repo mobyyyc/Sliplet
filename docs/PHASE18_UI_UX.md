@@ -17,4 +17,12 @@ The owner skipped the signed iPhone walkthrough on November 24, 2026 and asked t
 | P18-03 · Clarify what to do with an unfinished import | Lead with **Continue import** when saved work can be resumed. Make discarding or switching to another photo explicit secondary choices. Prototype with the existing single checkpoint. Confirm any replacement and preserve the pending import when a user cancels the new selection. Verify relaunch, discarding, and the normal one-tap route to import choices when no work is pending. |
 | P18-04 · Verify the combined paths in Simulator | Rerun the affected journeys in light and dark appearance, with the system’s largest text size, Reduce Motion and the keyboard. Check a long receipt and a large wallet for restored reading position and responsive scrolling. Use the same fictional examples for tap and interaction counts. |
 
-**Next approval** · P18-01, purchase history and price comparison presentation.
+## P18-01 · Purchase history and price comparison
+
+Each purchase now uses one list row. The store and date lead, with the line total and any recorded unit price alongside. The row opens the receipt at the matching item. Going back restores the purchase row and its position. The fictional example shows both previous purchases and their recorded prices without opening another screen.
+
+A single **Compare prices** action opens a purchase chooser. Saved comparisons are marked next to the corresponding purchase in both history and the chooser. The formal comparison keeps its existing product, pack, unit and tax verification. A purchase in a different currency stays readable in history and shows why it cannot open a comparison. Missing printed rates remain absent from the row.
+
+The scope includes light and dark history, system maximum text size, a long item name, a long highlighted receipt, a missing recorded rate, incompatible units and currencies, and reopening a saved comparison. Six distinct Simulator UI tests and 24 targeted unit tests passed. The maximum-text run used the Simulator system accessibility setting. The unsigned iPhone Release build succeeded. The UI runs used an isolated fictional wallet that was reseeded before each journey.
+
+**Next approval** · P18-02, active search filter visibility and clearing.

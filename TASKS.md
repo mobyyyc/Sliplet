@@ -2,7 +2,7 @@
 
 ## Phase 18 · Everyday interface refinements
 
-The owner skipped the Phase 17 iPhone walkthrough and requested continued UI and UX work. P18-01 · Make purchase history easier to scan awaits approval. [Roadmap and findings](docs/PHASE18_UI_UX.md).
+The owner skipped the Phase 17 iPhone walkthrough and requested continued UI and UX work. P18-01 · Purchase history and the price comparison chooser are complete in Simulator. P18-02 · Active search filters await approval. [Roadmap and findings](docs/PHASE18_UI_UX.md).
 
 ## Phase 17 · Everyday experience, quality, and useful features · Closed in Simulator
 

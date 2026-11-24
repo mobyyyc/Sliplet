@@ -3,7 +3,6 @@ import SwiftUI
 struct PurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
     let endpoint: PurchaseEndpoint
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Group {
@@ -11,11 +10,21 @@ struct PurchaseHistoryView: View {
                 ContentUnavailableView("Wallet locked", systemImage: "lock")
             } else if let record = workspace.receipts.first(where: { $0.id == endpoint.receiptID }),
                       let item = record.current.fields.items.first(where: { $0.id == endpoint.lineID }) {
+                let current = PurchaseHistoryEntry(record: record, line: item)
                 let entries = PurchaseHistoryEntry.entries(for: endpoint, in: workspace.receipts)
                 List {
                     Section {
-                        purchaseRow(record, line: item)
+                        PurchaseHistoryRow(purchase: current)
                             .accessibilityIdentifier("currentHistoryPurchase")
+                        if !entries.isEmpty {
+                            NavigationLink {
+                                PurchaseComparisonPicker(workspace: workspace, endpoint: endpoint)
+                            } label: {
+                                Label("Compare prices", systemImage: "arrow.left.arrow.right")
+                                    .frame(minHeight: 44)
+                            }
+                            .accessibilityIdentifier("compareUnitPrices")
+                        }
                     } header: {
                         VStack(alignment: .leading, spacing: 16) {
                             PurchaseItemHeading(name: item.paperName, code: item.sku)
@@ -34,18 +43,12 @@ struct PurchaseHistoryView: View {
                                 NavigationLink {
                                     PurchaseReceiptView(workspace: workspace, purchase: entry.id)
                                 } label: {
-                                    purchaseRow(entry.record, line: entry.line)
+                                    PurchaseHistoryRow(purchase: entry, comparisonSaved: entry.hasSavedComparison(with: current))
                                 }
                                 .accessibilityIdentifier("purchaseHistoryEntry-" + entry.line.id.uuidString)
-                                if PurchasePriceComparison.priceBlocker(record, line: item, entry.record, line: entry.line) == nil,
-                                   PurchaseLinkEngine.decision(record, line: item.id, entry.record, line: entry.line.id)?.pack != .different {
-                                    comparisonRow(record, entry: entry)
-                                }
                             }
                         } header: {
                             Text("Other purchases")
-                        } footer: {
-                            Text("Line totals and recorded unit prices come from each receipt. Comparisons use confirmed purchase details.")
                         }
                     }
                 }
@@ -59,8 +62,82 @@ struct PurchaseHistoryView: View {
         .navigationTitle("Purchase history")
         .navigationBarTitleDisplayMode(.inline)
     }
+}
 
-    private func purchaseRow(_ record: ReceiptRecord, line: ReceiptLine) -> some View {
+private struct PurchaseComparisonPicker: View {
+    @Bindable var workspace: ReceiptWorkspace
+    let endpoint: PurchaseEndpoint
+
+    var body: some View {
+        Group {
+            if !workspace.active || workspace.privacyCovered {
+                ContentUnavailableView("Wallet locked", systemImage: "lock")
+            } else if let record = workspace.receipts.first(where: { $0.id == endpoint.receiptID }),
+                      let line = record.current.fields.items.first(where: { $0.id == endpoint.lineID }) {
+                let current = PurchaseHistoryEntry(record: record, line: line)
+                let entries = PurchaseHistoryEntry.entries(for: endpoint, in: workspace.receipts)
+                if entries.isEmpty {
+                    ContentUnavailableView("No other purchases found", systemImage: "clock")
+                } else {
+                    List {
+                        Section("Choose a purchase") {
+                            ForEach(entries) { entry in
+                                if let reason = entry.comparisonBlocker(with: current) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        PurchaseHistoryRow(purchase: entry)
+                                        Text(reason).font(.footnote).foregroundStyle(.secondary)
+                                    }
+                                    .padding(.bottom, 5)
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityIdentifier("historyUnavailableComparison-" + entry.line.id.uuidString)
+                                } else {
+                                    NavigationLink {
+                                        PurchasePriceView(workspace: workspace, first: endpoint, second: entry.id)
+                                    } label: {
+                                        PurchaseHistoryRow(purchase: entry, comparisonSaved: entry.hasSavedComparison(with: current))
+                                    }
+                                    .accessibilityIdentifier("historyComparePurchase-" + entry.line.id.uuidString)
+                                }
+                            }
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                    .scrollEdgeEffectStyle(.soft, for: .vertical)
+                }
+            } else {
+                ContentUnavailableView("Item unavailable", systemImage: "doc.questionmark")
+            }
+        }
+        .navigationTitle("Compare prices")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private extension PurchaseHistoryEntry {
+    func comparisonBlocker(with current: Self) -> String? {
+        if let decision = PurchaseLinkEngine.decision(current.record, line: current.line.id, record, line: line.id),
+           decision.pack == .different || decision.verdict == .differentProduct {
+            return "These purchases are marked as different."
+        }
+        return PurchasePriceComparison.priceBlocker(current.record, line: current.line, record, line: line)
+    }
+
+    func hasSavedComparison(with current: Self) -> Bool {
+        guard let evidence = PurchasePriceComparison.savedEvidence(current.record, line: current.line.id, record, line: line.id) else {
+            return false
+        }
+        return (try? PurchasePriceComparison.compare(current.record, line: current.line.id, record, line: line.id, evidence: evidence)) != nil
+    }
+}
+
+private struct PurchaseHistoryRow: View {
+    let purchase: PurchaseHistoryEntry
+    var comparisonSaved = false
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        let record = purchase.record
+        let line = purchase.line
         let layout = typeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
             : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
@@ -72,14 +149,19 @@ struct PurchaseHistoryView: View {
                 if !ReceiptCompletion.isComplete(record) {
                     Text("Needs review").font(.caption).foregroundStyle(.secondary)
                 }
+                if comparisonSaved {
+                    Label("Comparison saved", systemImage: "checkmark.circle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
-                Text(line.amount.map(PurchasePresentation.price) ?? "Price unavailable")
+                Text(line.amount.map(PurchasePresentation.price) ?? "Line total unavailable")
                     .font(.body.weight(.semibold).monospacedDigit())
                     .accessibilityLabel(line.amount.map { "Line total, " + PurchasePresentation.price($0) } ?? "Line total unavailable")
                 if let rate = PurchasePresentation.recordedUnitPrice(line) {
                     Text(rate).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                        .accessibilityLabel(rate.hasPrefix("Unit price") ? rate : "Unit price, " + rate)
                         .accessibilityIdentifier("historyRecordedUnitPrice")
                 }
             }
@@ -89,28 +171,6 @@ struct PurchaseHistoryView: View {
         .frame(minHeight: 44)
     }
 
-    private func comparisonRow(_ record: ReceiptRecord, entry: PurchaseHistoryEntry) -> some View {
-        let saved = PurchasePriceComparison.savedEvidence(record, line: endpoint.lineID, entry.record, line: entry.line.id)
-        let result = saved.flatMap {
-            try? PurchasePriceComparison.compare(record, line: endpoint.lineID, entry.record, line: entry.line.id, evidence: $0)
-        }
-        return NavigationLink {
-            PurchasePriceView(workspace: workspace, first: endpoint, second: entry.id)
-        } label: {
-            if let result {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label(result.summary, systemImage: "checkmark.circle").font(.subheadline.weight(.semibold))
-                    Text("This purchase: " + result.first.formatted)
-                    Text("Other purchase: " + result.second.formatted)
-                    Text(result.tax.title).foregroundStyle(.secondary)
-                }.font(.footnote.monospacedDigit())
-            } else {
-                Label("Compare unit prices", systemImage: "arrow.left.arrow.right").font(.subheadline)
-            }
-        }
-        .frame(minHeight: 44)
-        .accessibilityIdentifier(result == nil ? "compareUnitPrices" : "historySavedComparison")
-    }
 }
 
 struct PurchaseItemHeading: View {
