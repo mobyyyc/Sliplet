@@ -1,8 +1,12 @@
 # Task registry
 
+## Phase 18 · Everyday interface refinements
+
+The owner skipped the Phase 17 iPhone walkthrough and requested continued UI and UX work. P18-01 · Make purchase history easier to scan awaits approval. [Roadmap and findings](docs/PHASE18_UI_UX.md).
+
 ## Phase 17 · Everyday experience, quality, and useful features · Closed in Simulator
 
-P17-01 · Five-journey baseline is complete in Simulator. Direct access to source-backed correction is the first priority. P17-02 · Import and review is complete in Simulator. A required line can open source-backed correction directly from the review prompt. P17-03 · Duplicate import guidance is complete in Simulator. Exact photos offer the saved receipt before reading, and matching receipt details offer a choice before saving. P17-04 · Archived receipt discovery is complete in Simulator. Empty searches can include eligible archived matches in one tap. P17-05 · Everyday quality is verified in Simulator. Continue personal use while a signed iPhone candidate walkthrough awaits approval. [Closeout and pilot decision](docs/PHASE17_CLOSEOUT.md). [Archive search and verification](docs/PHASE17_ARCHIVE_SEARCH.md). [Duplicate import and verification](docs/PHASE17_DUPLICATE_IMPORT.md). [Required line correction and verification](docs/PHASE17_REQUIRED_CORRECTION.md). [Roadmap](docs/PHASE17_DAILY_USE.md) · [Measured baseline and priorities](docs/PHASE17_EVERYDAY_AUDIT.md).
+P17-01 · Five-journey baseline is complete in Simulator. Direct access to source-backed correction is the first priority. P17-02 · Import and review is complete in Simulator. A required line can open source-backed correction directly from the review prompt. P17-03 · Duplicate import guidance is complete in Simulator. Exact photos offer the saved receipt before reading, and matching receipt details offer a choice before saving. P17-04 · Archived receipt discovery is complete in Simulator. Empty searches can include eligible archived matches in one tap. P17-05 · Everyday quality is verified in Simulator. The owner skipped the signed iPhone walkthrough and moved to Phase 18. [Closeout and pilot decision](docs/PHASE17_CLOSEOUT.md). [Archive search and verification](docs/PHASE17_ARCHIVE_SEARCH.md). [Duplicate import and verification](docs/PHASE17_DUPLICATE_IMPORT.md). [Required line correction and verification](docs/PHASE17_REQUIRED_CORRECTION.md). [Roadmap](docs/PHASE17_DAILY_USE.md) · [Measured baseline and priorities](docs/PHASE17_EVERYDAY_AUDIT.md).
 
 ## Phase 16 · First receipt and everyday use · Closed in Simulator
 

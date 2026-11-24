@@ -41,4 +41,6 @@ The native Files path exported an encrypted backup to On My iPhone, selected tha
 
 ## Candidate decision
 
-Continue personal use through a signed, in-place candidate walkthrough before inviting external testers. The next separately approved task is the owner’s iPhone 15 Pro walkthrough described in the [Phase 17 roadmap](PHASE17_DAILY_USE.md#keep-these-items-open-for-candidate-verification). Check retained receipts and originals, capture a fictional receipt, finish after an interruption, verify real Face ID and VoiceOver, and export and select a local backup. A live provider check, if needed, requires its own consent. Revisit the small pilot decision after the device results.
+Continue personal use through a signed, in-place candidate walkthrough before inviting external testers. The Simulator closeout proposed the [owner’s iPhone 15 Pro walkthrough](PHASE17_DAILY_USE.md#keep-these-items-open-for-candidate-verification). Check retained receipts and originals, capture a fictional receipt, finish after an interruption, verify real Face ID and VoiceOver, and export and select a local backup. A live provider check, if needed, requires its own consent. Revisit the small pilot decision after the device results.
+
+On November 24, 2026, the owner skipped the walkthrough and chose to continue with [Phase 18 · Everyday interface refinements](PHASE18_UI_UX.md).

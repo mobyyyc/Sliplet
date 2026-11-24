@@ -55,4 +55,4 @@ Search offers Include archived when the current search and filters match an arch
 
 The five everyday journeys, duplicate handling, large wallets, system accessibility text sizes, and interruption recovery are verified in Simulator. The amount correction takes one fewer tap and archived receipt discovery takes two fewer taps on the baseline fixtures. Continue personal use through real-device verification before deciding whether to invite a small group. [Results and candidate decision](PHASE17_CLOSEOUT.md).
 
-**Next approval** · Install the signed candidate in place on the owner's iPhone 15 Pro and run the [device walkthrough](#keep-these-items-open-for-candidate-verification).
+The owner skipped the candidate walkthrough on November 24, 2026 and moved to [Phase 18 · Everyday interface refinements](PHASE18_UI_UX.md). The device checklist remains available if the owner revisits it.
