@@ -1,5 +1,9 @@
 # Task registry
 
+## Phase 19 · Finish drafts and recover searches
+
+The roadmap is ready. P19-01 · Measure saved-draft resumption and empty filtered search in Simulator awaits approval. [Roadmap and acceptance criteria](docs/PHASE19_EVERYDAY_WORKFLOWS.md).
+
 ## Phase 18 · Everyday interface refinements · Closed in Simulator
 
 P18-01 · Purchase history and the price comparison chooser. P18-02 · Active search filters. P18-03 · Unfinished import choices. P18-04 · Combined verification passed in Simulator and corrected the unfinished-import actions at the largest text size. [Roadmap and findings](docs/PHASE18_UI_UX.md).
