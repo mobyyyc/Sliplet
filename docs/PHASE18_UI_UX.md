@@ -33,4 +33,12 @@ Tap a condition in **Active filters** to remove it immediately. **Clear filters*
 
 The first layouts allowed the native toolbar to cover the filter summary’s hit region. The final layout places the summary in the navigation safe-area bar and verifies that the control starts below the toolbar. The tests exercise the keyboard, the maximum system text size, three active conditions, an archived match, and returning to the same result after opening its original. Seven distinct Simulator UI tests and 24 targeted unit tests passed across the scoped runs. The unsigned iPhone Release build passed. All wallets and receipts in the checks are fictional.
 
-**Next approval** · P18-03, unfinished import choices.
+## P18-03 · Unfinished import choices
+
+**Continue import** is the primary action. The adjacent options menu offers **Choose another photo** and **Discard import**. Photo selection keeps the same camera, photo library, and Files sources. Picking a replacement opens a confirmation after Sliplet reads the new photo. Cancelling returns to the wallet, where the original import remains available.
+
+After confirmation, Sliplet writes the new photo and its initial progress in one encrypted database transaction, then opens photo adjustment. A failed read or write leaves the original photo and progress available. Discard has its own confirmation. Once the pending import is gone, the add button opens the source choices in one tap.
+
+The Simulator checks cover system Photos cancellation, cancelling or confirming replacement, relaunch, discard, and the normal add action. The storage regression verifies that a malformed photo or a failed database write preserves the original photo, crop, rotation, privacy covers and reading step. All 50 targeted import and workflow unit tests and the unsigned iPhone Release build passed. Run the replacement UI test with the fictional Photos fixture from the [import demo](IMPORT_DEMO.md).
+
+**Next approval** · P18-04, combined Simulator verification.

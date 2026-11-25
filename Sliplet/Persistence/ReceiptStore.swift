@@ -291,11 +291,12 @@ actor ReceiptStore {
         try database.integer("SELECT count(*) FROM metadata WHERE name = 'pending-import'") > 0
     }
 
-    func writePendingImport(_ checkpoint: ReceiptImportCheckpoint, original: Data? = nil) throws {
+    func writePendingImport(_ checkpoint: ReceiptImportCheckpoint, original: Data? = nil,
+                            permit: ReceiptOperationPermit? = nil) throws {
         let encoded = try JSONEncoder().encode(checkpoint)
         guard encoded.count <= Self.maximumRecordBytes else { throw ReceiptStoreError.sizeLimit }
         let sealed = try cipher.seal(encoded, context: Self.pendingImportContext)
-        try database.transaction {
+        try database.transaction(permit: permit) {
             if try pendingImportCheckpoint()?.id == checkpoint.id {
                 try database.run("UPDATE metadata SET value = ? WHERE name = 'pending-import'", [.blob(sealed)])
                 return

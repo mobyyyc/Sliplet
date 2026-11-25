@@ -75,6 +75,7 @@ import Vision
         let importButton = app.buttons["import"]
         XCTAssertTrue(app.buttons["debugMalformed"].waitForExistence(timeout: 15))
         if resume.exists {
+            app.buttons["pendingImportOptions"].tap()
             app.buttons["discardPendingImport"].tap()
             app.buttons["discardPendingImportConfirm"].firstMatch.tap()
             XCTAssertTrue(importButton.waitForExistence(timeout: 10))

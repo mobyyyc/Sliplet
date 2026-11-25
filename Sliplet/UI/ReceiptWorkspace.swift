@@ -107,6 +107,13 @@ final class ReceiptWorkspace {
     }
     private(set) var hasPendingImport = false
     private(set) var importCheckpointError: String?
+    private struct ImportReplacement {
+        let image: ReceiptImage
+        let hash: Data
+        let fromCamera: Bool
+    }
+    private var importReplacement: ImportReplacement?
+    var importReplacementReady: Bool { importReplacement != nil }
     @ObservationIgnored private var pendingImportID: UUID?
     @ObservationIgnored private var importPhotoHash: Data?
     private var acceptedDuplicatePhoto = false
@@ -250,6 +257,7 @@ final class ReceiptWorkspace {
         checkpointDelay?.cancel(); checkpointDelay = nil
         let lastCheckpoint = checkpointWrite; checkpointWrite = nil
         pendingImportID = nil; hasPendingImport = false; importCheckpointError = nil
+        importReplacement = nil
         importPhotoHash = nil; acceptedDuplicatePhoto = false
         importCovers = []; importUsesAI = false; importAdjustment = ReceiptPhotoAdjustment()
         active = false; privacyCovered = true; sessionID = UUID(); aiUploadStarted = false; lastAIReadFailure = nil; retryCovers = nil
@@ -346,13 +354,18 @@ final class ReceiptWorkspace {
     }
     func retryOpen() { suspend(); activate(protectedDataAvailable: UIApplication.shared.isProtectedDataAvailable) }
     private func isCurrent(_ session: UUID) -> Bool { active && sessionID == session && !Task.isCancelled }
-    func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false, fromCamera: Bool = false, _ load: @escaping @Sendable () async throws -> Data) {
-        guard active, !privacyCovered, availability == .ready, !saving, let store,
-              flow != .wallet || !hasPendingImport else { return }
+    func startImport(modelReader: (any ReceiptModelReader)? = nil, chooseRecognition: Bool = false,
+                     fromCamera: Bool = false, replacingPendingImport: Bool = false,
+                     _ load: @escaping @Sendable () async throws -> Data) {
+        guard active, !privacyCovered, availability == .ready, !saving, let store else { return }
+        if replacingPendingImport {
+            guard flow == .wallet, hasPendingImport, !importReplacementReady else { return }
+        } else {
+            guard flow != .wallet || !hasPendingImport else { return }
+        }
         resetImport()
         importCheckpointError = nil
         importUsesAI = false; importCovers = []
-        importFromCamera = fromCamera
         flow = .loading; errorMessage = nil; notice = nil
         let session = sessionID
         task = Task { [weak self] in
@@ -367,22 +380,81 @@ final class ReceiptWorkspace {
                 }
                 let (image, hash) = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
                 guard self.isCurrent(session), self.flow == .loading else { return }
-                self.image = image
-                self.importPhotoHash = hash
-                self.importStep = 0
-                self.importCropping = false
-                self.importAdjustment = ReceiptPhotoAdjustment()
+                if replacingPendingImport {
+                    self.importReplacement = ImportReplacement(image: image, hash: hash, fromCamera: fromCamera)
+                    self.flow = .wallet
+                    return
+                }
                 let id = UUID()
-                self.pendingImportID = id
+                self.prepareImportPhoto(image, hash: hash, id: id, fromCamera: fromCamera)
                 self.enqueueImportCheckpoint(store: store, checkpoint: self.importCheckpoint(id: id, step: 0), original: image.bytes)
                 if let modelReader { self.readModelImage(using: modelReader) }
                 else if chooseRecognition { self.flow = .preparingUpload }
                 else { self.readImage() }
-            } catch is CancellationError { }
-            catch {
+            } catch is CancellationError {
                 guard let self, self.isCurrent(session), self.flow == .loading else { return }
-                self.errorMessage = (error as? ImportFailure ?? .unavailableFile).message; self.flow = .failed
+                self.flow = .wallet
+            } catch {
+                guard let self, self.isCurrent(session), self.flow == .loading else { return }
+                if replacingPendingImport {
+                    self.flow = .wallet
+                    self.reportImportPickerFailure(replacingPendingImport: true)
+                } else {
+                    self.errorMessage = (error as? ImportFailure ?? .unavailableFile).message
+                    self.flow = .failed
+                }
             }
+        }
+    }
+
+    private func prepareImportPhoto(_ image: ReceiptImage, hash: Data, id: UUID, fromCamera: Bool) {
+        self.image = image
+        importPhotoHash = hash
+        pendingImportID = id
+        importFromCamera = fromCamera
+        importStep = 0
+        importCropping = false
+        importAdjustment = ReceiptPhotoAdjustment()
+    }
+
+    func cancelImportReplacement() { importReplacement = nil }
+
+    func confirmImportReplacement() {
+        guard active, !privacyCovered, flow == .wallet, !saving, hasPendingImport,
+              let replacement = importReplacement, let store else { return }
+        importReplacement = nil
+        flow = .loading
+        saving = true
+        let id = UUID(), session = sessionID, lease = permit, previous = checkpointWrite
+        let checkpoint = ReceiptImportCheckpoint(id: id, fromCamera: replacement.fromCamera,
+            adjustment: ReceiptPhotoAdjustment(), step: 0, useAI: false, covers: [], review: nil)
+        task = Task { [weak self] in
+            await previous?.value
+            do {
+                // Commit the new photo and checkpoint together so any write failure leaves the old pair intact.
+                try await store.writePendingImport(checkpoint, original: replacement.image.bytes, permit: lease)
+                guard let self, self.isCurrent(session) else { return }
+                self.prepareImportPhoto(replacement.image, hash: replacement.hash, id: id, fromCamera: replacement.fromCamera)
+                self.importCheckpointError = nil
+                self.saving = false
+                self.flow = .preparingUpload
+            } catch {
+                guard let self, self.isCurrent(session) else { return }
+                self.saving = false
+                self.flow = .wallet
+                self.importCheckpointError = "Couldn’t save the new photo. Your unfinished import is still here."
+            }
+        }
+    }
+
+    func reportImportPickerFailure(replacingPendingImport: Bool) {
+        guard active, !privacyCovered else { return }
+        if replacingPendingImport {
+            guard flow == .wallet, hasPendingImport else { return }
+            importCheckpointError = "Couldn’t open the new photo. Your unfinished import is still here."
+        } else {
+            errorMessage = ImportFailure.unavailableFile.message
+            flow = .failed
         }
     }
     private func importCheckpoint(id: UUID, step: Int? = nil) -> ReceiptImportCheckpoint {
@@ -439,6 +511,8 @@ final class ReceiptWorkspace {
     func resumePendingImport() {
         guard active, !privacyCovered, flow == .wallet, !saving, hasPendingImport, let store else { return }
         let session = sessionID
+        importReplacement = nil
+        importCheckpointError = nil
         flow = .loading; notice = nil
         task = Task { [weak self] in
             do {
@@ -492,8 +566,8 @@ final class ReceiptWorkspace {
         }
     }
 
-    func importFile(_ url: URL, chooseRecognition: Bool = false) {
-        startImport(chooseRecognition: chooseRecognition) {
+    func importFile(_ url: URL, chooseRecognition: Bool = false, replacingPendingImport: Bool = false) {
+        startImport(chooseRecognition: chooseRecognition, replacingPendingImport: replacingPendingImport) {
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize else { throw ImportFailure.unavailableFile }
@@ -647,6 +721,7 @@ final class ReceiptWorkspace {
         flow = .wallet
         checkpointDelay?.cancel(); checkpointDelay = nil
         pendingImportID = nil
+        importReplacement = nil
         importPhotoHash = nil; acceptedDuplicatePhoto = false
         importCovers = []; importUsesAI = false
         task?.cancel(); worker?.cancel(); recognition?.cancel(); worker = nil; recognition = nil

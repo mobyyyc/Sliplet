@@ -11,6 +11,8 @@ struct ReceiptHome: View {
     @State private var files = false
     @State private var discard = false
     @State private var discardPending = false
+    @State private var selectingReplacement = false
+    @State private var confirmReplacement = false
     @State private var duplicateSave: DuplicateSave?
     private struct DuplicateSave {
         let match: ReceiptImportMatch
@@ -50,10 +52,14 @@ struct ReceiptHome: View {
     private func anchoredImportChoices<Trigger: View>(@ViewBuilder trigger: () -> Trigger) -> some View {
         trigger()
             .confirmationDialog("Import a receipt", isPresented: $importChoices, titleVisibility: .visible) {
-                Button("Take a photo") { camera = true }
-                Button("Photo library") { photos = true }
-                Button("Files") { files = true }
+                photoSources(replacing: selectingReplacement)
             } message: { Text("Choose your receipt photo. You’ll select how to read it next.") }
+    }
+
+    @ViewBuilder private func photoSources(replacing: Bool) -> some View {
+        Button("Take a photo") { selectingReplacement = replacing; camera = true }
+        Button("Photo library") { selectingReplacement = replacing; photos = true }
+        Button("Files") { selectingReplacement = replacing; files = true }
     }
 
     var body: some View {
@@ -211,9 +217,12 @@ struct ReceiptHome: View {
                 let result = cameraResult; cameraResult = nil
                 guard session == workspace.sessionID, workspace.active else { return }
                 switch result {
-                case .photo(let bytes): workspace.startImport(chooseRecognition: true, fromCamera: true) { bytes }
+                case .photo(let bytes):
+                    let replacing = selectingReplacement
+                    selectingReplacement = false
+                    workspace.startImport(chooseRecognition: true, fromCamera: true, replacingPendingImport: replacing) { bytes }
                 case .existingImage: importChoices = true
-                default: break
+                default: selectingReplacement = false
                 }
             }) {
                 ReceiptCameraView { result in cameraResult = result; camera = false }
@@ -221,18 +230,22 @@ struct ReceiptHome: View {
             .sheet(isPresented: $photos) {
                 ReceiptPhotoPicker { loader in
                     photos = false
+                    let replacing = selectingReplacement
+                    selectingReplacement = false
                     guard session == workspace.sessionID, let loader else { return }
-                    workspace.startImport(chooseRecognition: true) { try await loader.load() }
+                    workspace.startImport(chooseRecognition: true, replacingPendingImport: replacing) { try await loader.load() }
                 }.ignoresSafeArea()
             }
             .fileImporter(isPresented: $files, allowedContentTypes: [.png, .jpeg, .heic, .heif], allowsMultipleSelection: false) { result in
+                let replacing = selectingReplacement
+                selectingReplacement = false
                 guard session == workspace.sessionID else { return }
                 switch result {
-                case .success(let urls): if let url = urls.first { workspace.importFile(url, chooseRecognition: true) }
+                case .success(let urls):
+                    if let url = urls.first { workspace.importFile(url, chooseRecognition: true, replacingPendingImport: replacing) }
                 case .failure(let error):
                     if (error as NSError).code != CocoaError.userCancelled.rawValue {
-                        workspace.errorMessage = ImportFailure.unavailableFile.message
-                        workspace.flow = .failed
+                        workspace.reportImportPickerFailure(replacingPendingImport: replacing)
                     }
                 }
             }
@@ -243,6 +256,12 @@ struct ReceiptHome: View {
                 Button("Discard import", role: .destructive, action: workspace.discardPendingImport)
                     .accessibilityIdentifier("discardPendingImportConfirm")
             } message: { Text("This removes the photo and progress for this import from Sliplet.") }
+            .alert("Replace unfinished import?", isPresented: $confirmReplacement) {
+                Button("Keep current import", role: .cancel, action: workspace.cancelImportReplacement)
+                Button("Replace import", role: .destructive, action: workspace.confirmImportReplacement)
+            } message: {
+                Text("The new photo will replace your current photo and its unsaved progress.")
+            }
             .alert(duplicateSave?.match.kind == .samePhoto ? "Photo already saved" : "Possible duplicate",
                    isPresented: showsDuplicateSave, presenting: duplicateSave) { decision in
                 if decision.match.kind == .samePhoto {
@@ -327,6 +346,7 @@ struct ReceiptHome: View {
         .onChange(of: workspace.searching) { _, searching in
             if !searching { closingSearch = false }
         }
+        .onChange(of: workspace.importReplacementReady) { _, ready in confirmReplacement = ready }
         .onAppear {
             #if DEBUG
             if !SyntheticNativePreview.enabled { workspace.library = displayList }
@@ -450,19 +470,17 @@ struct ReceiptHome: View {
                     if let message = workspace.importCheckpointError {
                         Text(message).font(.footnote).foregroundStyle(.secondary)
                     }
-                    ReceiptPairedActions {
-                        Button("Discard") { discardPending = true }
-                            .buttonStyle(ReceiptSecondaryStyle()).accessibilityIdentifier("discardPendingImport")
-                    } primary: {
+                    HStack(spacing: 12) {
                         Button("Continue import", systemImage: "doc.viewfinder", action: workspace.resumePendingImport)
                             .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("resumePendingImport")
+                        pendingImportOptions
                     }
                 }.frame(maxWidth: .infinity)
             } else {
                 HStack {
                     Spacer()
                     anchoredImportChoices {
-                        Button { importChoices = true } label: {
+                        Button { selectingReplacement = false; importChoices = true } label: {
                             Image(systemName: "plus").font(.title.weight(.bold))
                         }.buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 64))
                             .accessibilityLabel("Import receipt").accessibilityIdentifier("import")
@@ -541,11 +559,12 @@ struct ReceiptHome: View {
             if let record = workspace.photoDuplicatePrompt {
                 duplicatePhoto(record)
             } else {
-                ReceiptUploadPreview(workspace: workspace, retake: { camera = true })
+                ReceiptUploadPreview(workspace: workspace, retake: { selectingReplacement = false; camera = true })
             }
         case .loading, .reading:
             ReceiptReadingView(openingPhoto: workspace.flow == .loading,
-                               usingAI: workspace.flow == .reading && workspace.aiUploadStarted) {
+                               usingAI: workspace.flow == .reading && workspace.aiUploadStarted,
+                               savingPhoto: workspace.flow == .loading && workspace.saving) {
                 if workspace.flow == .reading { workspace.stopReading() }
                 else { workspace.cancelImport() }
             }
@@ -679,7 +698,32 @@ struct ReceiptHome: View {
 
     private var chooseAnotherImage: some View {
         anchoredImportChoices {
-            Button("Choose another image", systemImage: "photo") { importChoices = true }
+            Button("Choose another image", systemImage: "photo") { selectingReplacement = false; importChoices = true }
+        }
+    }
+
+    private var pendingImportOptions: some View {
+        anchoredImportChoices {
+            Menu {
+                Menu("Choose another photo", systemImage: "photo") {
+                    photoSources(replacing: true)
+                }
+                Button("Discard import", systemImage: "trash", role: .destructive) { discardPending = true }
+                    .accessibilityIdentifier("discardPendingImport")
+            } label: {
+                let icon = Image(systemName: "ellipsis")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
+                if ReceiptAccessibility.reduceTransparency(reduceTransparency) || ReceiptAccessibility.contrast(colorSchemeContrast) == .increased {
+                    icon.background(Color(uiColor: .secondarySystemGroupedBackground), in: .circle)
+                        .overlay { Circle().stroke(.primary.opacity(0.35), lineWidth: 1).allowsHitTesting(false) }
+                } else {
+                    icon.glassEffect(.regular.interactive(), in: .circle)
+                }
+            }
+            .accessibilityLabel("Unfinished import options")
+            .accessibilityIdentifier("pendingImportOptions")
         }
     }
 

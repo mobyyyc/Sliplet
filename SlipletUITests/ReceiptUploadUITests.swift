@@ -49,9 +49,80 @@ import XCTest
         XCTAssertTrue(app.buttons["finalUploadPreview"].exists)
         app.terminate(); app.launch()
         XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        app.buttons["pendingImportOptions"].tap()
         app.buttons["discardPendingImport"].tap()
         app.buttons["discardPendingImportConfirm"].firstMatch.tap()
         XCTAssertTrue(resume.waitForNonExistence(timeout: 10))
+    }
+
+    func testUnfinishedImportPhotoPickerCancellationReplacementAndDiscard() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--p805-upload-fixture"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 25))
+        let start = app.buttons["uploadFixture"]
+        XCTAssertTrue(start.waitForExistence(timeout: 15)); start.tap()
+        let adjustment = app.buttons["adjustPhotoContinue"]
+        XCTAssertTrue(adjustment.waitForExistence(timeout: 10)); adjustment.tap()
+        let readingMethod = app.buttons["readingMethodContinue"]
+        XCTAssertTrue(readingMethod.waitForExistence(timeout: 10))
+        let resume = app.buttons["resumePendingImport"]
+        let options = app.buttons["pendingImportOptions"]
+
+        func returnToWallet() {
+            XCUIDevice.shared.press(.home)
+            app.activate()
+            XCTAssertTrue(resume.waitForExistence(timeout: 15))
+        }
+
+        func openPhotoLibrary() -> XCUIElement {
+            options.tap()
+            let choose = app.buttons["Choose another photo"]
+            XCTAssertTrue(choose.waitForExistence(timeout: 5)); choose.tap()
+            let photos = app.buttons["Photo library"]
+            XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
+            let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo,' AND label CONTAINS '2036'")).firstMatch
+            XCTAssertTrue(photo.waitForExistence(timeout: 15), "Load the dated synthetic fixture into Simulator Photos first")
+            return photo
+        }
+
+        returnToWallet()
+        let wallet = XCTAttachment(screenshot: app.screenshot())
+        wallet.name = "Unfinished import actions"; wallet.lifetime = .keepAlways; add(wallet)
+        _ = openPhotoLibrary()
+        app.buttons["Cancel"].firstMatch.tap()
+        XCTAssertTrue(resume.waitForExistence(timeout: 10)); resume.tap()
+        XCTAssertTrue(readingMethod.waitForExistence(timeout: 10))
+
+        returnToWallet()
+        openPhotoLibrary().tap()
+        let confirm = app.alerts["Replace unfinished import?"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 15))
+        let confirmation = XCTAttachment(screenshot: app.screenshot())
+        confirmation.name = "Confirm fictional photo replacement"; confirmation.lifetime = .keepAlways; add(confirmation)
+        confirm.buttons["Keep current import"].tap()
+        XCTAssertTrue(resume.waitForExistence(timeout: 10)); resume.tap()
+        XCTAssertTrue(readingMethod.waitForExistence(timeout: 10))
+
+        returnToWallet()
+        openPhotoLibrary().tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 15))
+        confirm.buttons["Replace import"].tap()
+        XCTAssertTrue(adjustment.waitForExistence(timeout: 10))
+        app.terminate()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--p805-upload-fixture"]
+        app.launch()
+        XCTAssertTrue(resume.waitForExistence(timeout: 15)); resume.tap()
+        XCTAssertTrue(adjustment.waitForExistence(timeout: 10))
+
+        returnToWallet()
+        options.tap()
+        app.buttons["discardPendingImport"].tap()
+        app.buttons["discardPendingImportConfirm"].firstMatch.tap()
+        let normalImport = app.buttons["import"]
+        XCTAssertTrue(normalImport.waitForExistence(timeout: 10)); normalImport.tap()
+        XCTAssertTrue(app.buttons["Photo library"].waitForExistence(timeout: 5))
     }
 
     func testPreviewRedactionConsentAndFictionalSend() throws {

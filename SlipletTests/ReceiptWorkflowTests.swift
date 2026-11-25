@@ -431,6 +431,77 @@ final class ReceiptWorkflowTests: XCTestCase, @unchecked Sendable {
         model.suspend()
     }
 
+    @MainActor func testUnfinishedImportReplacementKeepsCheckpointUntilNewPhotoCommits() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let original = try SyntheticFixture.imageData()
+        let source = try XCTUnwrap(UIImage(data: original))
+        let replacement = try XCTUnwrap(source.jpegData(compressionQuality: 0.9))
+        let model = ReceiptWorkspace(directory: dir, keyProvider: Key())
+        model.activate(protectedDataAvailable: true)
+        try await wait { model.availability == .ready }
+        model.startImport(chooseRecognition: true) { original }
+        try await wait { model.flow == .preparingUpload }
+        let adjustment = ReceiptPhotoAdjustment(turns: 1, crop: CGRect(x: 0.1, y: 0.2, width: 0.6, height: 0.7))
+        model.importAdjustment = adjustment
+        model.importStep = 2
+        model.importUsesAI = true
+        let cover = CGRect(x: 0.125, y: 0.125, width: 0.25, height: 0.25)
+        model.importCovers = [cover]
+        model.suspend()
+        model.activate(protectedDataAvailable: true)
+        try await wait { model.availability == .ready }
+
+        model.startImport(replacingPendingImport: true) { Data([0, 1, 2]) }
+        try await wait { model.flow == .wallet && model.importCheckpointError != nil }
+        XCTAssertTrue(model.hasPendingImport)
+        model.startImport(replacingPendingImport: true) { replacement }
+        try await wait { model.importReplacementReady }
+        model.cancelImportReplacement()
+        XCTAssertFalse(model.importReplacementReady)
+        XCTAssertTrue(model.hasPendingImport)
+
+        let database = try ReceiptSQLiteDatabase(url: dir.appendingPathComponent("receipts.sqlite"), create: false)
+        try database.run("""
+            CREATE TRIGGER reject_replacement BEFORE INSERT ON metadata
+            WHEN NEW.name = 'pending-import' BEGIN SELECT RAISE(ABORT, 'Fictional replacement failure'); END
+            """)
+        model.startImport(replacingPendingImport: true) { replacement }
+        try await wait { model.importReplacementReady }
+        model.confirmImportReplacement()
+        try await wait { model.flow == .wallet && model.importCheckpointError != nil }
+        try database.run("DROP TRIGGER reject_replacement")
+        try database.close()
+
+        model.resumePendingImport()
+        try await wait { model.flow == .preparingUpload }
+        XCTAssertEqual(model.image?.bytes, original)
+        XCTAssertEqual(model.importAdjustment, adjustment)
+        XCTAssertEqual(model.importStep, 2)
+        XCTAssertEqual(model.importCovers, [cover])
+        XCTAssertTrue(model.importUsesAI)
+
+        model.suspend()
+        model.activate(protectedDataAvailable: true)
+        try await wait { model.availability == .ready }
+        model.startImport(fromCamera: true, replacingPendingImport: true) { replacement }
+        try await wait { model.importReplacementReady }
+        model.confirmImportReplacement()
+        try await wait { model.flow == .preparingUpload }
+        model.suspend()
+        model.activate(protectedDataAvailable: true)
+        try await wait { model.availability == .ready }
+        model.resumePendingImport()
+        try await wait { model.flow == .preparingUpload }
+        XCTAssertEqual(model.image?.bytes, replacement)
+        XCTAssertEqual(model.importStep, 0)
+        XCTAssertEqual(model.importAdjustment, ReceiptPhotoAdjustment())
+        XCTAssertTrue(model.importFromCamera)
+        XCTAssertTrue(model.importCovers.isEmpty)
+        XCTAssertFalse(model.importUsesAI)
+        XCTAssertTrue(model.receipts.isEmpty)
+        model.suspend()
+    }
+
     @MainActor func testDiscardClearsPendingImportAcrossSession() async throws {
         let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let model = ReceiptWorkspace(directory: dir, keyProvider: Key())

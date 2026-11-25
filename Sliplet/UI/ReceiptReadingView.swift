@@ -3,6 +3,7 @@ import SwiftUI
 struct ReceiptReadingView: View {
     let openingPhoto: Bool
     let usingAI: Bool
+    let savingPhoto: Bool
     let stop: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -47,19 +48,21 @@ struct ReceiptReadingView: View {
         }
         .accessibilityIdentifier("processing")
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 8) {
-                if usingAI {
-                    Text("Stopping won’t recall an image already sent to Google.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+            if !savingPhoto {
+                VStack(spacing: 8) {
+                    if usingAI {
+                        Text("Stopping won’t recall an image already sent to Google.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    Button(openingPhoto ? "Cancel import" : "Stop reading", role: .cancel, action: stop)
+                        .buttonStyle(ReceiptSecondaryStyle())
+                        .accessibilityIdentifier("cancelImport")
                 }
-                Button(openingPhoto ? "Cancel import" : "Stop reading", role: .cancel, action: stop)
-                    .buttonStyle(ReceiptSecondaryStyle())
-                    .accessibilityIdentifier("cancelImport")
+                .modifier(ReceiptActionBarLayout())
+                .background(Color(uiColor: .systemGroupedBackground))
             }
-            .modifier(ReceiptActionBarLayout())
-            .background(Color(uiColor: .systemGroupedBackground))
         }
         .task(id: usingAI) {
             stillReading = false
@@ -70,6 +73,7 @@ struct ReceiptReadingView: View {
     }
 
     private var title: String {
+        if savingPhoto { return "Saving new photo" }
         if openingPhoto { return "Opening photo" }
         if stillReading { return "Still reading your receipt" }
         return usingAI ? "Reading your receipt" : "Reading receipt"
