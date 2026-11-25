@@ -197,16 +197,26 @@ import Vision
         search("coffee", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts"); app.terminate()
     }
     func testCompactFiltersResetAndReturnToResult() {
-        let app = launch("search-large")
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "search-large", "--t05-light"]
+        app.launch()
+        let searchButton = app.buttons["receiptSearch"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 30))
+        searchButton.tap()
+        let count = app.staticTexts["searchResultCount"]
+        let seeded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == '500 receipts'"), object: count)
+        XCTAssertEqual(XCTWaiter.wait(for: [seeded], timeout: 60), .completed)
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
-        XCTAssertFalse(app.otherElements["searchFilterSummary"].exists)
+        let summary = app.buttons["searchFilterSummary"]
+        XCTAssertFalse(summary.exists)
         search("苹果", app: app)
         app.buttons["searchFilters"].tap()
         app.buttons["searchMerchantFilter"].tap(); app.buttons["FICTIONAL GROVE"].tap()
         capture(app, "P1403-native-filter-panel")
         app.buttons["applySearchFilters"].tap()
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
-        XCTAssertTrue(app.buttons["Remove filter: FICTIONAL GROVE"].exists)
+        XCTAssertTrue(summary.waitForExistence(timeout: 10))
+        XCTAssertTrue((summary.value as? String)?.contains("FICTIONAL GROVE") == true)
         capture(app, "P1106-compact-filters")
         let identifier = matches(app).element(boundBy: 1).identifier
         let target = app.buttons[identifier]
@@ -217,15 +227,16 @@ import Vision
         XCTAssertTrue(app.buttons[identifier].isHittable)
         XCTAssertEqual(app.searchFields.firstMatch.value as? String, "苹果")
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
-        for _ in 0..<8 {
-            let reset = app.buttons["searchClearFilters"]
-            if reset.exists && reset.isHittable && reset.frame.minY > 160 { break }
-            app.swipeDown()
-        }
-        app.buttons["searchClearFilters"].tap()
+        XCTAssertTrue(summary.isHittable)
+        summary.tap()
+        XCTAssertTrue(app.navigationBars["Active filters"].waitForExistence(timeout: 10))
+        let clear = app.buttons["searchClearFilters"]
+        XCTAssertTrue(clear.isHittable)
+        clear.tap()
         let reset = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == '500 receipts'"), object: app.staticTexts["searchResultCount"])
         XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 5), .completed)
-        XCTAssertFalse(app.otherElements["searchFilterSummary"].exists)
+        XCTAssertTrue(summary.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(app.searchFields.firstMatch.value as? String, "苹果")
         app.terminate()
     }
 

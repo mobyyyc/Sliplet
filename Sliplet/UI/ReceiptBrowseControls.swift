@@ -9,6 +9,138 @@ extension ReceiptHistoryChoice {
     }
 }
 
+struct ReceiptActiveFiltersBar: View {
+    @Bindable var workspace: ReceiptWorkspace
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var showingFilters = false
+
+    var body: some View {
+        let filters = activeFilters
+        Group {
+            if !filters.isEmpty {
+                Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    showingFilters = true
+                } label: {
+                    HStack(spacing: 10) {
+                        Text("Filters (\(filters.count))").fontWeight(.semibold).fixedSize()
+                        if !typeSize.isAccessibilitySize {
+                            Text(filters.map(\.title).joined(separator: " · "))
+                                .foregroundStyle(.secondary).lineLimit(1)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.secondary).accessibilityHidden(true)
+                    }
+                    .font(.subheadline)
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Active filters")
+                .accessibilityValue("\(filters.count): " + filters.map(\.title).joined(separator: ", "))
+                .accessibilityHint("Review and remove current filters")
+                .accessibilityIdentifier("searchFilterSummary")
+                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+                .background(Color(uiColor: .systemGroupedBackground), ignoresSafeAreaEdges: [])
+            }
+        }
+        .sheet(isPresented: $showingFilters) {
+            NavigationStack {
+                if workspace.active && !workspace.privacyCovered {
+                    List(filters) { filter in
+                        Button {
+                            if filters.count == 1 { showingFilters = false }
+                            remove(filter.id)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(filter.title).fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Image(systemName: "xmark.circle")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel("Remove filter: " + filter.title)
+                    }
+                    .listStyle(.insetGrouped)
+                    .navigationTitle("Active filters")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingFilters = false }
+                        }
+                    }
+                    .safeAreaBar(edge: .bottom, spacing: 0) {
+                        Button("Clear filters") {
+                            showingFilters = false
+                            workspace.resetBrowseFilters()
+                        }
+                        .buttonStyle(ReceiptSecondaryStyle())
+                        .accessibilityIdentifier("searchClearFilters")
+                        .modifier(ReceiptActionBarLayout())
+                    }
+                } else {
+                    ReceiptLockScreen()
+                }
+            }.dynamicTypeSize(typeSize)
+        }
+    }
+
+    private struct Filter: Identifiable {
+        enum Kind { case collection, merchant, month, date, amount, archive }
+        let id: Kind
+        let title: String
+    }
+
+    private var activeFilters: [Filter] {
+        var filters: [Filter] = []
+        if workspace.collection != "All receipts" { filters.append(.init(id: .collection, title: workspace.collection)) }
+        if workspace.merchantFilter != .all {
+            filters.append(.init(id: .merchant, title: workspace.merchantFilter.title(missing: "Merchant missing")))
+        }
+        if workspace.monthFilter != .all { filters.append(.init(id: .month, title: workspace.monthFilter.monthTitle)) }
+        if let date = workspace.browseDateTitle { filters.append(.init(id: .date, title: date)) }
+        if let amount = workspace.browseAmountTitle { filters.append(.init(id: .amount, title: amount)) }
+        if workspace.includeArchived && workspace.collection != "Archive" {
+            filters.append(.init(id: .archive, title: "Including archived"))
+        }
+        return filters
+    }
+
+    private func remove(_ kind: Filter.Kind) {
+        switch kind {
+        case .collection:
+            workspace.applyBrowseFilters(merchant: workspace.merchantFilter, month: workspace.monthFilter,
+                archived: workspace.collection != "Archive" && workspace.includeArchived, scope: "All receipts")
+        case .merchant:
+            workspace.merchantFilter = .all
+        case .month:
+            var filter = workspace.browsingFilter
+            if filter.dateMode == .month { filter.dateMode = .any }
+            workspace.applyBrowseFilters(merchant: workspace.merchantFilter, month: .all,
+                                        archived: workspace.includeArchived, extra: filter)
+        case .date:
+            var filter = workspace.browsingFilter
+            filter.dateMode = .any
+            workspace.browsingFilter = filter
+        case .amount:
+            var filter = workspace.browsingFilter
+            filter.minimum = ""
+            filter.maximum = ""
+            workspace.browsingFilter = filter
+        case .archive:
+            workspace.includeArchived = false
+        }
+    }
+}
+
 struct ReceiptBrowseFiltersView: View {
     @Bindable var workspace: ReceiptWorkspace
     @State private var merchant: ReceiptHistoryChoice

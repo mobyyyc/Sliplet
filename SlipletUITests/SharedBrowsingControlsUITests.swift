@@ -82,8 +82,9 @@ import XCTest
         app.buttons["searchMerchantFilter"].tap()
         app.buttons["SYNTHETIC CORNER"].tap()
         app.buttons["applySearchFilters"].tap()
-        let storeFilter = app.buttons["Remove filter: SYNTHETIC CORNER"]
-        XCTAssertTrue(storeFilter.waitForExistence(timeout: 10))
+        let summary = app.buttons["searchFilterSummary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 10))
+        XCTAssertTrue((summary.value as? String)?.contains("SYNTHETIC CORNER") == true)
         app.buttons["Clear text"].tap()
         query.tap()
         let term = "TEST GROCERY 30"
@@ -95,9 +96,9 @@ import XCTest
         XCTAssertEqual(count.label, "0 receipts")
         capture(app, "archive-search-shortcut")
         include.tap()
-        let archiveFilter = app.buttons["Remove filter: Including archived"]
-        XCTAssertTrue(archiveFilter.waitForExistence(timeout: 10))
-        XCTAssertTrue(storeFilter.exists)
+        let archiveActive = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", "Including archived"), object: summary)
+        wait(for: [archiveActive], timeout: 10)
+        XCTAssertTrue((summary.value as? String)?.contains("SYNTHETIC CORNER") == true)
         XCTAssertEqual(query.value as? String, term)
         XCTAssertEqual(count.label, "1 receipt")
         XCTAssertFalse(include.exists)
@@ -120,15 +121,20 @@ import XCTest
         XCTAssertTrue(returned.isHittable)
         XCTAssertEqual(returned.frame.minY, originalY, accuracy: 12)
         XCTAssertEqual(query.value as? String, term)
-        XCTAssertTrue(storeFilter.exists)
-        XCTAssertTrue(archiveFilter.exists)
+        XCTAssertTrue((summary.value as? String)?.contains("SYNTHETIC CORNER") == true)
+        XCTAssertTrue((summary.value as? String)?.contains("Including archived") == true)
         capture(app, "archived-result-restored")
 
+        summary.tap()
+        let archiveFilter = app.buttons["Remove filter: Including archived"]
+        XCTAssertTrue(archiveFilter.waitForExistence(timeout: 10))
         archiveFilter.tap()
+        XCTAssertTrue(archiveFilter.waitForNonExistence(timeout: 10))
+        app.navigationBars["Active filters"].buttons["Done"].tap()
         XCTAssertTrue(include.waitForExistence(timeout: 10))
         XCTAssertEqual(query.value as? String, term)
-        XCTAssertTrue(storeFilter.exists)
-        XCTAssertFalse(archiveFilter.exists)
+        XCTAssertTrue((summary.value as? String)?.contains("SYNTHETIC CORNER") == true)
+        XCTAssertFalse((summary.value as? String)?.contains("Including archived") == true)
     }
 
     func testTodayIsVisibleInitiallyAndAfterSearchCancel() {

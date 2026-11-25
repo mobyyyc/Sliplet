@@ -54,7 +54,6 @@ struct ReceiptPurchaseHistoryView: View {
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
-    @State private var viewportHeight: CGFloat = 1
     init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {},
          openOverview: @escaping (String?) -> Void, requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace; self.openSettings = openSettings; self.openOverview = openOverview
@@ -65,37 +64,9 @@ struct ReceiptPurchaseHistoryView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let viewportBottom = geometry.frame(in: .global).maxY
             ScrollViewReader { proxy in
                 List {
-                    if hasFilters {
-                        Section {
-                            ScrollView(.horizontal) {
-                                HStack(spacing: 8) {
-                                    if workspace.merchantFilter != .all {
-                                        filterChip(workspace.merchantFilter.title(missing: "Merchant missing")) {
-                                            workspace.merchantFilter = .all
-                                        }
-                                    }
-                                    if workspace.monthFilter != .all {
-                                        filterChip(workspace.monthFilter.monthTitle) { workspace.monthFilter = .all }
-                                    }
-                                    if workspace.includeArchived && workspace.collection != "Archive" {
-                                        filterChip("Including archived") { workspace.includeArchived = false }
-                                    }
-                                    if let title = workspace.browseDateTitle {
-                                        filterChip(title) { var filter = workspace.browsingFilter; filter.dateMode = .any; workspace.browsingFilter = filter }
-                                    }
-                                    if let title = workspace.browseAmountTitle {
-                                        filterChip(title) { var filter = workspace.browsingFilter; filter.minimum = ""; filter.maximum = ""; workspace.browsingFilter = filter }
-                                    }
-                                    if workspace.collection != "All receipts" { Text(workspace.collection).font(.caption) }
-                                    Button("Clear filters", action: workspace.resetBrowseFilters)
-                                        .font(.caption).accessibilityIdentifier("searchClearFilters")
-                                }.padding(.vertical, 2)
-                            }.scrollIndicators(.hidden)
-                                .accessibilityIdentifier("searchFilterSummary")
-                        }.listRowBackground(Color.clear).listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    }
                     if workspace.browsing.sections.isEmpty {
                         Section {
                             emptyState
@@ -104,7 +75,7 @@ struct ReceiptPurchaseHistoryView: View {
                     ForEach(workspace.browsing.sections) { section in
                         Section {
                             ForEach(section.rows) { row in
-                                resultRow(row, viewport: geometry.size.height)
+                                resultRow(row, viewportBottom: viewportBottom)
                             }
                         } header: {
                             VStack(alignment: .leading, spacing: 10) {
@@ -127,10 +98,7 @@ struct ReceiptPurchaseHistoryView: View {
                     // its backing scroll view is unavailable; never leave a blank surface.
                     pendingRestore = nil
                 }
-                .onAppear {
-                    viewportHeight = geometry.size.height
-                    restore(using: proxy)
-                }
+                .onAppear { restore(using: proxy) }
                 .onChange(of: workspace.browseVersion) { _, _ in
                     if workspace.flow == .wallet {
                         if workspace.browseAnchor == nil {
@@ -143,10 +111,10 @@ struct ReceiptPurchaseHistoryView: View {
                     if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
                     guard phase == .idle, userScrolled, pendingRestore == nil, workspace.flow == .wallet else { return }
                     userScrolled = false
-                    let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportHeight }
+                    let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportBottom }
                         .min { $0.value.minY < $1.value.minY }
                     if let first, let index = workspace.browsing.indexByID[first.key] {
-                        remember(workspace.browsing.rows[index], viewport: viewportHeight)
+                        remember(workspace.browsing.rows[index])
                     }
                 }
             }
@@ -211,21 +179,14 @@ struct ReceiptPurchaseHistoryView: View {
         guard let anchor = pendingRestore, let frame = rowFrames[anchor.rowID], frame.maxY > 0 else { return }
         if scrollAccess.align(row: frame, to: anchor.y) { pendingRestore = nil }
     }
-    private func remember(_ row: ReceiptBrowsingSnapshot.Row, viewport: CGFloat) {
+    private func remember(_ row: ReceiptBrowsingSnapshot.Row) {
         let frame = rowFrames[row.id] ?? .zero
         workspace.browseAnchor = ReceiptBrowsingAnchor(rowID: row.id, receiptID: row.record.id, y: frame.minY)
         workspace.searchReturnID = row.id
     }
-    private func filterChip(_ title: String, remove: @escaping () -> Void) -> some View {
-        Button(action: remove) {
-            HStack(spacing: 5) { Text(title); Image(systemName: "xmark").font(.caption2) }
-                .font(.caption).padding(.horizontal, 10).padding(.vertical, 8)
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: .capsule)
-        }.buttonStyle(.plain).accessibilityLabel("Remove filter: " + title)
-    }
-    private func resultRow(_ row: ReceiptBrowsingSnapshot.Row, viewport: CGFloat) -> some View {
+    private func resultRow(_ row: ReceiptBrowsingSnapshot.Row, viewportBottom: CGFloat) -> some View {
         Button {
-            remember(row, viewport: viewport)
+            remember(row)
             workspace.open(row.record, match: row.match)
         } label: {
             Group {
@@ -250,13 +211,13 @@ struct ReceiptPurchaseHistoryView: View {
             }.frame(width: 0, height: 0).accessibilityHidden(true).allowsHitTesting(false)
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            if frame.maxY >= -80 && frame.minY <= viewport + 80 { rowFrames[row.id] = frame }
+            if frame.maxY >= -80 && frame.minY <= viewportBottom + 80 { rowFrames[row.id] = frame }
             else { rowFrames.removeValue(forKey: row.id) }
             if pendingRestore?.rowID == row.id { completeRestore() }
         }
         .onDisappear { rowFrames.removeValue(forKey: row.id) }
         .receiptSwipeActions(row.record, identifier: row.identifier) { action in
-            remember(row, viewport: viewport)
+            remember(row)
             if action == .delete { requestDelete(row.record) }
             else { workspace.organize(row.record, action: action) }
         }

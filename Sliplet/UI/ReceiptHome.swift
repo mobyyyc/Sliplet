@@ -192,6 +192,12 @@ struct ReceiptHome: View {
                     #endif
                 }
             }
+            .safeAreaBar(edge: .top, spacing: 0) {
+                if workspace.availability == .ready && !workspace.privacyCovered && workspace.flow == .wallet
+                    && (workspace.library || workspace.searching) && workspace.hasBrowseFilters {
+                    ReceiptActiveFiltersBar(workspace: workspace)
+                }
+            }
             .safeAreaBar(edge: .bottom, spacing: 0) {
                 if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) {
                     if workspace.flow == .wallet && workspace.searching {

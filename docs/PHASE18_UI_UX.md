@@ -25,4 +25,12 @@ A single **Compare prices** action opens a purchase chooser. Saved comparisons a
 
 The scope includes light and dark history, system maximum text size, a long item name, a long highlighted receipt, a missing recorded rate, incompatible units and currencies, and reopening a saved comparison. Six distinct Simulator UI tests and 24 targeted unit tests passed. The maximum-text run used the Simulator system accessibility setting. The unsigned iPhone Release build succeeded. The UI runs used an isolated fictional wallet that was reseeded before each journey.
 
-**Next approval** · P18-02, active search filter visibility and clearing.
+## P18-02 · Active search filters
+
+Search and the receipt list now place a compact active-filter summary below the navigation controls. It remains visible as results scroll. The summary announces the count and current conditions to accessibility tools. At large text sizes it displays the count and opens a vertical list of the full conditions.
+
+Tap a condition in **Active filters** to remove it immediately. **Clear filters** stays at the bottom of that sheet. The remaining conditions and the search term carry forward after a single removal. Clearing all filters preserves the search term. The toolbar’s **Filters** button still opens the native editor with Apply and Cancel. Archive discovery still offers **Include archived** when an archived receipt matches all current conditions.
+
+The first layouts allowed the native toolbar to cover the filter summary’s hit region. The final layout places the summary in the navigation safe-area bar and verifies that the control starts below the toolbar. The tests exercise the keyboard, the maximum system text size, three active conditions, an archived match, and returning to the same result after opening its original. Seven distinct Simulator UI tests and 24 targeted unit tests passed across the scoped runs. The unsigned iPhone Release build passed. All wallets and receipts in the checks are fictional.
+
+**Next approval** · P18-03, unfinished import choices.

@@ -41,7 +41,9 @@ import XCTest
         app.buttons["searchMerchantFilter"].tap(); app.buttons["FICTIONAL GROVE"].tap()
         app.buttons["searchMonthFilter"].tap(); app.buttons["September 2026"].tap()
         app.buttons["applySearchFilters"].tap()
-        XCTAssertTrue(app.buttons["Remove filter: FICTIONAL GROVE"].waitForExistence(timeout: 5))
+        let summary = app.buttons["searchFilterSummary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 5))
+        XCTAssertTrue((summary.value as? String)?.contains("FICTIONAL GROVE") == true)
         search("milk", app: app)
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "167 receipts")
         capture(app, "filtered-item-search")
@@ -155,9 +157,49 @@ import XCTest
         capture(app, "large-text-dark-filters")
         merchant.tap()
         app.buttons["FICTIONAL GROVE"].tap()
+        let archive = app.switches["searchIncludeArchived"]
+        XCTAssertTrue(archive.isHittable)
+        archive.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let date = app.buttons["filterDateMode"]
+        reveal(date, app: app); date.tap()
+        app.buttons["Month"].tap()
+        let month = app.buttons["searchMonthFilter"]
+        reveal(month, app: app); month.tap()
+        app.buttons["September 2026"].tap()
         app.buttons["applySearchFilters"].tap()
+        let summary = app.buttons["searchFilterSummary"]
+        XCTAssertTrue(summary.waitForExistence(timeout: 10))
+        XCTAssertTrue(summary.isHittable)
+        for title in ["FICTIONAL GROVE", "September 2026", "Including archived"] {
+            XCTAssertTrue((summary.value as? String)?.contains(title) == true)
+        }
+        capture(app, "large-text-active-summary")
+        XCTAssertGreaterThanOrEqual(summary.frame.minY, filters.frame.maxY, "Summary \(summary.frame), toolbar control \(filters.frame)")
+        let query = app.searchFields.firstMatch
+        query.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(summary.isHittable)
+        capture(app, "large-text-active-filters-keyboard")
+        summary.tap()
+        let summaryBar = app.navigationBars["Active filters"]
+        XCTAssertTrue(summaryBar.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
         let storeFilter = app.buttons["Remove filter: FICTIONAL GROVE"]
-        XCTAssertTrue(storeFilter.waitForExistence(timeout: 10))
+        let monthFilter = app.buttons["Remove filter: September 2026"]
+        let archiveFilter = app.buttons["Remove filter: Including archived"]
+        XCTAssertTrue(storeFilter.isHittable)
+        XCTAssertTrue(monthFilter.isHittable)
+        XCTAssertTrue(archiveFilter.isHittable)
+        let clear = app.buttons["searchClearFilters"]
+        XCTAssertTrue(clear.isHittable)
+        capture(app, "large-text-active-filter-management")
+        archiveFilter.tap()
+        XCTAssertTrue(archiveFilter.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(storeFilter.isHittable)
+        XCTAssertTrue(monthFilter.isHittable)
+        summaryBar.buttons["Done"].tap()
+        XCTAssertTrue(summaryBar.waitForNonExistence(timeout: 5))
+        XCTAssertFalse((summary.value as? String)?.contains("Including archived") == true)
         let first = results(app).firstMatch
         reveal(first, app: app)
         capture(app, "large-text-dark-search")
@@ -171,10 +213,17 @@ import XCTest
         done.tap()
         XCTAssertTrue(done.waitForNonExistence(timeout: 10))
         app.buttons["back"].tap()
-        let query = app.searchFields.firstMatch
         XCTAssertTrue(query.waitForExistence(timeout: 10))
         XCTAssertEqual(query.value as? String, "creme")
-        XCTAssertTrue(storeFilter.exists)
+        XCTAssertTrue(summary.isHittable)
+        XCTAssertTrue((summary.value as? String)?.contains("FICTIONAL GROVE") == true)
+        XCTAssertTrue((summary.value as? String)?.contains("September 2026") == true)
+        summary.tap()
+        XCTAssertTrue(clear.waitForExistence(timeout: 10))
+        clear.tap()
+        XCTAssertTrue(summaryBar.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(summary.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(query.value as? String, "creme")
         app.terminate()
     }
 }
