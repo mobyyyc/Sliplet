@@ -1,8 +1,8 @@
 # Task registry
 
-## Phase 18 · Everyday interface refinements
+## Phase 18 · Everyday interface refinements · Closed in Simulator
 
-The owner skipped the Phase 17 iPhone walkthrough and requested continued UI and UX work. P18-01 · Purchase history and the price comparison chooser are complete in Simulator. P18-02 · Active search filters are complete in Simulator. P18-03 · Unfinished import choices are complete in Simulator. P18-04 · Combined Simulator verification awaits approval. [Roadmap and findings](docs/PHASE18_UI_UX.md).
+P18-01 · Purchase history and the price comparison chooser. P18-02 · Active search filters. P18-03 · Unfinished import choices. P18-04 · Combined verification passed in Simulator and corrected the unfinished-import actions at the largest text size. [Roadmap and findings](docs/PHASE18_UI_UX.md).
 
 ## Phase 17 · Everyday experience, quality, and useful features · Closed in Simulator
 

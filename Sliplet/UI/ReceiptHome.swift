@@ -471,8 +471,16 @@ struct ReceiptHome: View {
                         Text(message).font(.footnote).foregroundStyle(.secondary)
                     }
                     HStack(spacing: 12) {
-                        Button("Continue import", systemImage: "doc.viewfinder", action: workspace.resumePendingImport)
-                            .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("resumePendingImport")
+                        Button(action: workspace.resumePendingImport) {
+                            if typeSize.isAccessibilitySize {
+                                Text("Continue import")
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            } else {
+                                Label("Continue import", systemImage: "doc.viewfinder")
+                            }
+                        }
+                        .buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("resumePendingImport")
                         pendingImportOptions
                     }
                 }.frame(maxWidth: .infinity)
@@ -712,7 +720,7 @@ struct ReceiptHome: View {
                     .accessibilityIdentifier("discardPendingImport")
             } label: {
                 let icon = Image(systemName: "ellipsis")
-                    .font(.body.weight(.semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .frame(width: 44, height: 44)
                     .contentShape(Circle())
                 if ReceiptAccessibility.reduceTransparency(reduceTransparency) || ReceiptAccessibility.contrast(colorSchemeContrast) == .increased {

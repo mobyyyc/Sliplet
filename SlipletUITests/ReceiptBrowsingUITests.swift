@@ -2,12 +2,6 @@ import XCTest
 
 @MainActor final class ReceiptBrowsingUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
-    private func launch(_ mode: String = "search-large", flags: [String] = ["--t05-light"]) -> XCUIApplication {
-        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", mode] + flags
-        app.launch(); XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 90))
-        XCTAssertTrue(app.staticTexts[mode == "search-large" ? "500 receipts" : "3 receipts"].waitForExistence(timeout: 90))
-        return app
-    }
     private func capture(_ app: XCUIApplication, _ title: String) {
         let a = XCTAttachment(screenshot: app.screenshot()); a.name = "P14-03-" + title; a.lifetime = .keepAlways; add(a)
     }
@@ -29,7 +23,10 @@ import XCTest
         XCTAssertTrue(element.isHittable)
     }
     func testCleanFiltersCancelApplyAndSearchHistoryReturn() {
-        let app = launch()
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "search-large", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["500 receipts"].waitForExistence(timeout: 90))
         XCTAssertFalse(app.staticTexts["Active only"].exists)
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
         capture(app, "clean-list")
@@ -39,11 +36,14 @@ import XCTest
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "500 receipts")
         app.buttons["searchFilters"].tap()
         app.buttons["searchMerchantFilter"].tap(); app.buttons["FICTIONAL GROVE"].tap()
+        app.buttons["filterDateMode"].tap(); app.buttons["Month"].tap()
         app.buttons["searchMonthFilter"].tap(); app.buttons["September 2026"].tap()
         app.buttons["applySearchFilters"].tap()
         let summary = app.buttons["searchFilterSummary"]
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
         XCTAssertTrue((summary.value as? String)?.contains("FICTIONAL GROVE") == true)
+        app.buttons["receiptSearch"].tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
         search("milk", app: app)
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "167 receipts")
         capture(app, "filtered-item-search")

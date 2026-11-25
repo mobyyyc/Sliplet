@@ -41,4 +41,43 @@ After confirmation, Sliplet writes the new photo and its initial progress in one
 
 The Simulator checks cover system Photos cancellation, cancelling or confirming replacement, relaunch, discard, and the normal add action. The storage regression verifies that a malformed photo or a failed database write preserves the original photo, crop, rotation, privacy covers and reading step. All 50 targeted import and workflow unit tests and the unsigned iPhone Release build passed. Run the replacement UI test with the fictional Photos fixture from the [import demo](IMPORT_DEMO.md).
 
-**Next approval** · P18-04, combined Simulator verification.
+## P18-04 · Combined Simulator verification
+
+The checks use Xcode 27.2, iOS 27.0 and isolated iPhone 15 Pro Simulators with fictional receipts. The standard paths cover light and dark appearance. The accessibility path uses the Simulator's maximum Dynamic Type size, the software keyboard, and Sliplet's test switch for its Reduce Motion behavior.
+
+### Interaction counts
+
+The counts start on the named screen and end when the action takes effect. The pre-Phase-18 counts come from the routes in `e8e27eb`. The current counts come from the Simulator journeys. The history comparison uses two earlier purchases with recorded unit prices.
+
+| Starting point and action | Before Phase 18 | Current |
+| --- | --- | --- |
+| Purchase history · Read both recorded prices | No taps. Two purchase rows and two separate comparison rows. | No taps. Two purchase rows and one shared comparison action. |
+| Purchase history · Open a comparison for a particular earlier purchase | One tap on its comparison row. | Two taps to open the chooser and select the purchase. |
+| Filtered search · Clear all three active conditions | One tap once the horizontally scrolling control is visible. | Two taps from the fixed summary. No sideways scroll. The query stays in place. |
+| Filtered search · Remove only the archive condition | One tap once its chip is visible. | Two taps to remove it, then Done to return to results. The other conditions stay applied. |
+| Search with an eligible archived match · Include the archived result | One tap. | One tap. |
+| Wallet · Continue an unfinished import | One tap. | One tap. |
+| Wallet · Discard an unfinished import | Two taps including confirmation. | Three taps including the options menu and confirmation. |
+| Wallet · Start another photo from Photos while an unfinished import exists | Five taps, including discarding the old import before opening Photos. | Five taps, with the replacement confirmation after Photos. Cancelling preserves the old import. |
+| Wallet · Open photo source choices with nothing pending | One tap. | One tap. |
+
+### Long receipts and large wallets
+
+A 31-item receipt opened from Purchase overview and scrolled until its total cleared the bottom actions. Going back restored its originating row. Purchase history opened a late item in a previous receipt, highlighted the item and restored the history row within 5 points on return.
+
+| Fictional receipts | Papers before and after one drag | Drag and snapshot | Detail round trip | Search to result count |
+| ---: | ---: | ---: | ---: | ---: |
+| 10 | 8 → 10 | 2.64 s | 3.06 s | 1.90 s |
+| 50 | 8 → 10 | 2.63 s | 3.01 s | 1.93 s |
+| 200 | 8 → 10 | 2.57 s | 2.94 s | 1.86 s |
+| 1,000 | 8 → 10 | 2.58 s | 2.97 s | 1.87 s |
+
+At each size, the saved wallet reopened, the card returned within 4 points of its original position, and search found all the matching receipts. The 200- and 1,000-receipt runs also found an older receipt across the year boundary. The timings are single XCTest samples and include input, queries and idle waits. Frame pacing and VoiceOver operation remain for physical-device verification.
+
+### Accessibility and closeout
+
+The maximum-size wallet screenshot exposed a split word in **Continue import** and an ellipsis extending past its round button. At accessibility sizes, the primary action now gives the full label the available width. The adjacent symbol stays within its 44-point target. The final screenshot shows the label wrapping between words. The Photos cancellation and replacement journey passed at both standard and maximum text sizes.
+
+The UI tests now dismiss the system Photos notice when present, scroll to the AI method before selecting it, and open Search and the Month picker through their current controls. The scoped reruns passed after these test updates. The archived-result journey kept its query and filters after opening the source photo, and the reading screen still offered Stop after its delayed status update with Reduce Motion.
+
+Phase 18 is complete in Simulator. Nineteen distinct UI tests passed across the scoped runs, along with the unsigned iPhone Release build.

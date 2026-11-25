@@ -82,12 +82,20 @@ import XCTest
             XCTAssertTrue(choose.waitForExistence(timeout: 5)); choose.tap()
             let photos = app.buttons["Photo library"]
             XCTAssertTrue(photos.waitForExistence(timeout: 5)); photos.tap()
+            // At the largest system text size, the first-use Photos notice can fill the picker.
+            if app.staticTexts["Private Access to Photos"].firstMatch.waitForExistence(timeout: 2) {
+                app.buttons["Close"].firstMatch.tap()
+            }
             let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo,' AND label CONTAINS '2036'")).firstMatch
             XCTAssertTrue(photo.waitForExistence(timeout: 15), "Load the dated synthetic fixture into Simulator Photos first")
             return photo
         }
 
         returnToWallet()
+        XCTAssertTrue(resume.isHittable)
+        XCTAssertTrue(options.isHittable)
+        XCTAssertGreaterThanOrEqual(options.frame.height, 44)
+        XCTAssertLessThanOrEqual(resume.frame.maxX, options.frame.minX)
         let wallet = XCTAttachment(screenshot: app.screenshot())
         wallet.name = "Unfinished import actions"; wallet.lifetime = .keepAlways; add(wallet)
         _ = openPhotoLibrary()
@@ -269,7 +277,9 @@ extension ReceiptUploadUITests {
         app.launch()
         for id in ["uploadFixture", "adjustPhotoContinue", "previewAI", "readingMethodContinue", "reviewUpload"] {
             let button = app.buttons[id]
-            XCTAssertTrue(button.waitForExistence(timeout: 20))
+            XCTAssertTrue(button.waitForExistence(timeout: 20), "\(id) should be available")
+            if id == "previewAI" { reveal(button, in: app) }
+            if id == "readingMethodContinue" { XCTAssertEqual(button.label, "Hide sensitive details") }
             button.tap()
         }
         let consent = app.switches["uploadConsent"]
