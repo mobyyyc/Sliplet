@@ -2,7 +2,7 @@
 
 ## Phase 19 · Finish drafts and recover searches
 
-The roadmap is ready. P19-01 · Measure saved-draft resumption and empty filtered search in Simulator awaits approval. [Roadmap and acceptance criteria](docs/PHASE19_EVERYDAY_WORKFLOWS.md).
+P19-01 · Saved-draft resumption and empty filtered search baselines are complete in Simulator. P19-02 · Make saved drafts easier to resume awaits approval. [Roadmap and measured baseline](docs/PHASE19_EVERYDAY_WORKFLOWS.md).
 
 ## Phase 18 · Everyday interface refinements · Closed in Simulator
 

@@ -23,4 +23,35 @@
 - Continue an import, reopen a saved draft and edit a finished receipt remain distinct actions. P19-01 can record interruption during edits to finished receipts as a separate finding. A recovery feature for that case needs its own proposal for persistence, Cancel and review semantics.
 - Use fictional receipts in the first walkthrough and in recorded evidence. Keep the exact completion requirements for saved receipts and use explicit actions to change a search scope.
 
-**Next approval** · P19-01, the Simulator baseline for returning to a saved draft and recovering from an empty filtered search.
+## P19-01 · Simulator baseline
+
+Both journeys passed on isolated iPhone 15 Pro Simulators running iOS 27.0 against the planning commit `e075af1`. The saved-draft fixture used a local fake reading response containing 36 fictional items with one missing amount. The pending import used a different photo from the Simulator library. The search fixture used one item with a unique receipt match. The audit counts taps, drags and text entries along each route. Fixture setup, relaunch and assertions sit outside the counts. Search submission is included in its text entry.
+
+### Find a saved draft
+
+| From Wallet | To Review | To the required amount | Drags or text entry |
+| --- | ---: | ---: | ---: |
+| One draft with its paper visible | 2 taps | 3 taps | 0 |
+| One draft reached through **Filters → Collection → Needs review → Apply** | 6 taps | 7 taps | 0 |
+| Two saved drafts and a pending photo import, through the same filter | 6 taps | 7 taps | 0 |
+
+The saved draft reopened after relaunch with the last amount still missing and the source photo available. Leaving the correction returned to the same visible wallet paper within 5 points. The filtered route returned to its draft scope. In the two-draft fixture, a deliberate tap on **Continue import** took one tap to reach the separate photo's reading-method step. Reopening the saved draft afterward left that import available.
+
+**P19-02 entry point** · Use one **Needs review** action next to the saved count in the wallet pocket. In List, place the action as a row before the first receipt group. Show it at unfiltered home when there are active saved drafts. With one draft, open its existing review. With several, open a draft list and let the user choose. Keep the path to the required field in the existing review screen. This makes the one-draft target measurable from home to the same missing field.
+
+### Recover an empty filtered search
+
+The same item query was used with a conflicting store filter, with the only matching receipt archived, and after removing that fictional receipt. The conflicting store test also selected **Starred** and enabled **Include archived** to make the effect of each recovery action observable.
+
+| From Wallet with the stated starting filters | Taps to the outcome | Text entries | Drags | Outcome |
+| --- | ---: | ---: | ---: | --- |
+| Store filter hides the item, then remove only Store | 4 | 1 | 0 | Result returns. The last three taps open the summary, remove Store and close the sheet. Starred and Include archived stay selected. |
+| Same store filter, then use **Clear filters** | 3 | 1 | 0 | Result returns in two taps from the empty screen. Starred and Include archived are also cleared. |
+| Archive contains the only match | 2 | 1 | 0 | **Include archived** reaches the result in one tap from the empty screen. |
+| The item is absent, including from the archive | 1 | 1 | 0 | The generic empty state appears. With Include archived on, it still suggests clearing a filter. |
+
+Opening the result, viewing Original and returning took four additional taps. Both restored results kept their query and remaining filters, and returned within 12 points of the same row position.
+
+**P19-03 entry point** · Put the recovery action inside the empty search card. Show it when clearing the purchase filters alone produces a match in the current collection and archive scope. Target one tap from the empty screen, down from three while preserving the same scope. An eligible archive-only match under current filters can keep its existing path. For a genuine miss, offer guidance on changing the search text.
+
+**Next approval** · P19-02, make saved drafts easier to resume.
