@@ -544,6 +544,8 @@ struct ReceiptWalletScene: View {
         let upwardTravel = max(0, -pocketMotion)
         return AtmosphericBackground(alignedToWindow: true)
             .frame(width: geometry.size.width, height: 32 + geometry.safeAreaInsets.bottom + feather + upwardTravel)
+            // Keep a local backing behind the texture when navigation or the keyboard changes its crop.
+            .background(Color(uiColor: .systemBackground), ignoresSafeAreaEdges: [])
             .mask {
                 VStack(spacing: 0) {
                     LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)

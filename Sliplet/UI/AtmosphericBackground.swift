@@ -13,7 +13,8 @@ struct AtmosphericBackground: View {
                 .frame(width: bounds?.width ?? proxy.size.width, height: bounds?.height ?? proxy.size.height)
                 .blur(radius: 4, opaque: true)
                 .clipped()
-                .offset(x: bounds == nil ? 0 : -region.minX, y: bounds == nil ? 0 : -region.minY)
+                // This region spans the wallet’s width. Keep the image moving horizontally with the page.
+                .offset(y: bounds == nil ? 0 : -region.minY)
         }.clipped().allowsHitTesting(false).accessibilityHidden(true)
     }
 
