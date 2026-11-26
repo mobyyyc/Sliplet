@@ -68,4 +68,16 @@ The shortcut leaves a pending photo import available through **Continue import**
 
 The first check caught a roughly 25-point movement after canceling from Wallet. The final run restored the paper within the 5-point test tolerance, and List restored the entry within the same tolerance. The verification covered relaunch, the chooser in Wallet and List, the separate pending photo, archive visibility, correction followed by discard, finalization, and a 1,000-receipt wallet. The one-draft shortcut passed at the Simulator's maximum Dynamic Type size with Reduce Motion. Five distinct UI tests, 38 targeted unit tests and the unsigned iPhone Release build passed. The multi-draft test uses the fictional Photos fixture. [Simulator fixture](IMPORT_DEMO.md)
 
-**Next approval** · P19-03, recover a filtered search in place.
+## P19-03 · Recover a filtered search in place
+
+**Clear purchase filters** appears on the empty search card when the indexed receipt evidence confirms a match in the current collection and archive scope. It clears store, date and total constraints together and keeps the search text, collection, Include archived choice and selected filter currency. An archived match under the current constraints keeps the existing **Include archived** action as the first choice. A genuine miss suggests changing the search terms.
+
+The same fictional item from P19-01 returned in one tap from the empty screen while retaining Starred and Include archived. P19-01 took three taps to remove just the store filter with those choices intact. The new UI test blocks the match with store, month and total filters at once. After clearing them, Original and Back preserved the matching row within 12 points and kept the query and remaining scope.
+
+At accessibility sizes the empty card gives its space to the recovery button. The Simulator's largest Dynamic Type setting kept the whole button above the search field with the keyboard open. VoiceOver hint text describes the three kinds of filter the action clears.
+
+The recovery query stops at the first eligible match using the existing index. Each search update prepares its purchase filter bounds before the scan and builds rows for eligible receipts. A 1,000-receipt Simulator Debug test checked 60 consecutive query updates with alternating store and amount constraints. The 95th-percentile update went from 51.6 ms in the first candidate to 22.4 ms in the optimized candidate. The maximum in the final sample was 22.6 ms. The samples measure the workspace update.
+
+Four Simulator UI cases and 21 targeted unit tests passed, along with the unsigned iPhone Release build. The UI cases include the combined filters, maximum text size and keyboard, archived-only recovery, and a 1,000-receipt wallet.
+
+**Next approval** · P19-04, replay the two Phase 19 journeys and close the phase.

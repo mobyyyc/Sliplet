@@ -68,6 +68,138 @@ import XCTest
         XCTAssertEqual(app.searchFields.firstMatch.value as? String, "milk")
         app.terminate()
     }
+
+    func testClearPurchaseFiltersKeepsSearchScopeAndOriginalReturn() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "wallet", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 35))
+        app.buttons["receiptSearch"].tap()
+        let query = app.searchFields.firstMatch
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
+        let term = "TEST COFFEE"
+        query.typeText(term + "\n")
+        let row = results(app).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let options = app.buttons["receiptOptions"]
+        XCTAssertTrue(options.waitForExistence(timeout: 10))
+        options.tap()
+        app.buttons["Star receipt"].tap()
+        app.buttons["back"].tap()
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
+
+        app.buttons["searchFilters"].tap()
+        let collection = app.buttons["filterCollection"]
+        XCTAssertTrue(collection.waitForExistence(timeout: 10))
+        collection.tap()
+        app.buttons["Starred"].tap()
+        app.buttons["searchMerchantFilter"].tap()
+        app.buttons["SYNTHETIC CORNER"].tap()
+        let archive = app.switches["searchIncludeArchived"]
+        archive.coordinate(withNormalizedOffset: .init(dx: 0.95, dy: 0.5)).tap()
+        XCTAssertEqual(archive.value as? String, "1")
+        app.buttons["filterDateMode"].tap()
+        app.buttons["Month"].tap()
+        let month = app.buttons["searchMonthFilter"]
+        reveal(month, app: app)
+        month.tap()
+        app.buttons["Date unavailable"].tap()
+        let maximum = app.textFields["filterMaximum"]
+        reveal(maximum, app: app)
+        maximum.tap()
+        maximum.typeText("0")
+        app.buttons["applySearchFilters"].tap()
+        XCTAssertTrue(collection.waitForNonExistence(timeout: 10))
+
+        let clear = app.buttons["clearSearchPurchaseFilters"]
+        let summary = app.buttons["searchFilterSummary"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts")
+        let blockedScope = summary.value as? String ?? ""
+        for title in ["Starred", "SYNTHETIC CORNER", "Date unavailable", "Including archived", "CAD ≤ 0"] {
+            XCTAssertTrue(blockedScope.contains(title), title)
+        }
+
+        app.buttons["Clear text"].tap()
+        query.tap()
+        query.typeText("no matching item\n")
+        XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Try a different merchant, item or item code."].exists)
+        XCTAssertFalse(clear.exists)
+        XCTAssertFalse(app.buttons["includeArchivedSearchMatches"].exists)
+
+        app.buttons["Clear text"].tap()
+        query.tap()
+        query.typeText(term)
+        XCTAssertTrue(clear.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        XCTAssertTrue(clear.isHittable)
+        capture(app, "purchase-filter-recovery-keyboard")
+        clear.tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["searchResultCount"].label, "1 receipt")
+        XCTAssertEqual(query.value as? String, term)
+        let keptScope = summary.value as? String ?? ""
+        XCTAssertTrue(keptScope.contains("Starred") && keptScope.contains("Including archived"))
+        XCTAssertFalse(keptScope.contains("SYNTHETIC CORNER"))
+        XCTAssertFalse(keptScope.contains("Date unavailable"))
+        XCTAssertFalse(keptScope.contains("CAD ≤ 0"))
+        XCTAssertFalse(clear.exists)
+
+        if app.keyboards.firstMatch.exists {
+            query.typeText("\n")
+            XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 10))
+        }
+        let id = row.identifier
+        let before = row.frame.minY
+        row.tap()
+        let original = app.buttons["original"]
+        XCTAssertTrue(original.waitForExistence(timeout: 10))
+        original.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["sourceRaster"].firstMatch.waitForExistence(timeout: 12))
+        let done = app.buttons["sourceDone"]
+        done.tap()
+        XCTAssertTrue(done.waitForNonExistence(timeout: 10))
+        app.buttons["back"].tap()
+        let returned = app.buttons[id]
+        XCTAssertTrue(returned.waitForExistence(timeout: 12))
+        XCTAssertTrue(returned.isHittable)
+        XCTAssertEqual(returned.frame.minY, before, accuracy: 12)
+        XCTAssertEqual(query.value as? String, term)
+        XCTAssertEqual(summary.value as? String, keptScope)
+    }
+
+    func testPurchaseFilterRecoveryAtMaximumTextSizeWithKeyboard() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "search", "--t05-dark", "--t05-reduce-motion"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["3 receipts"].waitForExistence(timeout: 30))
+        app.buttons["searchFilters"].tap()
+        let store = app.buttons["searchMerchantFilter"]
+        XCTAssertTrue(store.waitForExistence(timeout: 10))
+        store.tap()
+        app.buttons["FICTIONAL CORNER MART"].tap()
+        app.buttons["applySearchFilters"].tap()
+        XCTAssertTrue(store.waitForNonExistence(timeout: 10))
+        app.buttons["receiptSearch"].tap()
+        let query = app.searchFields.firstMatch
+        XCTAssertTrue(query.waitForExistence(timeout: 10))
+        let term = "fictional grove milk"
+        query.typeText(term)
+        let clear = app.buttons["clearSearchPurchaseFilters"]
+        XCTAssertTrue(clear.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        XCTAssertTrue(clear.isHittable)
+        XCTAssertGreaterThanOrEqual(clear.frame.height, 44)
+        XCTAssertLessThanOrEqual(clear.frame.maxY, query.frame.minY)
+        capture(app, "purchase-filter-recovery-largest-text")
+        clear.tap()
+        XCTAssertTrue(results(app).firstMatch.waitForExistence(timeout: 12))
+        XCTAssertEqual(query.value as? String, term)
+        XCTAssertFalse(clear.exists)
+    }
+
     func testWalletListFollowsBrowsedPurchaseAndCollectionsAreDirect() {
         let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "wallet-months", "--t05-light"]
         app.launchEnvironment["SLIPLET_PREVIEW_COUNT"] = "50"; app.launch()

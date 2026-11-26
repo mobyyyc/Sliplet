@@ -155,6 +155,98 @@ import XCTest
         XCTAssertEqual(model.browsing.receiptCount, 1)
     }
 
+    func testClearPurchaseFiltersPreservesQueryCollectionArchiveAndCurrency() throws {
+        var archivedStar = SearchFixture.record()
+        archivedStar.organization = .init(archived: true, starred: true)
+        let other = SearchFixture.record()
+        let model = ReceiptWorkspace()
+        model.active = true
+        model.searching = true
+        model.receipts = [archivedStar, other]
+        model.searchQuery = "old 123456"
+
+        var filters = ReceiptBrowsingFilter()
+        filters.dateMode = .day
+        filters.start = try XCTUnwrap(Calendar(identifier: .gregorian).date(from: .init(year: 2026, month: 10, day: 25)))
+        filters.maximum = "2.99"
+        filters.currency = try ReceiptCurrency(code: "USD", minorUnitScale: 2)
+        model.applyBrowseFilters(merchant: .value("FICTIONAL DIFFERENT STORE"), month: .all,
+                                 archived: true, scope: "Starred", extra: filters)
+        XCTAssertEqual(model.browsing.receiptCount, 0)
+        XCTAssertTrue(model.hasMatchOutsidePurchaseFilters)
+
+        let version = model.browseVersion
+        model.clearPurchaseFiltersForSearch()
+        XCTAssertEqual(model.browseVersion, version + 1)
+        XCTAssertEqual(model.searchQuery, "old 123456")
+        XCTAssertEqual(model.collection, "Starred")
+        XCTAssertTrue(model.includeArchived)
+        XCTAssertEqual(model.merchantFilter, .all)
+        XCTAssertEqual(model.monthFilter, .all)
+        XCTAssertFalse(model.browsingFilter.active)
+        XCTAssertEqual(model.browsingFilter.currency, filters.currency)
+        XCTAssertFalse(model.hasMatchOutsidePurchaseFilters)
+        XCTAssertEqual(model.browsing.rows.map { $0.record.id }, [archivedStar.id])
+        XCTAssertEqual(model.browsing.rows.first?.match?.basis, .originalSKU)
+        XCTAssertEqual(model.receipts, [archivedStar, other])
+    }
+
+    func testRecoveryOffersOnlyActionsThatFindResultsInTheirOwnScope() {
+        let active = SearchFixture.record()
+        var archived = revised(SearchFixture.record(), date: nil, archived: true)
+        archived.organization?.starred = true
+        let model = ReceiptWorkspace()
+        model.receipts = [active, archived]
+        model.searchQuery = "milk"
+        model.applyBrowseFilters(merchant: .all, month: .missing, archived: false)
+        XCTAssertTrue(model.hasArchivedSearchMatch)
+        XCTAssertFalse(model.hasMatchOutsidePurchaseFilters, "Prefer the archive shortcut when it preserves the current purchase filters")
+        model.applyBrowseFilters(merchant: .value("FICTIONAL DIFFERENT STORE"), month: .all, archived: false)
+        XCTAssertTrue(model.hasMatchOutsidePurchaseFilters)
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+        model.collection = "Starred"
+        XCTAssertFalse(model.hasMatchOutsidePurchaseFilters, "The matching star is archived, and archived receipts are currently excluded")
+        XCTAssertFalse(model.hasArchivedSearchMatch, "The archive shortcut would also have to keep the store filter")
+        model.collection = "Archive"
+        XCTAssertTrue(model.hasMatchOutsidePurchaseFilters)
+        XCTAssertFalse(model.hasArchivedSearchMatch)
+
+        for query in ["", "  ", "…", String(repeating: "a", count: 513), "missingword", "milk creme"] {
+            model.searchQuery = query
+            XCTAssertFalse(model.hasMatchOutsidePurchaseFilters, query)
+            XCTAssertFalse(model.hasArchivedSearchMatch, query)
+        }
+    }
+
+    func testRecoveryFollowsRapidQueriesAndFilterChangesWithThousandReceipts() {
+        let model = ReceiptWorkspace()
+        model.receipts = (0..<1_000).map { _ in SearchFixture.record() }
+        XCTAssertEqual(model.searchIndex.count, 1_000)
+        let cases: [(String, Bool)] = [
+            ("m", true), ("mi", true), ("mil", true), ("milk", true),
+            ("milk x", false), ("milk absent", false), ("old 123456", true),
+            ("fennel", true), ("no matching evidence", false), ("", false)
+        ]
+        var durations: [Double] = []
+        for turn in 0..<6 {
+            var amount = ReceiptBrowsingFilter()
+            amount.maximum = "2.99"
+            model.applyBrowseFilters(merchant: turn.isMultiple(of: 2) ? .value("FICTIONAL DIFFERENT STORE") : .all,
+                                     month: .all, archived: false, extra: amount)
+            for (query, expectedRecovery) in cases {
+                let start = ProcessInfo.processInfo.systemUptime
+                model.searchQuery = query
+                durations.append(ProcessInfo.processInfo.systemUptime - start)
+                XCTAssertEqual(model.hasMatchOutsidePurchaseFilters, expectedRecovery)
+                XCTAssertEqual(model.browsing.receiptCount, 0)
+                XCTAssertFalse(model.hasArchivedSearchMatch)
+            }
+        }
+        XCTAssertEqual(model.searchIndex.count, 1_000)
+        let sorted = durations.sorted()
+        print("P19-03 fictional search updates=\(sorted.count) p95_ms=\(sorted[56] * 1_000) max_ms=\(sorted[59] * 1_000)")
+    }
+
     func testDateBoundsAreInclusiveAndAmountScopeNeverMixesCurrencies() throws {
         let record = SearchFixture.record(); let date = try XCTUnwrap(record.current.fields.purchaseDate)
         let calendar = Calendar(identifier: .gregorian)

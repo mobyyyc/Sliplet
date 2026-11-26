@@ -22,17 +22,27 @@ struct ReceiptBrowsingFilter: Equatable {
         if let low, let high, low > high { return "Maximum must be at least the minimum." }
         return nil
     }
-    func accepts(_ record: ReceiptRecord) -> Bool {
-        if dateMode == .day || dateMode == .range {
-            guard let date = record.current.fields.purchaseDate else { return false }
-            let key = String(format: "%04d-%02d-%02d", date.year, date.month, date.day)
-            guard key >= Self.key(start), key <= Self.key(dateMode == .day ? start : end) else { return false }
+    func predicate() -> (ReceiptRecord) -> Bool {
+        guard validation == nil else { return { _ in false } }
+        let hasDateBounds = dateMode == .day || dateMode == .range
+        let firstDay = hasDateBounds ? Self.key(start) : nil
+        let lastDay = hasDateBounds ? Self.key(dateMode == .day ? start : end) : nil
+        let low = minimum.isEmpty ? nil : ExactInput.money(minimum, scale: currency.minorUnitScale)
+        let high = maximum.isEmpty ? nil : ExactInput.money(maximum, scale: currency.minorUnitScale)
+        return { record in
+            if let firstDay, let lastDay {
+                guard let date = record.current.fields.purchaseDate else { return false }
+                let key = String(format: "%04d-%02d-%02d", date.year, date.month, date.day)
+                guard key >= firstDay, key <= lastDay else { return false }
+            }
+            if low != nil || high != nil {
+                guard let total = record.current.fields.total, total.currency == currency else { return false }
+                if let low, total.minorUnits < low { return false }
+                if let high, total.minorUnits > high { return false }
+            }
+            return true
         }
-        if hasAmount {
-            guard validation == nil, let total = record.current.fields.total, total.currency == currency else { return false }
-            if let low = ExactInput.money(minimum, scale: currency.minorUnitScale), total.minorUnits < low { return false }
-            if let high = ExactInput.money(maximum, scale: currency.minorUnitScale), total.minorUnits > high { return false }
-        }
-        return true
     }
+
+    func accepts(_ record: ReceiptRecord) -> Bool { predicate()(record) }
 }

@@ -51,6 +51,7 @@ struct ReceiptPurchaseHistoryView: View {
     var openOverview: (String?) -> Void
     var openSavedDrafts: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
@@ -150,24 +151,44 @@ struct ReceiptPurchaseHistoryView: View {
 
     @ViewBuilder private var emptyState: some View {
         if workspace.hasArchivedSearchMatch {
-            VStack(spacing: 16) {
-                Label("Matches in archive", systemImage: "archivebox")
+            searchRecovery(title: "Matches in archive", symbol: "archivebox",
+                           button: "Include archived", identifier: "includeArchivedSearchMatches") {
+                workspace.includeArchived = true
+            }
+        } else if workspace.hasMatchOutsidePurchaseFilters {
+            searchRecovery(title: typeSize.isAccessibilitySize ? nil : "Matches outside filters",
+                           symbol: "line.3.horizontal.decrease.circle",
+                           button: "Clear purchase filters", identifier: "clearSearchPurchaseFilters",
+                           hint: "Matches exist outside your store, date and total filters. Clears those filters.",
+                           action: workspace.clearPurchaseFiltersForSearch)
+        } else {
+            let hasQuery = !workspace.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ContentUnavailableView(hasQuery ? "No matches" : "No receipts here",
+                systemImage: hasQuery ? "magnifyingglass" : "doc.text",
+                description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." :
+                    hasQuery ? "Try a different merchant, item or item code." :
+                    hasFilters ? "Try clearing a filter." : "Try a merchant, item or item code."))
+        }
+    }
+
+    private func searchRecovery(title: String?, symbol: String, button: String, identifier: String,
+                                hint: String = "", action: @escaping () -> Void) -> some View {
+        VStack(spacing: 16) {
+            if let title {
+                Label(title, systemImage: symbol)
                     .labelStyle(.titleAndIcon)
                     .font(.headline)
                     .accessibilityAddTraits(.isHeader)
-                Button("Include archived") { workspace.includeArchived = true }
-                    .buttonStyle(ReceiptSecondaryStyle())
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("includeArchivedSearchMatches")
             }
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
-        } else {
-            ContentUnavailableView(workspace.searchQuery.isEmpty ? "No receipts here" : "No matches",
-                systemImage: workspace.searchQuery.isEmpty ? "doc.text" : "magnifyingglass",
-                description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." : hasFilters ? "Try clearing a filter or changing your search." : "Try a merchant, item or item code."))
+            Button(button, action: action)
+                .buttonStyle(ReceiptSecondaryStyle())
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHint(hint)
+                .accessibilityIdentifier(identifier)
         }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, title == nil ? 8 : 24)
     }
 
     @ViewBuilder private func sectionHeading(_ section: ReceiptBrowsingSnapshot.Section) -> some View {

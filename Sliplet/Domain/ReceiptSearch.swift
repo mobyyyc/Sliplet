@@ -119,12 +119,13 @@ struct ReceiptSearchIndex: Sendable {
     }
 
     func results(query: String, collection: String = "All receipts", includeArchived: Bool = false,
-                 merchant: ReceiptHistoryChoice = .all, month: ReceiptHistoryChoice = .all) -> [Result] {
+                 merchant: ReceiptHistoryChoice = .all, month: ReceiptHistoryChoice = .all,
+                 accepting: (ReceiptRecord) -> Bool = { _ in true }) -> [Result] {
         guard let query = Query(query) else { return [] }
         return documents.compactMap { document in
             let record = document.record
-            guard collection == "Archive" ? record.isArchived : includeArchived || !record.isArchived,
-                  Self.accepts(record, collection: collection, merchant: merchant, month: month) else { return nil }
+            guard Self.accepts(record, collection: collection, includeArchived: includeArchived,
+                               merchant: merchant, month: month), accepting(record) else { return nil }
             if !query.searching { return Result(record: record, matches: []) }
             if query.matches(document.merchants) {
                 let field = document.merchants.first { query.matches([$0]) } ?? document.merchants[0]
@@ -148,24 +149,36 @@ struct ReceiptSearchIndex: Sendable {
         }
     }
 
-    /// Probe only archived documents and stop at the first match, without constructing result rows.
     func hasArchivedMatch(query: String, collection: String, merchant: ReceiptHistoryChoice,
                           month: ReceiptHistoryChoice, accepting: (ReceiptRecord) -> Bool) -> Bool {
+        hasMatchingDocument(query) { record in
+            record.isArchived && Self.accepts(record, collection: collection, includeArchived: true,
+                                              merchant: merchant, month: month) && accepting(record)
+        }
+    }
+
+    func hasMatchIgnoringPurchaseFilters(query: String, collection: String, includeArchived: Bool) -> Bool {
+        hasMatchingDocument(query) {
+            Self.accepts($0, collection: collection, includeArchived: includeArchived, merchant: .all, month: .all)
+        }
+    }
+
+    /// Reuse the indexed evidence and stop at the first eligible match.
+    private func hasMatchingDocument(_ query: String, accepting: (ReceiptRecord) -> Bool) -> Bool {
         guard let query = Query(query), query.searching else { return false }
         return documents.contains { document in
-            let record = document.record
-            guard record.isArchived, Self.accepts(record, collection: collection, merchant: merchant, month: month),
-                  accepting(record) else { return false }
+            guard accepting(document.record) else { return false }
             return query.matches(document.merchants) || document.items.contains { query.matches(document.merchants, with: $0.fields) }
         }
     }
 
-    private static func accepts(_ record: ReceiptRecord, collection: String, merchant: ReceiptHistoryChoice,
-                                month: ReceiptHistoryChoice) -> Bool {
-        (collection != "Starred" || record.isStarred)
+    private static func accepts(_ record: ReceiptRecord, collection: String, includeArchived: Bool,
+                                merchant: ReceiptHistoryChoice, month: ReceiptHistoryChoice) -> Bool {
+        (collection == "Archive" ? record.isArchived : includeArchived || !record.isArchived)
+            && (collection != "Starred" || record.isStarred)
             && (collection != "Needs review" || !ReceiptCompletion.isComplete(record))
             && merchant.accepts(record.current.fields.merchant)
-            && month.accepts(ReceiptHistory.monthKey(record))
+            && (month == .all || month.accepts(ReceiptHistory.monthKey(record)))
     }
 }
 

@@ -64,13 +64,15 @@ final class ReceiptWorkspace {
     var walletJumpID: String?
     var searching = false
     var browsingFilter = ReceiptBrowsingFilter() { didSet { if browsingFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
-    var hasBrowseFilters: Bool { merchantFilter != .all || monthFilter != .all || includeArchived || collection != "All receipts" || browsingFilter.active }
+    private var hasPurchaseFilters: Bool { merchantFilter != .all || monthFilter != .all || browsingFilter.active }
+    var hasBrowseFilters: Bool { hasPurchaseFilters || includeArchived || collection != "All receipts" }
     var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true) } } }
     var searchFiltersExpanded = false
     var searchReturnID: String?
     var browseAnchor: ReceiptBrowsingAnchor?
     private(set) var browsing = ReceiptBrowsingSnapshot()
     private(set) var hasArchivedSearchMatch = false
+    private(set) var hasMatchOutsidePurchaseFilters = false
     private(set) var browseMerchants: [String] = []
     private(set) var browseMonths: [String] = []
     private(set) var browseMonthTitles: [String: String] = [:]
@@ -302,13 +304,16 @@ final class ReceiptWorkspace {
         guard !updatingBrowseFilters else { return }
         let previous = browsing
         let filter = browsingFilter
+        let acceptsPurchase = filter.predicate()
         browseDateTitle = filter.dateMode == .day ? filter.start.formatted(date: .abbreviated, time: .omitted) : filter.dateMode == .range ? filter.start.formatted(date: .abbreviated, time: .omitted) + " – " + filter.end.formatted(date: .abbreviated, time: .omitted) : nil
         browseAmountTitle = filter.hasAmount ? filter.currency.code + " " + (filter.minimum.isEmpty ? "≤ " + filter.maximum : filter.maximum.isEmpty ? "≥ " + filter.minimum : filter.minimum + " – " + filter.maximum) : nil
         let results = searchIndex.results(query: searchQuery, collection: collection,
-            includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter).filter { filter.accepts($0.record) }
+            includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter, accepting: acceptsPurchase)
         hasArchivedSearchMatch = results.isEmpty && !includeArchived && collection != "Archive"
             && searchIndex.hasArchivedMatch(query: searchQuery, collection: collection, merchant: merchantFilter,
-                                            month: monthFilter, accepting: filter.accepts)
+                                            month: monthFilter, accepting: acceptsPurchase)
+        hasMatchOutsidePurchaseFilters = results.isEmpty && !hasArchivedSearchMatch && hasPurchaseFilters
+            && searchIndex.hasMatchIgnoringPurchaseFilters(query: searchQuery, collection: collection, includeArchived: includeArchived)
         let today = ReceiptBrowsingPeriod.today()
         browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles, today: today)
         let newestFirst = results.map(\.record)
@@ -341,6 +346,12 @@ final class ReceiptWorkspace {
         refreshBrowsing(resetAnchor: true)
     }
     func resetBrowseFilters() { applyBrowseFilters(merchant: .all, month: .all, archived: false, scope: "All receipts", extra: ReceiptBrowsingFilter()) }
+    func clearPurchaseFiltersForSearch() {
+        guard active, !privacyCovered, !saving, flow == .wallet, searching, hasMatchOutsidePurchaseFilters else { return }
+        var filters = ReceiptBrowsingFilter()
+        filters.currency = browsingFilter.currency
+        applyBrowseFilters(merchant: .all, month: .all, archived: includeArchived, extra: filters)
+    }
     func showCollection(_ value: String) {
         collection = value; library = true
     }
