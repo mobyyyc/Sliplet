@@ -51,23 +51,26 @@ struct ReceiptPurchaseHistoryView: View {
     var openOverview: (String?) -> Void
     var openSavedDrafts: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
+    let isSearchResults: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
     init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {},
-         openOverview: @escaping (String?) -> Void, openSavedDrafts: @escaping () -> Void,
+         isSearchResults: Bool, openOverview: @escaping (String?) -> Void, openSavedDrafts: @escaping () -> Void,
          requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace; self.openSettings = openSettings; self.openOverview = openOverview
         self.openSavedDrafts = openSavedDrafts
-        self.requestDelete = requestDelete
-        _pendingRestore = State(initialValue: workspace.browseAnchor)
+        self.requestDelete = requestDelete; self.isSearchResults = isSearchResults
+        _pendingRestore = State(initialValue: isSearchResults || !workspace.searching ? workspace.browseAnchor : nil)
     }
+    private var snapshot: ReceiptBrowsingSnapshot { isSearchResults ? workspace.browsing : workspace.homeBrowsing }
+    private var isActiveSurface: Bool { workspace.flow == .wallet && workspace.searching == isSearchResults }
     private var hasFilters: Bool { workspace.hasBrowseFilters }
 
     var body: some View {
-        let draftCount = workspace.savedDraftShortcutCount
+        let draftCount = isSearchResults ? 0 : workspace.homeSavedDraftShortcutCount
         GeometryReader { geometry in
             let viewportBottom = geometry.frame(in: .global).maxY
             ScrollViewReader { proxy in
@@ -93,19 +96,19 @@ struct ReceiptPurchaseHistoryView: View {
                             .id("browse-top")
                         }
                     }
-                    if workspace.browsing.sections.isEmpty {
+                    if snapshot.sections.isEmpty {
                         Section {
                             emptyState
                         } header: { resultCount.id(draftCount == 0 ? "browse-top" : "browse-count") }
                     }
-                    ForEach(workspace.browsing.sections) { section in
+                    ForEach(snapshot.sections) { section in
                         Section {
                             ForEach(section.rows) { row in
                                 resultRow(row, viewportBottom: viewportBottom)
                             }
                         } header: {
                             VStack(alignment: .leading, spacing: 10) {
-                                if section.id == workspace.browsing.sections.first?.id {
+                                if section.id == snapshot.sections.first?.id {
                                     resultCount.id(draftCount == 0 ? "browse-top" : "browse-count")
                                 }
                                 sectionHeading(section)
@@ -126,9 +129,9 @@ struct ReceiptPurchaseHistoryView: View {
                     // its backing scroll view is unavailable; never leave a blank surface.
                     pendingRestore = nil
                 }
-                .onAppear { restore(using: proxy) }
+                .onAppear { if isActiveSurface { restore(using: proxy) } }
                 .onChange(of: workspace.browseVersion) { _, _ in
-                    if workspace.flow == .wallet {
+                    if isActiveSurface {
                         if workspace.browseAnchor == nil {
                             pendingRestore = nil; scrollAccess.scrollToStart()
                             proxy.scrollTo("browse-top", anchor: .top)
@@ -136,13 +139,14 @@ struct ReceiptPurchaseHistoryView: View {
                     }
                 }
                 .onScrollPhaseChange { _, phase in
+                    guard isActiveSurface else { return }
                     if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
-                    guard phase == .idle, userScrolled, pendingRestore == nil, workspace.flow == .wallet else { return }
+                    guard phase == .idle, userScrolled, pendingRestore == nil else { return }
                     userScrolled = false
                     let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportBottom }
                         .min { $0.value.minY < $1.value.minY }
-                    if let first, let index = workspace.browsing.indexByID[first.key] {
-                        remember(workspace.browsing.rows[index])
+                    if let first, let index = snapshot.indexByID[first.key] {
+                        remember(snapshot.rows[index])
                     }
                 }
             }
@@ -150,19 +154,19 @@ struct ReceiptPurchaseHistoryView: View {
     }
 
     @ViewBuilder private var emptyState: some View {
-        if workspace.hasArchivedSearchMatch {
+        if isSearchResults && workspace.hasArchivedSearchMatch {
             searchRecovery(title: "Matches in archive", symbol: "archivebox",
                            button: "Include archived", identifier: "includeArchivedSearchMatches") {
                 workspace.includeArchived = true
             }
-        } else if workspace.hasMatchOutsidePurchaseFilters {
+        } else if isSearchResults && workspace.hasMatchOutsidePurchaseFilters {
             searchRecovery(title: typeSize.isAccessibilitySize ? nil : "Matches outside filters",
                            symbol: "line.3.horizontal.decrease.circle",
                            button: "Clear purchase filters", identifier: "clearSearchPurchaseFilters",
                            hint: "Matches exist outside your store, date and total filters. Clears those filters.",
                            action: workspace.clearPurchaseFiltersForSearch)
         } else {
-            let hasQuery = !workspace.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasQuery = isSearchResults && !workspace.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ContentUnavailableView(hasQuery ? "No matches" : "No receipts here",
                 systemImage: hasQuery ? "magnifyingglass" : "doc.text",
                 description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." :
@@ -192,7 +196,7 @@ struct ReceiptPurchaseHistoryView: View {
     }
 
     @ViewBuilder private func sectionHeading(_ section: ReceiptBrowsingSnapshot.Section) -> some View {
-        if !workspace.searching, let record = section.rows.first?.record {
+        if !isSearchResults, let record = section.rows.first?.record {
             let month = ReceiptHistory.monthKey(record)
             Button { openOverview(month) } label: {
                 HStack(spacing: 7) {
@@ -214,11 +218,11 @@ struct ReceiptPurchaseHistoryView: View {
     }
 
     private var resultCount: some View {
-        Text("\(workspace.browsing.receiptCount) \(workspace.browsing.receiptCount == 1 ? "receipt" : "receipts")")
+        Text("\(snapshot.receiptCount) \(snapshot.receiptCount == 1 ? "receipt" : "receipts")")
             .font(.caption).foregroundStyle(Color(uiColor: .secondaryLabel)).accessibilityIdentifier("searchResultCount")
     }
     private func restore(using proxy: ScrollViewProxy) {
-        guard let anchor = workspace.browseAnchor, workspace.browsing.indexByID[anchor.rowID] != nil else { return }
+        guard let anchor = workspace.browseAnchor, snapshot.indexByID[anchor.rowID] != nil else { return }
         pendingRestore = anchor
         proxy.scrollTo(anchor.rowID, anchor: .center)
         completeRestore()

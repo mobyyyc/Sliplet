@@ -143,7 +143,7 @@ struct ReceiptWalletScene: View {
                                 VStack(spacing: 24) {
                                     EmptyWalletArtwork().frame(width: 240, height: 190)
                                     VStack(spacing: 10) {
-                                        Text(workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty ? "No matching receipts" : workspace.receipts.isEmpty ? "A place for your receipts" : "Your wallet is clear").font(.title2.weight(.semibold))
+                                        Text(workspace.hasBrowseFilters ? "No matching receipts" : workspace.receipts.isEmpty ? "A place for your receipts" : "Your wallet is clear").font(.title2.weight(.semibold))
                                         if workspace.hasBrowseFilters {
                                             Text("Try changing or clearing your filters.")
                                         } else if workspace.hasPendingImport {
@@ -531,7 +531,7 @@ struct ReceiptWalletScene: View {
     }
     private func walletPocket(_ jump: @escaping () -> Void) -> some View {
         WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty,
-                    draftCount: workspace.savedDraftShortcutCount, showDrafts: openSavedDrafts,
+                    draftCount: workspace.homeSavedDraftShortcutCount, showDrafts: openSavedDrafts,
                     showOverview: { openOverview(records.last.flatMap(ReceiptHistory.monthKey)) }, jumpToLatest: jump)
             .fixedSize(horizontal: false, vertical: true)
             .allowsHitTesting(presented == nil)

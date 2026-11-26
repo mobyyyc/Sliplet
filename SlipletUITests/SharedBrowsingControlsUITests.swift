@@ -137,6 +137,63 @@ import XCTest
         XCTAssertFalse((summary.value as? String)?.contains("Including archived") == true)
     }
 
+    func testSearchEdgeSwipeCancelsShortDragAndClosesWithKeyboardOpen() {
+        let app = launch()
+        app.buttons["receiptSearch"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        let term = "no fictional match"
+        field.typeText(term)
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
+
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.36))
+        let short = app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.36))
+        edge.press(forDuration: 0.08, thenDragTo: short, withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertEqual(field.value as? String, term)
+        XCTAssertTrue(keyboard.exists)
+
+        let middle = app.coordinate(withNormalizedOffset: CGVector(dx: 0.30, dy: 0.48))
+        let right = app.coordinate(withNormalizedOffset: CGVector(dx: 0.78, dy: 0.48))
+        middle.press(forDuration: 0.08, thenDragTo: right)
+        XCTAssertTrue(field.exists)
+
+        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.36))
+        edge.press(forDuration: 0.08, thenDragTo: finish)
+        XCTAssertTrue(field.waitForNonExistence(timeout: 10))
+        XCTAssertFalse(keyboard.exists)
+        XCTAssertTrue(app.staticTexts["30 saved"].isHittable)
+        XCTAssertTrue(app.buttons["import"].isHittable)
+
+        app.buttons["receiptSearch"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, "Merchant, item or code")
+    }
+
+    func testSearchEdgeSwipeReturnsToListWithReduceMotion() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "search", "--t05-dark", "--t05-reduce-motion"]
+        app.launch()
+        let count = app.staticTexts["searchResultCount"]
+        XCTAssertTrue(count.waitForExistence(timeout: 30))
+        let before = count.label
+        app.buttons["receiptSearch"].tap()
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.typeText("no fictional match\n")
+        XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
+
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.40))
+        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.40))
+        edge.press(forDuration: 0.08, thenDragTo: finish)
+        XCTAssertTrue(field.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(count.isHittable)
+        XCTAssertEqual(count.label, before)
+        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Receipts")
+    }
+
     func testTodayIsVisibleInitiallyAndAfterSearchCancel() {
         checkRecentWallet(id: "today", title: "Today", arguments: ["--t05-light", "--today-wallet"])
     }

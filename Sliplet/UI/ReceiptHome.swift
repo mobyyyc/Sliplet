@@ -42,7 +42,12 @@ struct ReceiptHome: View {
     @FocusState private var editing: String?
     @FocusState private var searchFocused: Bool
     @State private var keyboardVisible = false
-    @State private var closingSearch = false
+    private enum SearchReturn { case idle, animating, waitingForKeyboard }
+    @State private var searchReturn = SearchReturn.idle
+    @State private var searchOffset: CGFloat = 0
+    @State private var searchWidth: CGFloat = 1
+    @State private var homeBrowseVersion = 0
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -200,19 +205,9 @@ struct ReceiptHome: View {
                     #endif
                 }
             }
-            .safeAreaBar(edge: .top, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && workspace.flow == .wallet
-                    && (workspace.library || workspace.searching) && workspace.hasBrowseFilters {
-                    ReceiptActiveFiltersBar(workspace: workspace)
-                }
-            }
             .safeAreaBar(edge: .bottom, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && [.wallet, .detail, .review].contains(workspace.flow) {
-                    if workspace.flow == .wallet && workspace.searching {
-                        searchBar.modifier(ReceiptActionBarLayout())
-                    } else {
-                        bottomActions.modifier(ReceiptActionBarLayout())
-                    }
+                if workspace.availability == .ready && !workspace.privacyCovered && [.detail, .review].contains(workspace.flow) {
+                    bottomActions.modifier(ReceiptActionBarLayout())
                 }
             }
             .fullScreenCover(isPresented: $camera, onDismiss: {
@@ -346,20 +341,17 @@ struct ReceiptHome: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
             keyboardVisible = false
-            guard closingSearch else { return }
-            closingSearch = false
-            if workspace.flow == .wallet && workspace.searching {
-                withoutSearchAnimation { workspace.endSearch() }
-            }
+            if searchReturn == .waitingForKeyboard { finishSearchReturn() }
         }
         .onChange(of: workspace.flow) { _, flow in
+            if flow != .wallet { resetSearchReturn() }
             if flow == .wallet && overviewReceiptID != nil {
                 overviewReceiptID = nil
                 presentedPurchaseOverview = workspace.active && !workspace.privacyCovered ? purchaseOverview : nil
             }
         }
         .onChange(of: workspace.searching) { _, searching in
-            if !searching { closingSearch = false }
+            if !searching { resetSearchReturn() }
         }
         .onChange(of: workspace.importReplacementReady) { _, ready in confirmReplacement = ready }
         .onAppear {
@@ -415,21 +407,61 @@ struct ReceiptHome: View {
         }
     }
 
+    private var reduceSearchMotion: Bool { ReceiptAccessibility.reduceMotion(systemReduceMotion) }
+
     private func openSearch() {
-        guard !closingSearch else { return }
+        guard searchReturn == .idle else { return }
         withoutSearchAnimation {
-            workspace.searching = true
+            if !workspace.searching {
+                // Prepare the usual newest-first landing before it becomes visible on return.
+                workspace.resetHomeToNewest()
+                homeBrowseVersion += 1
+                workspace.searching = true
+            }
             searchFocused = true
         }
     }
 
     private func closeSearch() {
-        guard !closingSearch else { return }
-        // Keep the results scroll view mounted until the keyboard stops resizing the safe area.
-        closingSearch = keyboardVisible
+        guard searchReturn == .idle, workspace.flow == .wallet, workspace.searching else { return }
+        searchReturn = .animating
+        withoutSearchAnimation { searchFocused = false }
+        withAnimation(.easeOut(duration: reduceSearchMotion ? 0.15 : 0.29), completionCriteria: .removed) {
+            searchOffset = searchWidth
+        } completion: {
+            guard searchReturn == .animating, workspace.flow == .wallet, workspace.searching else { return }
+            // Let both animations run together, but keep the search scroll surface mounted until iOS settles its keyboard inset.
+            if keyboardVisible { searchReturn = .waitingForKeyboard }
+            else { finishSearchReturn() }
+        }
+    }
+
+    private func finishSearchReturn() {
+        guard workspace.flow == .wallet, workspace.searching else { return }
         withoutSearchAnimation {
-            searchFocused = false
-            if !closingSearch { workspace.endSearch() }
+            workspace.endSearch()
+            resetSearchReturn()
+        }
+    }
+
+    private func resetSearchReturn() {
+        searchReturn = .idle
+        searchOffset = 0
+    }
+
+    private func updateSearchEdgePan(_ pan: UIPanGestureRecognizer) {
+        guard searchReturn == .idle else { return }
+        let translation = pan.translation(in: pan.view?.window).x
+        let velocity = pan.velocity(in: pan.view?.window).x
+        switch pan.state {
+        case .began, .changed:
+            // Leave room for the exit animation even after a very long drag.
+            if !reduceSearchMotion { searchOffset = min(max(translation, 0), searchWidth * 0.95) }
+        case .ended where translation > searchWidth * 0.34 || (translation > 24 && velocity > 550):
+            closeSearch()
+        case .ended, .cancelled, .failed:
+            withAnimation(.easeOut(duration: 0.22)) { searchOffset = 0 }
+        default: break
         }
     }
 
@@ -452,7 +484,7 @@ struct ReceiptHome: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 48))
                 .accessibilityIdentifier("close")
-        }.allowsHitTesting(!closingSearch)
+        }
     }
 
     private var searchField: some View {
@@ -758,21 +790,63 @@ struct ReceiptHome: View {
     }
 
     private var wallet: some View {
-        Group {
-            if (workspace.library || workspace.searching) && (workspace.flow == .wallet || workspace.openedFromSavedDraftShortcut) {
-                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true },
-                                           openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts) { record in
-                    deleteTarget = record; delete = true
+        let showingSearch = workspace.flow == .wallet && workspace.searching
+        return ZStack {
+            walletContent
+                .id(homeBrowseVersion)
+                .safeAreaBar(edge: .top, spacing: 0) {
+                    if workspace.flow == .wallet && workspace.library && workspace.hasBrowseFilters {
+                        ReceiptActiveFiltersBar(workspace: workspace)
+                    }
                 }
-            } else if workspace.library || workspace.searching || overviewReceiptID != nil {
-                ReceiptSearchDetailView(workspace: workspace)
-            } else {
-                ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts) { record in
-                    deleteTarget = record; delete = true
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    if workspace.flow == .wallet { bottomActions.modifier(ReceiptActionBarLayout()) }
                 }
-
-            }
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .allowsHitTesting(!showingSearch)
+                .accessibilityHidden(true, isEnabled: showingSearch)
+            if showingSearch { searchSurface }
         }
+    }
+
+    @ViewBuilder private var walletContent: some View {
+        if workspace.library && (workspace.flow == .wallet || workspace.openedFromSavedDraftShortcut) {
+            browseList(isSearchResults: false)
+        } else if workspace.flow != .wallet && (workspace.library || workspace.searching || overviewReceiptID != nil) {
+            ReceiptSearchDetailView(workspace: workspace)
+        } else {
+            ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts,
+                               requestDelete: requestBrowseDeletion)
+        }
+    }
+
+    private func browseList(isSearchResults: Bool) -> some View {
+        ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }, isSearchResults: isSearchResults,
+                                   openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts,
+                                   requestDelete: requestBrowseDeletion)
+    }
+
+    private func requestBrowseDeletion(_ record: ReceiptRecord) {
+        deleteTarget = record
+        delete = true
+    }
+
+    private var searchSurface: some View {
+        browseList(isSearchResults: true)
+            .safeAreaBar(edge: .top, spacing: 0) {
+                if workspace.hasBrowseFilters { ReceiptActiveFiltersBar(workspace: workspace) }
+            }
+            .safeAreaBar(edge: .bottom, spacing: 0) { searchBar.modifier(ReceiptActionBarLayout()) }
+            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea(.container))
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { searchWidth = max(1, $0) }
+            .background {
+                ReceiptSearchBackGesture(isEnabled: searchReturn == .idle && !workspace.searchFiltersExpanded && !settings && !delete,
+                                         action: updateSearchEdgePan)
+            }
+            .accessibilityAction(.escape, closeSearch)
+            .offset(x: reduceSearchMotion ? 0 : searchOffset)
+            .opacity(reduceSearchMotion ? 1 - min(searchOffset / searchWidth, 1) : 1)
+            .allowsHitTesting(searchReturn == .idle)
     }
 
     private func openSavedDrafts() {
@@ -818,6 +892,59 @@ struct ReceiptHome: View {
         #if DEBUG
         WorkflowTestControls(workspace: workspace)
         #endif
+    }
+}
+
+private struct ReceiptSearchBackGesture: UIViewRepresentable {
+    let isEnabled: Bool
+    let action: (UIPanGestureRecognizer) -> Void
+
+    func makeUIView(context: Context) -> Surface { Surface() }
+
+    func updateUIView(_ view: Surface, context: Context) {
+        view.action = action
+        view.edgePan.isEnabled = isEnabled
+    }
+
+    static func dismantleUIView(_ view: Surface, coordinator: ()) { view.detachGesture() }
+
+    final class Surface: UIView, UIGestureRecognizerDelegate {
+        var action: ((UIPanGestureRecognizer) -> Void)?
+        lazy var edgePan: UIPanGestureRecognizer = {
+            let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handleEdgePan))
+            recognizer.maximumNumberOfTouches = 1
+            recognizer.delegate = self
+            return recognizer
+        }()
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            // Attach above the List's own recognizers so touches at the screen edge reach Back.
+            if edgePan.view !== window {
+                detachGesture()
+                window?.addGestureRecognizer(edgePan)
+            }
+        }
+
+        func detachGesture() { edgePan.view?.removeGestureRecognizer(edgePan) }
+
+        @objc private func handleEdgePan() { action?(edgePan) }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let window else { return false }
+            let position = touch.location(in: window)
+            let localY = touch.location(in: self).y
+            return (0...20).contains(position.x) && (bounds.minY...bounds.maxY).contains(localY)
+        }
+
+        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            let velocity = edgePan.velocity(in: window)
+            return velocity.x > abs(velocity.y)
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+            other is UIPanGestureRecognizer && !(other is UIScreenEdgePanGestureRecognizer)
+        }
     }
 }
 

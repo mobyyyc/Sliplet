@@ -39,9 +39,8 @@ final class ReceiptWorkspace {
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
     private(set) var orderedReceipts: [ReceiptRecord] = []
     private(set) var activeSavedDrafts: [ReceiptRecord] = []
-    var savedDraftShortcutCount: Int {
-        !searching && !hasBrowseFilters ? activeSavedDrafts.count : 0
-    }
+    var savedDraftShortcutCount: Int { searching ? 0 : homeSavedDraftShortcutCount }
+    var homeSavedDraftShortcutCount: Int { hasBrowseFilters ? 0 : activeSavedDrafts.count }
     private struct SavedDraftNavigation {
         let walletFocus: ReceiptWalletFocus?
         var returnsFromReviewToWallet = true
@@ -66,11 +65,12 @@ final class ReceiptWorkspace {
     var browsingFilter = ReceiptBrowsingFilter() { didSet { if browsingFilter != oldValue { refreshBrowsing(resetAnchor: true) } } }
     private var hasPurchaseFilters: Bool { merchantFilter != .all || monthFilter != .all || browsingFilter.active }
     var hasBrowseFilters: Bool { hasPurchaseFilters || includeArchived || collection != "All receipts" }
-    var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true) } } }
+    var searchQuery = "" { didSet { if searchQuery != oldValue { refreshBrowsing(resetAnchor: true, queryChanged: true) } } }
     var searchFiltersExpanded = false
     var searchReturnID: String?
     var browseAnchor: ReceiptBrowsingAnchor?
     private(set) var browsing = ReceiptBrowsingSnapshot()
+    private(set) var homeBrowsing = ReceiptBrowsingSnapshot()
     private(set) var hasArchivedSearchMatch = false
     private(set) var hasMatchOutsidePurchaseFilters = false
     private(set) var browseMerchants: [String] = []
@@ -300,7 +300,7 @@ final class ReceiptWorkspace {
         searchFiltersExpanded = false; searchReturnID = nil; browseAnchor = nil
         collection = "All receipts"; walletSettings = ReceiptWalletSettings()
     }
-    private func refreshBrowsing(resetAnchor: Bool = false) {
+    private func refreshBrowsing(resetAnchor: Bool = false, queryChanged: Bool = false) {
         guard !updatingBrowseFilters else { return }
         let previous = browsing
         let filter = browsingFilter
@@ -316,19 +316,25 @@ final class ReceiptWorkspace {
             && searchIndex.hasMatchIgnoringPurchaseFilters(query: searchQuery, collection: collection, includeArchived: includeArchived)
         let today = ReceiptBrowsingPeriod.today()
         browsing = ReceiptBrowsingSnapshot(results: results, monthTitles: browseMonthTitles, today: today)
-        let newestFirst = results.map(\.record)
-        let recent = ReceiptBrowsingPeriod.Recent(newestFirst: newestFirst, today: today)
-        // Keep the recent period at the pocket, including when newer-looking dates are in the future.
-        let chronological = newestFirst.reversed()
-        let papers = chronological.filter { !recent.contains($0) } + chronological.filter { recent.contains($0) }
-        if walletReceipts != papers || walletGroupingDay != today {
-            walletReceipts = papers; walletGroupingDay = today
-            walletLayout = ReceiptWalletLayout(records: papers, recent: recent)
-        }
-        if resetAnchor {
-            if let target = walletAnchorID.flatMap({ walletLayout.indexByID[$0] == nil ? nil : $0 }) ?? walletReceipts.last?.id {
-                walletFocus = ReceiptWalletFocus(receiptID: target, y: walletAnchorY)
-            } else { walletFocus = nil; walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil }
+        // Search results stay independent of the wallet or list beneath them.
+        if searchQuery.isEmpty || !queryChanged {
+            let homeResults = searchQuery.isEmpty ? results : searchIndex.results(query: "", collection: collection,
+                includeArchived: includeArchived, merchant: merchantFilter, month: monthFilter, accepting: acceptsPurchase)
+            homeBrowsing = searchQuery.isEmpty ? browsing : ReceiptBrowsingSnapshot(results: homeResults, monthTitles: browseMonthTitles, today: today)
+            let newestFirst = homeResults.map(\.record)
+            let recent = ReceiptBrowsingPeriod.Recent(newestFirst: newestFirst, today: today)
+            // Keep the recent period at the pocket, including when newer-looking dates are in the future.
+            let chronological = newestFirst.reversed()
+            let papers = chronological.filter { !recent.contains($0) } + chronological.filter { recent.contains($0) }
+            if walletReceipts != papers || walletGroupingDay != today {
+                walletReceipts = papers; walletGroupingDay = today
+                walletLayout = ReceiptWalletLayout(records: papers, recent: recent)
+            }
+            if resetAnchor && !queryChanged {
+                if let target = walletAnchorID.flatMap({ walletLayout.indexByID[$0] == nil ? nil : $0 }) ?? walletReceipts.last?.id {
+                    walletFocus = ReceiptWalletFocus(receiptID: target, y: walletAnchorY)
+                } else { walletFocus = nil; walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil }
+            }
         }
         browseAnchor = resetAnchor ? nil : browsing.restored(browseAnchor, from: previous)
         if library || searching, let selected, let match = searchMatch {
