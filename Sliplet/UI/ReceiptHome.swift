@@ -38,16 +38,9 @@ struct ReceiptHome: View {
     @State private var purchaseOverview: ReceiptOverviewNavigation?
     @State private var presentedPurchaseOverview: ReceiptOverviewNavigation?
     @State private var overviewReceiptID: UUID?
-    @AppStorage("receiptDisplayList") private var displayList = false
     @FocusState private var editing: String?
     @FocusState private var searchFocused: Bool
-    @State private var keyboardVisible = false
-    private enum SearchReturn { case idle, animating, waitingForKeyboard }
-    @State private var searchReturn = SearchReturn.idle
-    @State private var searchOffset: CGFloat = 0
-    @State private var searchWidth: CGFloat = 1
-    @State private var homeBrowseVersion = 0
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @State private var focusSearchOnEntry = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -71,256 +64,120 @@ struct ReceiptHome: View {
 
     var body: some View {
         let session = workspace.sessionID
-        let canReturnToImportStep = workspace.flow == .preparingUpload && workspace.importStep > 0 && workspace.photoDuplicatePrompt == nil
         NavigationStack {
-            Group {
-                if workspace.privacyCovered { ReceiptLockScreen() }
-                else {
-                    switch workspace.availability {
-                    case .closed, .opening: ProgressView("Opening local wallet")
-                    case .failed(let message):
-                        ContentUnavailableView {
-                            Label("Wallet unavailable", systemImage: "lock.trianglebadge.exclamationmark")
-                        } description: { Text(message) } actions: { Button("Try again", action: workspace.retryOpen).buttonStyle(ReceiptSecondaryStyle()) }
-                    case .ready: flow
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                if workspace.availability == .ready && !workspace.privacyCovered &&
-                    (workspace.flow == .detail || (workspace.flow == .wallet && !workspace.library)) {
-                    AtmosphericBackground().ignoresSafeArea()
-                } else {
-                    Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
-                }
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if workspace.availability == .ready && !workspace.privacyCovered {
-                    if workspace.flow != .wallet && workspace.flow != .reading && workspace.flow != .loading {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button(workspace.flow == .preparingUpload ? (canReturnToImportStep ? "Back" : "Cancel") : workspace.flow == .review ? "Cancel" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
-                                if workspace.flow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
-                                else if canReturnToImportStep {
-                                    workspace.importForward = false; workspace.importStep -= 1
-                                    workspace.checkpointImport()
-                                }
-                                else if workspace.flow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
-                                else if workspace.flow == .review || workspace.flow == .reading || workspace.flow == .loading || workspace.flow == .preparingUpload || (workspace.flow == .failed && workspace.image != nil) { editing = nil; discard = true }
-                                else { workspace.backToWallet() }
-                            }.disabled(workspace.saving).accessibilityIdentifier("back")
-                        }
-                    }
-                    if workspace.image != nil && workspace.flow != .reading && workspace.flow != .loading {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button { editing = nil; workspace.showSource() } label: { Text("Original") }
-                                .accessibilityIdentifier("original").disabled(workspace.saving)
-                        }
-                    }
-                    if workspace.flow == .wallet {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Text(workspace.library ? "Receipts" : "Wallet")
-                                .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
-                        }.sharedBackgroundVisibility(.hidden)
-                        ToolbarItemGroup(placement: .topBarTrailing) {
-                            Button("Search", systemImage: "magnifyingglass") {
-                                openSearch()
-                            }.accessibilityIdentifier("receiptSearch")
-                            Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                workspace.searchFiltersExpanded = true
-                            }.accessibilityIdentifier("searchFilters")
-                        }
-                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Settings", systemImage: "gearshape") {
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                                settings = true
-                            }
-                                .accessibilityIdentifier("walletSettings")
-                        }
-
-                    }
-                    if workspace.flow == .detail {
-                        if workspace.selected != nil {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                ReceiptShareButton { sharingReceipt = true }.disabled(workspace.saving)
-                            }
-                        }
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Menu {
-                                if let record = workspace.selected {
-                                    Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
-                                    Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
-                                }
-                                Button("Storage details", systemImage: "info.circle") { walletInformation = true }
-                                Button("Delete receipt", systemImage: "trash", role: .destructive) { deleteTarget = workspace.selected; delete = true }
-                                    .accessibilityIdentifier("delete")
-                            } label: { Image(systemName: "ellipsis") }
-                            .accessibilityLabel("Receipt options").accessibilityIdentifier("receiptOptions")
-                        }
-                    }
-                    #if DEBUG
-                    if SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && workspace.flow == .wallet && workspace.receipts.isEmpty {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button("Import fictional image", systemImage: "doc.badge.plus") {
-                                let bytes = SyntheticNativePreview.fixture(index: 0).0
-                                workspace.startImport { bytes }
-                            }
-                            .labelStyle(.iconOnly)
-                            .accessibilityIdentifier("searchDemoImport")
-                        }
-                    }
-                    if ReceiptUploadFixture.enabled && workspace.flow == .wallet {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Button("Fictional import", systemImage: "doc.badge.plus") {
-                                let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
-                                workspace.startImport(chooseRecognition: true) { bytes }
-                            }.labelStyle(.iconOnly).accessibilityIdentifier("uploadFixture")
-                        }
-                    }
-                    if WorkflowTestInput.enabled {
-                        if workspace.flow == .wallet {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Local test image") {
-                                    if let url = try? WorkflowTestInput.imageURL() { workspace.importFile(url) }
-                                }.accessibilityIdentifier("debugImport")
-                            }
-                        }
-                        if workspace.flow == .review {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Test reference") { WorkflowTestInput.applyReference(workspace) }.accessibilityIdentifier("debugReference")
-                            }
-                        }
-                        if workspace.flow == .detail {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button("Test verify") { WorkflowTestInput.verify(workspace) }.accessibilityIdentifier("debugVerify")
-                            }
-                        }
-                    }
-                    #endif
-                }
-            }
-            .safeAreaBar(edge: .bottom, spacing: 0) {
-                if workspace.availability == .ready && !workspace.privacyCovered && [.detail, .review].contains(workspace.flow) {
-                    bottomActions.modifier(ReceiptActionBarLayout())
-                }
-            }
-            .fullScreenCover(isPresented: $camera, onDismiss: {
-                let result = cameraResult; cameraResult = nil
-                guard session == workspace.sessionID, workspace.active else { return }
-                switch result {
-                case .photo(let bytes):
-                    let replacing = selectingReplacement
-                    selectingReplacement = false
-                    workspace.startImport(chooseRecognition: true, fromCamera: true, replacingPendingImport: replacing) { bytes }
-                case .existingImage: importChoices = true
-                default: selectingReplacement = false
-                }
-            }) {
-                ReceiptCameraView { result in cameraResult = result; camera = false }
-            }
-            .sheet(isPresented: $photos) {
-                ReceiptPhotoPicker { loader in
-                    photos = false
-                    let replacing = selectingReplacement
-                    selectingReplacement = false
-                    guard session == workspace.sessionID, let loader else { return }
-                    workspace.startImport(chooseRecognition: true, replacingPendingImport: replacing) { try await loader.load() }
-                }.ignoresSafeArea()
-            }
-            .fileImporter(isPresented: $files, allowedContentTypes: [.png, .jpeg, .heic, .heif], allowsMultipleSelection: false) { result in
+            screen(isSearchRoute: false)
+                .navigationDestination(isPresented: $workspace.searching) { screen(isSearchRoute: true) }
+        }
+        .fullScreenCover(isPresented: $camera, onDismiss: {
+            let result = cameraResult; cameraResult = nil
+            guard session == workspace.sessionID, workspace.active else { return }
+            switch result {
+            case .photo(let bytes):
                 let replacing = selectingReplacement
                 selectingReplacement = false
-                guard session == workspace.sessionID else { return }
-                switch result {
-                case .success(let urls):
-                    if let url = urls.first { workspace.importFile(url, chooseRecognition: true, replacingPendingImport: replacing) }
-                case .failure(let error):
-                    if (error as NSError).code != CocoaError.userCancelled.rawValue {
-                        workspace.reportImportPickerFailure(replacingPendingImport: replacing)
-                    }
-                }
+                workspace.startImport(chooseRecognition: true, fromCamera: true, replacingPendingImport: replacing) { bytes }
+            case .existingImage: importChoices = true
+            default: selectingReplacement = false
             }
-            .confirmationDialog("Discard unsaved changes?", isPresented: $discard, titleVisibility: .visible) {
-                Button("Discard changes", role: .destructive) { workspace.finishEditing() }
-            } message: { Text("Only receipts you explicitly saved are kept.") }
-            .confirmationDialog("Discard unfinished import?", isPresented: $discardPending, titleVisibility: .visible) {
-                Button("Discard import", role: .destructive, action: workspace.discardPendingImport)
-                    .accessibilityIdentifier("discardPendingImportConfirm")
-            } message: { Text("This removes the photo and progress for this import from Sliplet.") }
-            .alert("Replace unfinished import?", isPresented: $confirmReplacement) {
-                Button("Keep current import", role: .cancel, action: workspace.cancelImportReplacement)
-                Button("Replace import", role: .destructive, action: workspace.confirmImportReplacement)
-            } message: {
-                Text("The new photo will replace your current photo and its unsaved progress.")
-            }
-            .alert(duplicateSave?.match.kind == .samePhoto ? "Photo already saved" : "Possible duplicate",
-                   isPresented: showsDuplicateSave, presenting: duplicateSave) { decision in
-                if decision.match.kind == .samePhoto {
-                    Button("Open saved receipt") { workspace.openSavedDuplicate(decision.match.record) }
-                        .accessibilityIdentifier("openSavedDuplicate")
-                }
-                Button(decision.asDraft ? "Save separate draft" : "Save separately") {
-                    if !workspace.privacyCovered { workspace.save(asDraft: decision.asDraft) }
-                }.accessibilityIdentifier("saveDuplicateSeparately")
-                Button("Keep reviewing", role: .cancel) { }
-            } message: { decision in
-                if decision.match.kind == .samePhoto {
-                    Text("This photo is already in your wallet. Opening the saved receipt discards this import.")
-                } else {
-                    Text("A saved receipt has the same store, date, total and receipt lines. If these are separate purchases, you can keep both.")
-                }
-            }
-            .alert("Delete this receipt?", isPresented: $delete) {
-                Button("Delete receipt and original", role: .destructive) { if let deleteTarget { workspace.deleteReceipt(deleteTarget) }; deleteTarget = nil }
-                Button("Cancel", role: .cancel) { deleteTarget = nil }
-            } message: { Text("This removes all revisions and the original from this app. Copies in Photos or Files remain there.") }
-            .sheet(item: $workspace.detailLine) { line in
-                ReceiptFocusedCorrectionView(workspace: workspace, check: line.check, detailLine: line)
-            }
-            .sheet(isPresented: $sharingReceipt) {
-                if let id = workspace.selected?.id { ReceiptShareView(workspace: workspace, receiptID: id) }
-            }
-            .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
-            .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
-            .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
-            .sheet(isPresented: $walletInformation) { WalletInformationView() }
-            .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
-            .sheet(isPresented: $showingSavedDrafts, onDismiss: {
-                let id = chosenSavedDraft
-                chosenSavedDraft = nil
-                if session == workspace.sessionID, let id { workspace.resumeSavedDraft(id) }
-            }) {
-                savedDraftPicker
-            }
-            .sheet(item: $presentedPurchaseOverview, onDismiss: finishOverviewPresentation) { navigation in
-                if workspace.privacyCovered {
-                    ReceiptLockScreen()
-                } else {
-                    ReceiptPurchaseOverviewView(navigation: navigation, records: workspace.orderedReceipts,
-                                                revision: workspace.purchaseOverviewRevision) { id in
-                        overviewReceiptID = id
-                        presentedPurchaseOverview = nil
-                    }.dynamicTypeSize(typeSize)
-                }
-            }
-            .sheet(isPresented: $recoveryAISettings) {
-                NavigationStack {
-                    ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Done") { recoveryAISettings = false }
-                            }
-                        }
-                }
-            }
-            .disabled(workspace.saving)
+        }) {
+            ReceiptCameraView { result in cameraResult = result; camera = false }
         }
+        .sheet(isPresented: $photos) {
+            ReceiptPhotoPicker { loader in
+                photos = false
+                let replacing = selectingReplacement
+                selectingReplacement = false
+                guard session == workspace.sessionID, let loader else { return }
+                workspace.startImport(chooseRecognition: true, replacingPendingImport: replacing) { try await loader.load() }
+            }.ignoresSafeArea()
+        }
+        .fileImporter(isPresented: $files, allowedContentTypes: [.png, .jpeg, .heic, .heif], allowsMultipleSelection: false) { result in
+            let replacing = selectingReplacement
+            selectingReplacement = false
+            guard session == workspace.sessionID else { return }
+            switch result {
+            case .success(let urls):
+                if let url = urls.first { workspace.importFile(url, chooseRecognition: true, replacingPendingImport: replacing) }
+            case .failure(let error):
+                if (error as NSError).code != CocoaError.userCancelled.rawValue {
+                    workspace.reportImportPickerFailure(replacingPendingImport: replacing)
+                }
+            }
+        }
+        .confirmationDialog("Discard unsaved changes?", isPresented: $discard, titleVisibility: .visible) {
+            Button("Discard changes", role: .destructive) { workspace.finishEditing() }
+        } message: { Text("Only receipts you explicitly saved are kept.") }
+        .confirmationDialog("Discard unfinished import?", isPresented: $discardPending, titleVisibility: .visible) {
+            Button("Discard import", role: .destructive, action: workspace.discardPendingImport)
+                .accessibilityIdentifier("discardPendingImportConfirm")
+        } message: { Text("This removes the photo and progress for this import from Sliplet.") }
+        .alert("Replace unfinished import?", isPresented: $confirmReplacement) {
+            Button("Keep current import", role: .cancel, action: workspace.cancelImportReplacement)
+            Button("Replace import", role: .destructive, action: workspace.confirmImportReplacement)
+        } message: {
+            Text("The new photo will replace your current photo and its unsaved progress.")
+        }
+        .alert(duplicateSave?.match.kind == .samePhoto ? "Photo already saved" : "Possible duplicate",
+               isPresented: showsDuplicateSave, presenting: duplicateSave) { decision in
+            if decision.match.kind == .samePhoto {
+                Button("Open saved receipt") { workspace.openSavedDuplicate(decision.match.record) }
+                    .accessibilityIdentifier("openSavedDuplicate")
+            }
+            Button(decision.asDraft ? "Save separate draft" : "Save separately") {
+                if !workspace.privacyCovered { workspace.save(asDraft: decision.asDraft) }
+            }.accessibilityIdentifier("saveDuplicateSeparately")
+            Button("Keep reviewing", role: .cancel) { }
+        } message: { decision in
+            if decision.match.kind == .samePhoto {
+                Text("This photo is already in your wallet. Opening the saved receipt discards this import.")
+            } else {
+                Text("A saved receipt has the same store, date, total and receipt lines. If these are separate purchases, you can keep both.")
+            }
+        }
+        .alert("Delete this receipt?", isPresented: $delete) {
+            Button("Delete receipt and original", role: .destructive) { if let deleteTarget { workspace.deleteReceipt(deleteTarget) }; deleteTarget = nil }
+            Button("Cancel", role: .cancel) { deleteTarget = nil }
+        } message: { Text("This removes all revisions and the original from this app. Copies in Photos or Files remain there.") }
+        .sheet(item: $workspace.detailLine) { line in
+            ReceiptFocusedCorrectionView(workspace: workspace, check: line.check, detailLine: line)
+        }
+        .sheet(isPresented: $sharingReceipt) {
+            if let id = workspace.selected?.id { ReceiptShareView(workspace: workspace, receiptID: id) }
+        }
+        .sheet(isPresented: $workspace.splitVisible) { ReceiptSplitView(workspace: workspace) }
+        .sheet(isPresented: $workspace.sourceVisible) { ReceiptSourceView(workspace: workspace) }
+        .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
+        .sheet(isPresented: $walletInformation) { WalletInformationView() }
+        .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
+        .sheet(isPresented: $showingSavedDrafts, onDismiss: {
+            let id = chosenSavedDraft
+            chosenSavedDraft = nil
+            if session == workspace.sessionID, let id { workspace.resumeSavedDraft(id) }
+        }) {
+            savedDraftPicker
+        }
+        .sheet(item: $presentedPurchaseOverview, onDismiss: finishOverviewPresentation) { navigation in
+            if workspace.privacyCovered {
+                ReceiptLockScreen()
+            } else {
+                ReceiptPurchaseOverviewView(navigation: navigation, records: workspace.orderedReceipts,
+                                            revision: workspace.purchaseOverviewRevision) { id in
+                    overviewReceiptID = id
+                    presentedPurchaseOverview = nil
+                }.dynamicTypeSize(typeSize)
+            }
+        }
+        .sheet(isPresented: $recoveryAISettings) {
+            NavigationStack {
+                ReceiptAISettingsView(connection: workspace.aiConnection, privacyCovered: workspace.privacyCovered)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { recoveryAISettings = false }
+                        }
+                    }
+            }
+        }
+        .disabled(workspace.saving)
         .alert("Import progress unavailable", isPresented: Binding(
             get: { workspace.flow != .wallet && !workspace.openedFromSavedDraftShortcut && workspace.importCheckpointError != nil },
             set: { if !$0 { workspace.dismissCheckpointError() } }
@@ -336,53 +193,181 @@ struct ReceiptHome: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             workspace.refreshCalendarGrouping()
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            keyboardVisible = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
-            keyboardVisible = false
-            if searchReturn == .waitingForKeyboard { finishSearchReturn() }
-        }
         .onChange(of: workspace.flow) { _, flow in
-            if flow != .wallet { resetSearchReturn() }
+            if flow != .wallet { searchFocused = false }
             if flow == .wallet && overviewReceiptID != nil {
                 overviewReceiptID = nil
                 presentedPurchaseOverview = workspace.active && !workspace.privacyCovered ? purchaseOverview : nil
             }
         }
         .onChange(of: workspace.searching) { _, searching in
-            if !searching { resetSearchReturn() }
+            if !searching {
+                searchFocused = false
+                focusSearchOnEntry = false
+                workspace.endSearch()
+            }
         }
         .onChange(of: workspace.importReplacementReady) { _, ready in confirmReplacement = ready }
-        .onAppear {
-            #if DEBUG
-            if !SyntheticNativePreview.enabled { workspace.library = displayList }
-            #else
-            workspace.library = displayList
-            #endif
-        }
-        .onChange(of: workspace.availability) { _, state in
-            guard state == .ready else { return }
-            #if DEBUG
-            if !SyntheticNativePreview.enabled { workspace.library = displayList }
-            #else
-            workspace.library = displayList
-            #endif
-        }
-        .onChange(of: workspace.library) { _, value in
-            guard workspace.active, workspace.availability == .ready else { return }
-            #if DEBUG
-            if !SyntheticNativePreview.enabled { displayList = value }
-            #else
-            displayList = value
-            #endif
-        }
         .onChange(of: workspace.aiConnection.canUseAI) { _, ready in
             if !ready && workspace.aiUploadStarted && workspace.flow == .reading { workspace.stopReading() }
         }
         .tint(.primary)
         .environment(\.receiptPaperAppearance, workspace.walletSettings.paperAppearance)
     }
+    private func screen(isSearchRoute: Bool) -> some View {
+        // When opening a result, the covered Wallet remains on the stack at its original scroll position.
+        let screenFlow: ReceiptWorkspace.Flow = !isSearchRoute && workspace.searching ? .wallet : workspace.flow
+        let canReturnToImportStep = screenFlow == .preparingUpload && workspace.importStep > 0 && workspace.photoDuplicatePrompt == nil
+        return Group {
+            if workspace.privacyCovered { ReceiptLockScreen() }
+            else {
+                switch workspace.availability {
+                case .closed, .opening: ProgressView("Opening local wallet")
+                case .failed(let message):
+                    ContentUnavailableView {
+                        Label("Wallet unavailable", systemImage: "lock.trianglebadge.exclamationmark")
+                    } description: { Text(message) } actions: { Button("Try again", action: workspace.retryOpen).buttonStyle(ReceiptSecondaryStyle()) }
+                case .ready: flow(screenFlow, isSearchRoute: isSearchRoute)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if workspace.availability == .ready && !workspace.privacyCovered &&
+                (screenFlow == .detail || (screenFlow == .wallet && !isSearchRoute)) {
+                AtmosphericBackground().ignoresSafeArea()
+            } else {
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            }
+        }
+        .navigationTitle(isSearchRoute && screenFlow == .wallet ? "Search" : title(for: screenFlow))
+        .navigationBarBackButtonHidden(isSearchRoute && screenFlow != .wallet)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if workspace.availability == .ready && !workspace.privacyCovered {
+                if screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button(screenFlow == .preparingUpload ? (canReturnToImportStep ? "Back" : "Cancel") : screenFlow == .review ? "Cancel" : isSearchRoute ? "Search" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
+                            if screenFlow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
+                            else if canReturnToImportStep {
+                                workspace.importForward = false; workspace.importStep -= 1
+                                workspace.checkpointImport()
+                            }
+                            else if screenFlow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
+                            else if screenFlow == .review || screenFlow == .reading || screenFlow == .loading || screenFlow == .preparingUpload || (screenFlow == .failed && workspace.image != nil) { editing = nil; discard = true }
+                            else { workspace.backToWallet() }
+                        }.disabled(workspace.saving).accessibilityIdentifier("back")
+                    }
+                }
+                if workspace.image != nil && screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { editing = nil; workspace.showSource() } label: { Text("Original") }
+                            .accessibilityIdentifier("original").disabled(workspace.saving)
+                    }
+                }
+                if screenFlow == .wallet {
+                    if !isSearchRoute {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Text("Wallet")
+                                .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
+                        }.sharedBackgroundVisibility(.hidden)
+                    }
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        if !isSearchRoute {
+                            Button("Search", systemImage: "magnifyingglass", action: openSearch)
+                                .accessibilityIdentifier("receiptSearch")
+                        }
+                        Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            workspace.searchFiltersExpanded = true
+                        }.accessibilityIdentifier("searchFilters")
+                    }
+                    if !isSearchRoute {
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Settings", systemImage: "gearshape") { settings = true }
+                                .accessibilityIdentifier("walletSettings")
+                        }
+                    }
+                }
+                if screenFlow == .detail {
+                    if workspace.selected != nil {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            ReceiptShareButton { sharingReceipt = true }.disabled(workspace.saving)
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            if let record = workspace.selected {
+                                Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
+                                Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
+                            }
+                            Button("Storage details", systemImage: "info.circle") { walletInformation = true }
+                            Button("Delete receipt", systemImage: "trash", role: .destructive) { deleteTarget = workspace.selected; delete = true }
+                                .accessibilityIdentifier("delete")
+                        } label: { Image(systemName: "ellipsis") }
+                        .accessibilityLabel("Receipt options").accessibilityIdentifier("receiptOptions")
+                    }
+                }
+                #if DEBUG
+                if !isSearchRoute && SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && screenFlow == .wallet && workspace.receipts.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Import fictional image", systemImage: "doc.badge.plus") {
+                            let bytes = SyntheticNativePreview.fixture(index: 0).0
+                            workspace.startImport { bytes }
+                        }
+                        .labelStyle(.iconOnly)
+                        .accessibilityIdentifier("searchDemoImport")
+                    }
+                }
+                if !isSearchRoute && ReceiptUploadFixture.enabled && screenFlow == .wallet {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Fictional import", systemImage: "doc.badge.plus") {
+                            let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
+                            workspace.startImport(chooseRecognition: true) { bytes }
+                        }.labelStyle(.iconOnly).accessibilityIdentifier("uploadFixture")
+                    }
+                }
+                if !isSearchRoute && WorkflowTestInput.enabled {
+                    if screenFlow == .wallet {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Local test image") {
+                                if let url = try? WorkflowTestInput.imageURL() { workspace.importFile(url) }
+                            }.accessibilityIdentifier("debugImport")
+                        }
+                    }
+                    if screenFlow == .review {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Test reference") { WorkflowTestInput.applyReference(workspace) }.accessibilityIdentifier("debugReference")
+                        }
+                    }
+                    if screenFlow == .detail {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Test verify") { WorkflowTestInput.verify(workspace) }.accessibilityIdentifier("debugVerify")
+                        }
+                    }
+                }
+                #endif
+            }
+        }
+        .safeAreaBar(edge: .top, spacing: 0) {
+            if isSearchRoute && screenFlow == .wallet && workspace.hasBrowseFilters && !workspace.privacyCovered {
+                ReceiptActiveFiltersBar(workspace: workspace)
+            }
+        }
+        .safeAreaBar(edge: .bottom, spacing: 0) {
+            if workspace.availability == .ready && !workspace.privacyCovered {
+                if isSearchRoute && screenFlow == .wallet {
+                    searchBar.modifier(ReceiptActionBarLayout())
+                } else if [.detail, .review].contains(screenFlow) {
+                    bottomActions(for: screenFlow).modifier(ReceiptActionBarLayout())
+                }
+            }
+        }
+    }
+
     private func showPurchaseOverview(_ month: String?) {
         guard workspace.flow == .wallet, !workspace.searching, !workspace.privacyCovered, !workspace.saving else { return }
         let today = ReceiptBrowsingPeriod.today()
@@ -407,83 +392,25 @@ struct ReceiptHome: View {
         }
     }
 
-    private var reduceSearchMotion: Bool { ReceiptAccessibility.reduceMotion(systemReduceMotion) }
-
     private func openSearch() {
-        guard searchReturn == .idle else { return }
-        withoutSearchAnimation {
-            if !workspace.searching {
-                // Prepare the usual newest-first landing before it becomes visible on return.
-                workspace.resetHomeToNewest()
-                homeBrowseVersion += 1
-                workspace.searching = true
-            }
-            searchFocused = true
-        }
-    }
-
-    private func closeSearch() {
-        guard searchReturn == .idle, workspace.flow == .wallet, workspace.searching else { return }
-        searchReturn = .animating
-        withoutSearchAnimation { searchFocused = false }
-        withAnimation(.easeOut(duration: reduceSearchMotion ? 0.15 : 0.29), completionCriteria: .removed) {
-            searchOffset = searchWidth
-        } completion: {
-            guard searchReturn == .animating, workspace.flow == .wallet, workspace.searching else { return }
-            // Let both animations run together, but keep the search scroll surface mounted until iOS settles its keyboard inset.
-            if keyboardVisible { searchReturn = .waitingForKeyboard }
-            else { finishSearchReturn() }
-        }
-    }
-
-    private func finishSearchReturn() {
-        guard workspace.flow == .wallet, workspace.searching else { return }
-        withoutSearchAnimation {
-            workspace.endSearch()
-            resetSearchReturn()
-        }
-    }
-
-    private func resetSearchReturn() {
-        searchReturn = .idle
-        searchOffset = 0
-    }
-
-    private func updateSearchEdgePan(_ pan: UIPanGestureRecognizer) {
-        guard searchReturn == .idle else { return }
-        let translation = pan.translation(in: pan.view?.window).x
-        let velocity = pan.velocity(in: pan.view?.window).x
-        switch pan.state {
-        case .began, .changed:
-            // Leave room for the exit animation even after a very long drag.
-            if !reduceSearchMotion { searchOffset = min(max(translation, 0), searchWidth * 0.95) }
-        case .ended where translation > searchWidth * 0.34 || (translation > 24 && velocity > 550):
-            closeSearch()
-        case .ended, .cancelled, .failed:
-            withAnimation(.easeOut(duration: 0.22)) { searchOffset = 0 }
-        default: break
-        }
-    }
-
-    private func withoutSearchAnimation(_ updates: () -> Void) {
-        // The navigation toolbar is not part of the search presentation.
-        var transaction = Transaction(animation: nil)
-        transaction.disablesAnimations = true
-        withTransaction(transaction, updates)
+        focusSearchOnEntry = true
+        workspace.searching = true
     }
 
     private var searchBar: some View {
-        HStack(spacing: 10) {
+        Group {
             if ReceiptAccessibility.reduceTransparency(reduceTransparency) || ReceiptAccessibility.contrast(colorSchemeContrast) == .increased {
                 searchField.background(Color(uiColor: .secondarySystemGroupedBackground), in: .capsule)
                     .overlay { Capsule().stroke(.primary.opacity(0.35), lineWidth: 1).allowsHitTesting(false) }
             } else {
                 searchField.glassEffect(.regular, in: .capsule)
             }
-            Button("Close search", systemImage: "xmark", action: closeSearch)
-                .labelStyle(.iconOnly)
-                .buttonStyle(ReceiptSecondaryStyle(circular: true, diameter: 48))
-                .accessibilityIdentifier("close")
+        }
+        .task {
+            if focusSearchOnEntry {
+                focusSearchOnEntry = false
+                searchFocused = true
+            }
         }
     }
 
@@ -509,8 +436,8 @@ struct ReceiptHome: View {
         .frame(minHeight: 48)
     }
 
-    @ViewBuilder private var bottomActions: some View {
-        switch workspace.flow {
+    @ViewBuilder private func bottomActions(for screenFlow: ReceiptWorkspace.Flow) -> some View {
+        switch screenFlow {
         case .wallet:
             if workspace.hasPendingImport {
                 VStack(spacing: 8) {
@@ -591,8 +518,8 @@ struct ReceiptHome: View {
         }.buttonStyle(ReceiptProminentStyle()).accessibilityIdentifier("edit")
             .disabled(workspace.saving || workspace.image == nil)
     }
-    private var title: String {
-        switch workspace.flow {
+    private func title(for screenFlow: ReceiptWorkspace.Flow) -> String {
+        switch screenFlow {
         case .wallet: ""
         case .review: "Review receipt"
         case .detail: "Receipt"
@@ -600,21 +527,29 @@ struct ReceiptHome: View {
         case .loading, .preparingUpload, .reading: "Import receipt"
         }
     }
-    @ViewBuilder private var flow: some View {
-        switch workspace.flow {
+    @ViewBuilder private func flow(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some View {
+        switch screenFlow {
         case .wallet, .detail, .review:
-            let shortcutDetail = workspace.openedFromSavedDraftShortcut && workspace.flow == .detail
-            let hideHome = workspace.flow == .review || shortcutDetail
-            ZStack {
-                // Disable this modifier when visible so decorative child visibility is preserved.
-                wallet.opacity(hideHome ? 0 : 1)
-                    .allowsHitTesting(!hideHome)
-                    .accessibilityHidden(true, isEnabled: hideHome)
-                if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
-                else if shortcutDetail { ReceiptSearchDetailView(workspace: workspace) }
-                else if workspace.openedFromSavedDraftShortcut && workspace.saving {
-                    ProgressView("Opening draft")
-                        .padding(16).background(.regularMaterial, in: .rect(cornerRadius: 16))
+            let shortcutDetail = workspace.openedFromSavedDraftShortcut && screenFlow == .detail
+            let hideHome = screenFlow == .review || shortcutDetail
+            if isSearchRoute {
+                switch screenFlow {
+                case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
+                case .detail: ReceiptSearchDetailView(workspace: workspace)
+                default: ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                }
+            } else {
+                ZStack {
+                    // Disable this modifier when visible so decorative child visibility is preserved.
+                    wallet.opacity(hideHome ? 0 : 1)
+                        .allowsHitTesting(!hideHome)
+                        .accessibilityHidden(true, isEnabled: hideHome)
+                    if screenFlow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
+                    else if shortcutDetail { ReceiptSearchDetailView(workspace: workspace) }
+                    else if workspace.openedFromSavedDraftShortcut && workspace.saving {
+                        ProgressView("Opening draft")
+                            .padding(16).background(.regularMaterial, in: .rect(cornerRadius: 16))
+                    }
                 }
             }
         case .preparingUpload:
@@ -789,64 +724,24 @@ struct ReceiptHome: View {
         }
     }
 
-    private var wallet: some View {
-        let showingSearch = workspace.flow == .wallet && workspace.searching
-        return ZStack {
-            walletContent
-                .id(homeBrowseVersion)
-                .safeAreaBar(edge: .top, spacing: 0) {
-                    if workspace.flow == .wallet && workspace.library && workspace.hasBrowseFilters {
-                        ReceiptActiveFiltersBar(workspace: workspace)
-                    }
-                }
-                .safeAreaBar(edge: .bottom, spacing: 0) {
-                    if workspace.flow == .wallet { bottomActions.modifier(ReceiptActionBarLayout()) }
-                }
-                .ignoresSafeArea(.keyboard, edges: .bottom)
-                .allowsHitTesting(!showingSearch)
-                .accessibilityHidden(true, isEnabled: showingSearch)
-            if showingSearch { searchSurface }
-        }
-    }
-
-    @ViewBuilder private var walletContent: some View {
-        if workspace.library && (workspace.flow == .wallet || workspace.openedFromSavedDraftShortcut) {
-            browseList(isSearchResults: false)
-        } else if workspace.flow != .wallet && (workspace.library || workspace.searching || overviewReceiptID != nil) {
+    @ViewBuilder private var wallet: some View {
+        if overviewReceiptID != nil && workspace.flow != .wallet {
             ReceiptSearchDetailView(workspace: workspace)
         } else {
             ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts,
                                requestDelete: requestBrowseDeletion)
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    if workspace.flow == .wallet || workspace.searching {
+                        bottomActions(for: .wallet).modifier(ReceiptActionBarLayout())
+                    }
+                }
+                .ignoresSafeArea(.keyboard, edges: .bottom)
         }
-    }
-
-    private func browseList(isSearchResults: Bool) -> some View {
-        ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }, isSearchResults: isSearchResults,
-                                   openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts,
-                                   requestDelete: requestBrowseDeletion)
     }
 
     private func requestBrowseDeletion(_ record: ReceiptRecord) {
         deleteTarget = record
         delete = true
-    }
-
-    private var searchSurface: some View {
-        browseList(isSearchResults: true)
-            .safeAreaBar(edge: .top, spacing: 0) {
-                if workspace.hasBrowseFilters { ReceiptActiveFiltersBar(workspace: workspace) }
-            }
-            .safeAreaBar(edge: .bottom, spacing: 0) { searchBar.modifier(ReceiptActionBarLayout()) }
-            .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea(.container))
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { searchWidth = max(1, $0) }
-            .background {
-                ReceiptSearchBackGesture(isEnabled: searchReturn == .idle && !workspace.searchFiltersExpanded && !settings && !delete,
-                                         action: updateSearchEdgePan)
-            }
-            .accessibilityAction(.escape, closeSearch)
-            .offset(x: reduceSearchMotion ? 0 : searchOffset)
-            .opacity(reduceSearchMotion ? 1 - min(searchOffset / searchWidth, 1) : 1)
-            .allowsHitTesting(searchReturn == .idle)
     }
 
     private func openSavedDrafts() {
@@ -892,59 +787,6 @@ struct ReceiptHome: View {
         #if DEBUG
         WorkflowTestControls(workspace: workspace)
         #endif
-    }
-}
-
-private struct ReceiptSearchBackGesture: UIViewRepresentable {
-    let isEnabled: Bool
-    let action: (UIPanGestureRecognizer) -> Void
-
-    func makeUIView(context: Context) -> Surface { Surface() }
-
-    func updateUIView(_ view: Surface, context: Context) {
-        view.action = action
-        view.edgePan.isEnabled = isEnabled
-    }
-
-    static func dismantleUIView(_ view: Surface, coordinator: ()) { view.detachGesture() }
-
-    final class Surface: UIView, UIGestureRecognizerDelegate {
-        var action: ((UIPanGestureRecognizer) -> Void)?
-        lazy var edgePan: UIPanGestureRecognizer = {
-            let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handleEdgePan))
-            recognizer.maximumNumberOfTouches = 1
-            recognizer.delegate = self
-            return recognizer
-        }()
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            // Attach above the List's own recognizers so touches at the screen edge reach Back.
-            if edgePan.view !== window {
-                detachGesture()
-                window?.addGestureRecognizer(edgePan)
-            }
-        }
-
-        func detachGesture() { edgePan.view?.removeGestureRecognizer(edgePan) }
-
-        @objc private func handleEdgePan() { action?(edgePan) }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            guard let window else { return false }
-            let position = touch.location(in: window)
-            let localY = touch.location(in: self).y
-            return (0...20).contains(position.x) && (bounds.minY...bounds.maxY).contains(localY)
-        }
-
-        override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-            let velocity = edgePan.velocity(in: window)
-            return velocity.x > abs(velocity.y)
-        }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
-            other is UIPanGestureRecognizer && !(other is UIScreenEdgePanGestureRecognizer)
-        }
     }
 }
 

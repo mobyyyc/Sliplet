@@ -26,7 +26,9 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "search-large", "--t05-light"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["500 receipts"].waitForExistence(timeout: 90))
+        XCTAssertTrue(app.staticTexts["500 saved"].waitForExistence(timeout: 90))
+        app.buttons["receiptSearch"].tap()
+        XCTAssertTrue(app.staticTexts["500 receipts"].waitForExistence(timeout: 15))
         XCTAssertFalse(app.staticTexts["Active only"].exists)
         XCTAssertFalse(app.buttons["searchMerchantFilter"].exists)
         capture(app, "clean-list")
@@ -42,7 +44,6 @@ import XCTest
         let summary = app.buttons["searchFilterSummary"]
         XCTAssertTrue(summary.waitForExistence(timeout: 5))
         XCTAssertTrue((summary.value as? String)?.contains("FICTIONAL GROVE") == true)
-        app.buttons["receiptSearch"].tap()
         XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
         search("milk", app: app)
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "167 receipts")
@@ -174,7 +175,7 @@ import XCTest
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "search", "--t05-dark", "--t05-reduce-motion"]
         app.launch()
-        XCTAssertTrue(app.staticTexts["3 receipts"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.staticTexts["3 saved"].waitForExistence(timeout: 30))
         app.buttons["searchFilters"].tap()
         let store = app.buttons["searchMerchantFilter"]
         XCTAssertTrue(store.waitForExistence(timeout: 10))
@@ -200,33 +201,40 @@ import XCTest
         XCTAssertFalse(clear.exists)
     }
 
-    func testWalletListFollowsBrowsedPurchaseAndCollectionsAreDirect() {
-        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "wallet-months", "--t05-light"]
-        app.launchEnvironment["SLIPLET_PREVIEW_COUNT"] = "50"; app.launch()
-        XCTAssertTrue(app.staticTexts["50 saved"].waitForExistence(timeout: 90))
-        app.buttons["allReceipts"].tap()
-        XCTAssertTrue(app.buttons["receiptCollections"].waitForExistence(timeout: 10))
-        for _ in 0..<3 { app.swipeUp() }
-        let candidates = receipts(app).allElementsBoundByIndex.filter { $0.isHittable && $0.frame.minY > 160 && $0.frame.maxY < 650 }
-        guard let target = candidates.first else { return XCTFail("Expected a visible receipt") }
-        let iso = target.label.range(of: "[0-9]{4}-[0-9]{2}-[0-9]{2}", options: .regularExpression).map { String(target.label[$0]) }
-        let identifier = target.identifier
-        target.tap(); XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 10)); app.buttons["back"].tap()
-        app.buttons["walletTab"].tap()
-        let papers = app.buttons.matching(NSPredicate(format: "identifier MATCHES %@", "receipt-[0-9]+"))
-        XCTAssertTrue(papers.firstMatch.waitForExistence(timeout: 10))
-        if let iso { XCTAssertTrue(papers.allElementsBoundByIndex.contains { $0.isHittable && $0.label.contains(iso) }) }
-        capture(app, "wallet-from-list")
-        app.buttons["allReceipts"].tap()
-        XCTAssertTrue(app.buttons[identifier].waitForExistence(timeout: 10))
-        app.buttons["receiptCollections"].tap(); app.buttons["collection-Archive"].tap()
-        XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts")
-        XCTAssertFalse(app.buttons["walletSettings"].exists)
-        capture(app, "direct-archive")
-        app.buttons["receiptCollections"].tap(); app.buttons["collection-All receipts"].tap()
-        XCTAssertEqual(app.staticTexts["searchResultCount"].label, "50 receipts")
-        app.terminate()
+    func testNativeSearchBackRestoresAScrolledWalletAndKeepsTheCollection() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "many", "--t05-light"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["30 saved"].waitForExistence(timeout: 60))
+        for _ in 0..<2 { app.swipeDown() }
+        let papers = app.buttons.matching(NSPredicate(format: "identifier MATCHES 'receipt-[0-9]+'"))
+        guard let paper = papers.allElementsBoundByIndex.first(where: {
+            $0.isHittable && $0.frame.minY > 125 && $0.frame.minY < 450
+        }) else { return XCTFail("Expected a visible paper in the scrolled wallet") }
+        let id = paper.identifier
+        let before = paper.frame.minY
+        app.buttons["receiptSearch"].tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
+        app.searchFields.firstMatch.typeText("no fictional match\n")
+        XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
+        app.navigationBars["Search"].buttons.firstMatch.tap()
+        let restored = app.buttons[id]
+        XCTAssertTrue(restored.waitForExistence(timeout: 10))
+        XCTAssertTrue(restored.isHittable)
+        XCTAssertEqual(restored.frame.minY, before, accuracy: 12)
+
+        app.buttons["searchFilters"].tap()
+        app.buttons["filterCollection"].tap()
+        app.buttons["Archive"].tap()
+        app.buttons["applySearchFilters"].tap()
+        XCTAssertTrue(app.staticTexts["No matching receipts"].waitForExistence(timeout: 10))
+        app.buttons["receiptSearch"].tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue((app.buttons["searchFilterSummary"].value as? String)?.contains("Archive") == true)
+        app.navigationBars["Search"].buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["No matching receipts"].waitForExistence(timeout: 10))
     }
+
     func testDateEditMovesMonthAndReturnsToTheSamePaper() {
         let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", "many", "--t05-light"]
         app.launch(); XCTAssertTrue(app.staticTexts["30 saved"].waitForExistence(timeout: 60))

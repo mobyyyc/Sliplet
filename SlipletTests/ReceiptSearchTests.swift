@@ -151,7 +151,7 @@ enum SearchFixture {
         _ = try await store.create(extraction: original, originalImage: SyntheticFixture.imageData(), mediaType: "image/png", correction: SearchFixture.correction(original)); try await store.close()
         let workspace = ReceiptWorkspace(directory: dir, keyProvider: SearchFixture.Key())
         workspace.activate(protectedDataAvailable: true); try await wait { workspace.availability == .ready }
-        workspace.searchQuery = "milk"; workspace.includeArchived = true; workspace.library = true
+        workspace.searchQuery = "milk"; workspace.includeArchived = true; workspace.searching = true
         workspace.searchFiltersExpanded = true; workspace.searchReturnID = "fictional-return"
         let result = try XCTUnwrap(workspace.searchIndex.results(query: workspace.searchQuery).first)
         workspace.open(result.record, match: result.matches[0]); try await wait { workspace.image != nil }

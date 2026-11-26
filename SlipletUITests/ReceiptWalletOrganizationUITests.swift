@@ -109,7 +109,7 @@ import XCTest
         app.buttons["back"].tap()
         XCTAssertTrue(field.waitForExistence(timeout: 12))
         XCTAssertEqual(field.value as? String, olderDate ?? commonQuery)
-        app.buttons["close"].tap()
+        app.navigationBars["Search"].buttons.firstMatch.tap()
         XCTAssertTrue(overviewButton.waitForExistence(timeout: 12))
 
         let samples: [String: Double] = [

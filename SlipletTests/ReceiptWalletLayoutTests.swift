@@ -107,7 +107,7 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         XCTAssertEqual(Set(nextList.sections[0].rows.map(\.record.id)), Set(records.suffix(2).map(\.id)))
         XCTAssertEqual(Set(nextList.sections.flatMap(\.rows).map(\.record.id)).count, records.count)
     }
-    @MainActor func testSearchCancelResetsHomeAndFutureDatesCannotDuplicateTodayMonthSections() throws {
+    @MainActor func testSearchReturnKeepsWalletPositionAndFutureDatesCannotDuplicateTodayMonthSections() throws {
         let today = ReceiptBrowsingPeriod.today()
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = .autoupdatingCurrent
         let future = ReceiptBrowsingPeriod.today(now: calendar.date(byAdding: .day, value: 1, to: Date())!)
@@ -117,13 +117,13 @@ final class ReceiptWalletLayoutTests: XCTestCase {
         XCTAssertEqual(Set(model.walletLayout.sections.map(\.id)).count, model.walletLayout.sections.count)
         model.searching = true; model.searchQuery = "unrecognized zebra"
         XCTAssertEqual(model.browsing.receiptCount, 0)
-        XCTAssertEqual(model.homeBrowsing.receiptCount, 3)
         XCTAssertEqual(model.walletReceipts.last?.id, current.id)
         model.walletScrollOffset = 450; model.walletAnchorID = current.id
         model.walletFocus = ReceiptWalletFocus(receiptID: current.id, y: 140)
         model.endSearch()
         XCTAssertFalse(model.searching); XCTAssertEqual(model.searchQuery, "")
-        XCTAssertNil(model.walletScrollOffset); XCTAssertNil(model.walletFocus); XCTAssertNil(model.walletAnchorID)
+        XCTAssertEqual(model.walletScrollOffset, 450); XCTAssertEqual(model.walletFocus?.receiptID, current.id)
+        XCTAssertEqual(model.walletAnchorID, current.id)
         XCTAssertNil(model.browseAnchor)
         XCTAssertEqual(model.walletLayout.sections.last?.title, "Today")
     }

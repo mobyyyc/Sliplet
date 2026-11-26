@@ -3,7 +3,7 @@ import XCTest
 @MainActor final class ReceiptPurchaseOverviewUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
 
-    func testWalletAndListOpenMonthlyTotalsAndReceiptReturnsToSameMerchant() {
+    func testWalletOpensMonthlyTotalsAndReceiptReturnsToSameMerchant() {
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "wallet", "--t05-light", "--today-wallet"]
         app.launch()
@@ -35,19 +35,13 @@ import XCTest
         XCTAssertTrue(total.waitForExistence(timeout: 10))
         app.buttons["closePurchaseOverview"].tap()
 
-        app.buttons["walletSettings"].tap()
-        app.buttons["receiptDisplayMode"].tap()
-        app.buttons["List"].tap()
-        app.buttons["Done"].tap()
-        let listEntry = app.buttons["listOverview-today"]
-        XCTAssertTrue(listEntry.waitForExistence(timeout: 10))
-        listEntry.tap()
+        XCTAssertTrue(entry.waitForExistence(timeout: 10))
+        entry.tap()
         XCTAssertTrue(total.waitForExistence(timeout: 10))
 
         let month = app.buttons["purchaseOverviewMonth"]
         month.tap()
-        let earlierMonth = app.buttons.matching(NSPredicate(
-            format: "label == %@ AND identifier != %@", "October 2026", "listOverview-2026-10")).firstMatch
+        let earlierMonth = app.buttons["October 2026"].firstMatch
         XCTAssertTrue(earlierMonth.waitForExistence(timeout: 5))
         earlierMonth.tap()
         XCTAssertEqual(month.value as? String, "October 2026")

@@ -57,22 +57,20 @@ import XCTest
         XCTAssertEqual(model.walletFocus?.receiptID, second.id)
         XCTAssertEqual(model.walletLayout.receiptIDs, [second.id])
     }
-    func testViewSwitchPreservesSearchAndFiltersAndNeverUnarchivesAReceipt() throws {
+    func testLeavingSearchClearsTheQueryAndPreservesArchiveScope() throws {
         let model = ReceiptWorkspace(); let record = SearchFixture.record()
-        model.receipts = [record]; model.library = true; model.searchQuery = "milk"
-        model.applyBrowseFilters(merchant: .value("FICTIONAL CORNER MART"), month: .all, archived: false)
+        model.receipts = [revised(record, date: record.current.fields.purchaseDate, archived: true)]
+        model.applyBrowseFilters(merchant: .value("FICTIONAL CORNER MART"), month: .all, archived: false, scope: "Archive")
+        model.searching = true; model.searchQuery = "milk"
         let row = try XCTUnwrap(model.browsing.rows.first)
         model.browseAnchor = .init(rowID: row.id, receiptID: record.id, y: 200)
-        model.switchReceiptView()
-        XCTAssertFalse(model.library); XCTAssertEqual(model.walletFocus?.receiptID, record.id)
-        model.switchReceiptView()
-        XCTAssertTrue(model.library); XCTAssertEqual(model.searchQuery, "milk")
-        XCTAssertEqual(model.merchantFilter, .value("FICTIONAL CORNER MART")); XCTAssertEqual(model.browseAnchor?.rowID, row.id)
-        model.receipts = [revised(record, date: record.current.fields.purchaseDate, archived: true)]
-        model.showCollection("Archive"); let archived = try XCTUnwrap(model.browsing.rows.first)
-        model.browseAnchor = .init(rowID: archived.id, receiptID: record.id, y: 200); model.walletFocus = nil
-        model.switchReceiptView()
-        XCTAssertNotNil(model.walletFocus); XCTAssertTrue(model.receipts[0].isArchived); XCTAssertEqual(model.collection, "Archive")
+        model.endSearch()
+        XCTAssertFalse(model.searching); XCTAssertEqual(model.searchQuery, "")
+        XCTAssertNil(model.browseAnchor)
+        XCTAssertEqual(model.merchantFilter, .value("FICTIONAL CORNER MART"))
+        XCTAssertEqual(model.collection, "Archive")
+        XCTAssertEqual(model.walletReceipts.map(\.id), [record.id])
+        XCTAssertTrue(model.receipts[0].isArchived)
     }
     func testSharedMonthAndTotalScopeProduceIdenticalWalletAndListIdentities() throws {
         let model = ReceiptWorkspace(); let record = SearchFixture.record(); model.receipts = [record]

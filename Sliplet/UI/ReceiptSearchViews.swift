@@ -45,73 +45,42 @@ struct ReceiptSearchDetailView: View {
     }
 }
 
-struct ReceiptPurchaseHistoryView: View {
+struct ReceiptSearchResultsView: View {
     @Bindable var workspace: ReceiptWorkspace
-    var openSettings: () -> Void
-    var openOverview: (String?) -> Void
-    var openSavedDrafts: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
-    let isSearchResults: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
-    init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {},
-         isSearchResults: Bool, openOverview: @escaping (String?) -> Void, openSavedDrafts: @escaping () -> Void,
-         requestDelete: @escaping (ReceiptRecord) -> Void) {
-        self.workspace = workspace; self.openSettings = openSettings; self.openOverview = openOverview
-        self.openSavedDrafts = openSavedDrafts
-        self.requestDelete = requestDelete; self.isSearchResults = isSearchResults
-        _pendingRestore = State(initialValue: isSearchResults || !workspace.searching ? workspace.browseAnchor : nil)
+    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
+        self.workspace = workspace
+        self.requestDelete = requestDelete
+        _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
-    private var snapshot: ReceiptBrowsingSnapshot { isSearchResults ? workspace.browsing : workspace.homeBrowsing }
-    private var isActiveSurface: Bool { workspace.flow == .wallet && workspace.searching == isSearchResults }
-    private var hasFilters: Bool { workspace.hasBrowseFilters }
+    private var isActiveSurface: Bool { workspace.flow == .wallet && workspace.searching }
 
     var body: some View {
-        let draftCount = isSearchResults ? 0 : workspace.homeSavedDraftShortcutCount
         GeometryReader { geometry in
             let viewportBottom = geometry.frame(in: .global).maxY
             ScrollViewReader { proxy in
                 List {
-                    if draftCount > 0 {
-                        Section {
-                            Button(action: openSavedDrafts) {
-                                HStack {
-                                    Label("Needs review", systemImage: "exclamationmark.circle")
-                                    Spacer()
-                                    Text(draftCount.formatted()).foregroundStyle(.secondary)
-                                    Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
-                                        .accessibilityHidden(true)
-                                }
-                                .frame(minHeight: 44)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Needs review")
-                            .accessibilityValue(draftCount == 1 ? "1 saved draft" : "\(draftCount) saved drafts")
-                            .accessibilityIdentifier("savedDraftShortcut")
-                            .id("browse-top")
-                        }
-                    }
-                    if snapshot.sections.isEmpty {
+                    if workspace.browsing.sections.isEmpty {
                         Section {
                             emptyState
-                        } header: { resultCount.id(draftCount == 0 ? "browse-top" : "browse-count") }
+                        } header: { resultCount.id("browse-top") }
                     }
-                    ForEach(snapshot.sections) { section in
+                    ForEach(workspace.browsing.sections) { section in
                         Section {
                             ForEach(section.rows) { row in
                                 resultRow(row, viewportBottom: viewportBottom)
                             }
                         } header: {
                             VStack(alignment: .leading, spacing: 10) {
-                                if section.id == snapshot.sections.first?.id {
-                                    resultCount.id(draftCount == 0 ? "browse-top" : "browse-count")
+                                if section.id == workspace.browsing.sections.first?.id {
+                                    resultCount.id("browse-top")
                                 }
-                                sectionHeading(section)
+                                Text(section.title).font(.subheadline.weight(.medium)).foregroundStyle(Color(uiColor: .label))
                             }.textCase(nil)
                         }
                     }
@@ -145,8 +114,8 @@ struct ReceiptPurchaseHistoryView: View {
                     userScrolled = false
                     let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportBottom }
                         .min { $0.value.minY < $1.value.minY }
-                    if let first, let index = snapshot.indexByID[first.key] {
-                        remember(snapshot.rows[index])
+                    if let first, let index = workspace.browsing.indexByID[first.key] {
+                        remember(workspace.browsing.rows[index])
                     }
                 }
             }
@@ -154,24 +123,24 @@ struct ReceiptPurchaseHistoryView: View {
     }
 
     @ViewBuilder private var emptyState: some View {
-        if isSearchResults && workspace.hasArchivedSearchMatch {
+        if workspace.hasArchivedSearchMatch {
             searchRecovery(title: "Matches in archive", symbol: "archivebox",
                            button: "Include archived", identifier: "includeArchivedSearchMatches") {
                 workspace.includeArchived = true
             }
-        } else if isSearchResults && workspace.hasMatchOutsidePurchaseFilters {
+        } else if workspace.hasMatchOutsidePurchaseFilters {
             searchRecovery(title: typeSize.isAccessibilitySize ? nil : "Matches outside filters",
                            symbol: "line.3.horizontal.decrease.circle",
                            button: "Clear purchase filters", identifier: "clearSearchPurchaseFilters",
                            hint: "Matches exist outside your store, date and total filters. Clears those filters.",
                            action: workspace.clearPurchaseFiltersForSearch)
         } else {
-            let hasQuery = isSearchResults && !workspace.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let hasQuery = !workspace.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ContentUnavailableView(hasQuery ? "No matches" : "No receipts here",
                 systemImage: hasQuery ? "magnifyingglass" : "doc.text",
                 description: Text(workspace.searchQuery.count > 512 ? "Use a shorter search." :
                     hasQuery ? "Try a different merchant, item or item code." :
-                    hasFilters ? "Try clearing a filter." : "Try a merchant, item or item code."))
+                    workspace.hasBrowseFilters ? "Try clearing a filter." : "Try a merchant, item or item code."))
         }
     }
 
@@ -195,34 +164,12 @@ struct ReceiptPurchaseHistoryView: View {
         .padding(.vertical, title == nil ? 8 : 24)
     }
 
-    @ViewBuilder private func sectionHeading(_ section: ReceiptBrowsingSnapshot.Section) -> some View {
-        if !isSearchResults, let record = section.rows.first?.record {
-            let month = ReceiptHistory.monthKey(record)
-            Button { openOverview(month) } label: {
-                HStack(spacing: 7) {
-                    Text(section.title)
-                    Image(systemName: "chart.bar").font(.caption).accessibilityHidden(true)
-                }
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.primary)
-                .frame(minHeight: 44, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityHint(month == nil ? "Shows receipts awaiting a purchase date" : "Opens the purchase overview for this month")
-            .accessibilityIdentifier("listOverview-" + section.id)
-        } else {
-            Text(section.title).font(.subheadline.weight(.medium)).foregroundStyle(Color(uiColor: .label))
-        }
-    }
-
     private var resultCount: some View {
-        Text("\(snapshot.receiptCount) \(snapshot.receiptCount == 1 ? "receipt" : "receipts")")
+        Text("\(workspace.browsing.receiptCount) \(workspace.browsing.receiptCount == 1 ? "receipt" : "receipts")")
             .font(.caption).foregroundStyle(Color(uiColor: .secondaryLabel)).accessibilityIdentifier("searchResultCount")
     }
     private func restore(using proxy: ScrollViewProxy) {
-        guard let anchor = workspace.browseAnchor, snapshot.indexByID[anchor.rowID] != nil else { return }
+        guard let anchor = workspace.browseAnchor, workspace.browsing.indexByID[anchor.rowID] != nil else { return }
         pendingRestore = anchor
         proxy.scrollTo(anchor.rowID, anchor: .center)
         completeRestore()

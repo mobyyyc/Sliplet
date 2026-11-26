@@ -169,7 +169,7 @@ import CryptoKit
             if mode == "review" || mode.hasPrefix("correction-") { workspace.edit() }
             if mode == "source" { workspace.showSource(ids: receipt.original.fields.items.first?.sourceLineIDs ?? []) }
         }
-        if ["library", "search", "search-large"].contains(mode) { workspace.library = true }
+        if mode == "library" || ProcessInfo.processInfo.arguments.contains("--start-in-search") { workspace.searching = true }
         try? JSONSerialization.data(withJSONObject: ["mode":mode,"count":workspace.receipts.count,"ready":true], options: [.sortedKeys]).write(to: readyURL, options: .atomic)
         if mode == "motion", workspace.orderedReceipts.count == 3 {
             let records = workspace.orderedReceipts

@@ -642,7 +642,7 @@ extension ReceiptUploadUITests {
         XCTAssertFalse(shortcut.exists)
     }
 
-    func testSavedDraftChooserInWalletAndListKeepsPendingImportAndOmitsArchive() {
+    func testSavedDraftChooserKeepsPendingImportAndOmitsArchive() {
         let app = saveLongDraft()
         let back = app.buttons["back"]
         back.tap()
@@ -700,32 +700,29 @@ extension ReceiptUploadUITests {
         XCTAssertTrue(chooser.waitForNonExistence(timeout: 10))
         XCTAssertEqual(previousPaper.frame.minY, previousY, accuracy: 5)
 
-        app.buttons["walletSettings"].tap()
-        app.buttons["receiptDisplayMode"].tap(); app.buttons["List"].tap(); app.buttons["Done"].tap()
-        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
         let market = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH 'searchReceipt-' AND label CONTAINS 'SYNTHETIC MARKET'")).firstMatch
-        let priorListY = shortcut.frame.minY
+            format: "identifier MATCHES 'receipt-[0-9]+' AND label CONTAINS 'SYNTHETIC MARKET'")).firstMatch
         shortcut.tap()
         XCTAssertTrue(chooser.waitForExistence(timeout: 10))
-        let picker = XCTAttachment(screenshot: app.screenshot())
-        picker.name = "Choose between two saved drafts in List"; picker.lifetime = .keepAlways; add(picker)
         choices.matching(NSPredicate(format: "label CONTAINS 'FICTIONAL PREVIEW'")).firstMatch.tap()
         let blocker = app.buttons["reviewBlocker"]
         XCTAssertTrue(blocker.waitForExistence(timeout: 12))
         XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
         back.tap()
         XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
-        XCTAssertEqual(shortcut.frame.minY, priorListY, accuracy: 5)
+        XCTAssertEqual(previousPaper.frame.minY, previousY, accuracy: 5)
         XCTAssertTrue(resumeImport.isHittable)
 
         reveal(market, in: app)
-        market.tap()
+        market.coordinate(withNormalizedOffset: .init(dx: 0.5, dy: 0.09)).tap()
+        let merchant = app.staticTexts["receiptPaperMerchant"]
+        XCTAssertTrue(merchant.waitForExistence(timeout: 10))
+        XCTAssertEqual(merchant.label, "SYNTHETIC MARKET")
         XCTAssertTrue(app.buttons["receiptOptions"].waitForExistence(timeout: 10))
         app.buttons["receiptOptions"].tap(); app.buttons["Archive receipt"].tap()
-        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
-        XCTAssertEqual(shortcut.value as? String, "1 saved draft")
-        XCTAssertFalse(market.exists)
+        let oneDraft = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1 saved draft"), object: shortcut)
+        XCTAssertEqual(XCTWaiter.wait(for: [oneDraft], timeout: 12), .completed)
+        XCTAssertTrue(market.waitForNonExistence(timeout: 10))
         app.buttons["searchFilters"].tap()
         app.buttons["filterCollection"].tap(); app.buttons["Archive"].tap()
         app.buttons["applySearchFilters"].tap()

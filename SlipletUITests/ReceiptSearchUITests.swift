@@ -5,7 +5,7 @@ import Vision
 @MainActor final class ReceiptSearchUITests: XCTestCase {
     override func setUp() { continueAfterFailure = false }
     private func launch(_ mode: String = "search", flags: [String] = ["--t05-light"]) -> XCUIApplication {
-        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", mode] + flags
+        let app = XCUIApplication(); app.launchArguments = ["--t05-synthetic-preview", mode, "--start-in-search"] + flags
         app.launch(); XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 60)); reveal(app.staticTexts["searchResultCount"], app: app); return app
     }
     private func capture(_ app: XCUIApplication, _ name: String) {
@@ -54,7 +54,7 @@ import Vision
         app.launch()
         let readyPaper = app.buttons.matching(NSPredicate(format: "identifier MATCHES %@ AND label CONTAINS '382.54'", "receipt-[0-9]+" )).firstMatch
         XCTAssertTrue(readyPaper.waitForExistence(timeout: 60))
-        app.buttons["allReceipts"].tap()
+        app.buttons["receiptSearch"].tap()
         search("milk", app: app)
         let first = matches(app).firstMatch
         reveal(first, app: app); first.tap()
@@ -126,14 +126,14 @@ import Vision
         let share = app.buttons["splitShare"]; reveal(share, app: app); share.tap(); capture(app, "fictional-import-native-share")
         let systemCopy = app.cells.matching(NSPredicate(format: "label == 'Copy'")).firstMatch
         XCTAssertTrue(systemCopy.waitForExistence(timeout: 10)); systemCopy.tap(); app.buttons["splitDone"].tap()
-        app.buttons["back"].tap(); XCTAssertTrue(app.buttons["allReceipts"].waitForExistence(timeout: 10)); app.buttons["allReceipts"].tap()
+        app.buttons["back"].tap(); XCTAssertTrue(app.buttons["receiptSearch"].waitForExistence(timeout: 10)); app.buttons["receiptSearch"].tap()
         search("item", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "1 receipt")
         let match = matches(app).firstMatch; reveal(match, app: app); match.tap()
         XCTAssertTrue(app.buttons["searchOriginal"].waitForExistence(timeout: 10)); app.buttons["searchOriginal"].tap()
         XCTAssertTrue(app.buttons["sourceDone"].waitForExistence(timeout: 10)); capture(app, "fictional-import-search-original")
         app.buttons["sourceDone"].tap(); app.terminate()
         app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]; app.launch()
-        XCTAssertTrue(app.buttons["allReceipts"].waitForExistence(timeout: 30)); app.buttons["allReceipts"].tap(); search("item", app: app)
+        XCTAssertTrue(app.buttons["receiptSearch"].waitForExistence(timeout: 30)); app.buttons["receiptSearch"].tap(); search("item", app: app)
         XCTAssertEqual(app.staticTexts["searchResultCount"].label, "1 receipt"); reveal(matches(app).firstMatch, app: app); matches(app).firstMatch.tap()
         let split = app.buttons["splitOpen"]
         XCTAssertTrue(split.waitForExistence(timeout: 10))
@@ -169,7 +169,7 @@ import Vision
             }
         }
         app.terminate(); app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]; app.launch()
-        XCTAssertTrue(app.buttons["allReceipts"].waitForExistence(timeout: 30)); app.buttons["allReceipts"].tap()
+        XCTAssertTrue(app.buttons["receiptSearch"].waitForExistence(timeout: 30)); app.buttons["receiptSearch"].tap()
         search("milk", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "3 receipts"); app.terminate()
     }
     func testNativeEditArchiveIncludeRestoreDeleteAndRelaunch() throws {
@@ -193,7 +193,7 @@ import Vision
         XCTAssertTrue(app.buttons["edit"].exists); app.buttons["receiptOptions"].tap(); app.buttons["delete"].tap(); app.buttons["Delete receipt and original"].tap()
         XCTAssertTrue(app.staticTexts["searchResultCount"].waitForExistence(timeout: 10)); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts")
         app.terminate(); app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]; app.launch()
-        XCTAssertTrue(app.buttons["allReceipts"].waitForExistence(timeout: 30)); app.buttons["allReceipts"].tap()
+        XCTAssertTrue(app.buttons["receiptSearch"].waitForExistence(timeout: 30)); app.buttons["receiptSearch"].tap()
         search("coffee", app: app); XCTAssertEqual(app.staticTexts["searchResultCount"].label, "0 receipts"); app.terminate()
     }
     func testCompactFiltersResetAndReturnToResult() {

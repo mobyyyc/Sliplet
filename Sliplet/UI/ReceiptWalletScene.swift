@@ -107,7 +107,7 @@ struct ReceiptWalletScene: View {
     @State private var revealedID: UUID?
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemMotion) }
     private var selectedID: UUID? {
-        !workspace.openedFromSavedDraftShortcut && [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil
+        !workspace.searching && !workspace.openedFromSavedDraftShortcut && [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil
     }
     private var records: [ReceiptRecord] { retainedRecords ?? workspace.walletReceipts }
     private var layout: ReceiptWalletLayout { retainedLayout ?? workspace.walletLayout }
@@ -231,7 +231,7 @@ struct ReceiptWalletScene: View {
                     .scrollPosition($walletScroll)
                     .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
                         scrollOffset = offset
-                        if positioned && presented == nil && !workspace.openedFromSavedDraftShortcut && !records.isEmpty {
+                        if positioned && presented == nil && !workspace.searching && !workspace.openedFromSavedDraftShortcut && !records.isEmpty {
                             workspace.walletScrollOffset = offset
                         }
                     }
@@ -530,8 +530,8 @@ struct ReceiptWalletScene: View {
         typeSize.isAccessibilitySize ? 0 : [-1.0, 0.7, -0.5, 1.1][index % 4]
     }
     private func walletPocket(_ jump: @escaping () -> Void) -> some View {
-        WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty,
-                    draftCount: workspace.homeSavedDraftShortcutCount, showDrafts: openSavedDrafts,
+        WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters,
+                    draftCount: workspace.savedDraftShortcutCount, showDrafts: openSavedDrafts,
                     showOverview: { openOverview(records.last.flatMap(ReceiptHistory.monthKey)) }, jumpToLatest: jump)
             .fixedSize(horizontal: false, vertical: true)
             .allowsHitTesting(presented == nil)
@@ -1047,14 +1047,6 @@ struct ReceiptWalletSettingsView: View {
         NavigationStack {
             Form {
                 Section("Display") {
-                    Picker("Receipt view", selection: Binding(get: { workspace.library }, set: { value in
-                        if value != workspace.library {
-                            workspace.endSearch(); workspace.switchReceiptView(); workspace.resetHomeToNewest()
-                        }
-                    })) {
-                        Text("Wallet").tag(false)
-                        Text("List").tag(true)
-                    }.accessibilityIdentifier("receiptDisplayMode")
                     Picker("Receipt paper", selection: Binding(get: { workspace.walletSettings.paperAppearance }, set: { appearance in
                         var settings = workspace.walletSettings; settings.paperAppearance = appearance
                         workspace.setWalletSettings(settings)

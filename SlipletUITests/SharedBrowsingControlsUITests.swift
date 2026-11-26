@@ -9,7 +9,7 @@ import XCTest
     private func capture(_ app: XCUIApplication, _ name: String) {
         let a = XCTAttachment(screenshot: app.screenshot()); a.name = name; a.lifetime = .keepAlways; add(a)
     }
-    func testSharedToolbarFiltersResetAndDisplayChoice() {
+    func testWalletToolbarFiltersResetAndSettingsOffersPaperAppearance() {
         let app = launch()
         XCTAssertTrue(app.buttons["walletSettings"].isHittable)
         XCTAssertTrue(app.buttons["receiptSearch"].isHittable)
@@ -26,25 +26,19 @@ import XCTest
         capture(app, "shared-wallet-empty-filter")
         app.buttons["Clear filters"].tap(); XCTAssertTrue(app.staticTexts["30 saved"].waitForExistence(timeout: 10))
         app.buttons["walletSettings"].tap()
-        app.buttons["receiptDisplayMode"].tap(); app.buttons["List"].tap(); app.buttons["Done"].tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchReceipt-' ")).firstMatch.waitForExistence(timeout: 10))
-        for _ in 0..<10 {
-            if app.staticTexts["searchResultCount"].exists { break }
-            app.swipeDown(velocity: .fast)
-        }
-        XCTAssertTrue(app.staticTexts["searchResultCount"].exists)
-        XCTAssertEqual(app.staticTexts["searchResultCount"].label, "30 receipts")
-        XCTAssertTrue(app.buttons["walletSettings"].isHittable); XCTAssertTrue(app.buttons["receiptSearch"].isHittable)
-        XCTAssertFalse(app.buttons["walletTab"].exists)
-        capture(app, "shared-list-toolbar"); app.terminate()
+        XCTAssertTrue(app.buttons["paperAppearanceSetting"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["receiptDisplayMode"].exists)
+        app.buttons["Done"].tap()
+        XCTAssertTrue(app.staticTexts["30 saved"].waitForExistence(timeout: 10))
+        capture(app, "wallet-remains-home"); app.terminate()
     }
     func testSearchKeepsToolbarAndReturnsToMatchingReceipt() {
         let app = launch(true)
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("milk\n")
-        XCTAssertTrue(app.buttons["walletSettings"].isHittable)
+        XCTAssertTrue(app.navigationBars["Search"].buttons.firstMatch.isHittable)
         XCTAssertTrue(app.buttons["searchFilters"].isHittable)
-        capture(app, "shared-active-search")
+        capture(app, "native-search-destination")
         let match = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'searchMatch-' ")).firstMatch
         XCTAssertTrue(match.waitForExistence(timeout: 10)); match.tap()
         XCTAssertTrue(app.buttons["back"].waitForExistence(timeout: 10)); app.buttons["back"].tap()
@@ -148,7 +142,7 @@ import XCTest
         XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
 
-        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.36))
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.36))
         let short = app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.36))
         edge.press(forDuration: 0.08, thenDragTo: short, withVelocity: .slow, thenHoldForDuration: 0.1)
         XCTAssertEqual(field.value as? String, term)
@@ -159,8 +153,8 @@ import XCTest
         middle.press(forDuration: 0.08, thenDragTo: right)
         XCTAssertTrue(field.exists)
 
-        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.36))
-        edge.press(forDuration: 0.08, thenDragTo: finish)
+        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.36))
+        edge.press(forDuration: 0.01, thenDragTo: finish, withVelocity: .fast, thenHoldForDuration: 0)
         XCTAssertTrue(field.waitForNonExistence(timeout: 10))
         XCTAssertFalse(keyboard.exists)
         XCTAssertTrue(app.staticTexts["30 saved"].isHittable)
@@ -171,13 +165,12 @@ import XCTest
         XCTAssertEqual(field.value as? String, "Merchant, item or code")
     }
 
-    func testSearchEdgeSwipeReturnsToListWithReduceMotion() {
+    func testSearchEdgeSwipeReturnsToWalletWithReduceMotion() {
         let app = XCUIApplication()
         app.launchArguments = ["--t05-synthetic-preview", "search", "--t05-dark", "--t05-reduce-motion"]
         app.launch()
-        let count = app.staticTexts["searchResultCount"]
-        XCTAssertTrue(count.waitForExistence(timeout: 30))
-        let before = count.label
+        let wallet = app.staticTexts["3 saved"]
+        XCTAssertTrue(wallet.waitForExistence(timeout: 30))
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10))
@@ -185,13 +178,12 @@ import XCTest
         XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 5))
 
-        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.40))
-        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.40))
-        edge.press(forDuration: 0.08, thenDragTo: finish)
+        let edge = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.40))
+        let finish = app.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.40))
+        edge.press(forDuration: 0.01, thenDragTo: finish, withVelocity: .fast, thenHoldForDuration: 0)
         XCTAssertTrue(field.waitForNonExistence(timeout: 10))
-        XCTAssertTrue(count.isHittable)
-        XCTAssertEqual(count.label, before)
-        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Receipts")
+        XCTAssertTrue(wallet.isHittable)
+        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
     }
 
     func testTodayIsVisibleInitiallyAndAfterSearchCancel() {
@@ -223,8 +215,17 @@ import XCTest
         } else {
             XCTAssertTrue(keyboard.waitForNonExistence(timeout: 5))
         }
-        XCTAssertEqual(app.staticTexts["browseTitle"].label, "Wallet")
-        app.buttons["close"].tap()
+        let searchBack = app.navigationBars["Search"].buttons.firstMatch
+        XCTAssertTrue(searchBack.isHittable)
+        XCTAssertFalse(app.buttons["close"].exists)
+        if id == "latest" {
+            let clear = app.buttons["Clear text"]
+            XCTAssertTrue(clear.isHittable)
+            clear.tap()
+            XCTAssertTrue(searchBack.isHittable)
+            XCTAssertEqual(field.value as? String, "Merchant, item or code")
+        }
+        searchBack.tap()
         XCTAssertTrue(recent.waitForExistence(timeout: 10))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         XCTAssertGreaterThan(recent.frame.minY, 110); XCTAssertLessThan(recent.frame.maxY, app.frame.height - 120)
@@ -237,7 +238,7 @@ import XCTest
         capture(app, id + "-wallet-after-search-cancel")
         guard id == "today" else { app.terminate(); return }
         app.buttons["walletSettings"].tap()
-        XCTAssertTrue(app.buttons["receiptDisplayMode"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["receiptDisplayMode"].exists)
         XCTAssertTrue(app.buttons["paperAppearanceSetting"].isHittable)
         XCTAssertTrue(app.staticTexts["Display"].exists)
         for _ in 0..<6 {
