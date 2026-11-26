@@ -54,4 +54,18 @@ Opening the result, viewing Original and returning took four additional taps. Bo
 
 **P19-03 entry point** · Put the recovery action inside the empty search card. Show it when clearing the purchase filters alone produces a match in the current collection and archive scope. Target one tap from the empty screen, down from three while preserving the same scope. An eligible archive-only match under current filters can keep its existing path. For a genuine miss, offer guidance on changing the search text.
 
-**Next approval** · P19-02, make saved drafts easier to resume.
+## P19-02 · Resume saved drafts
+
+Unfiltered Wallet shows **Needs review** by the saved count. List places the same action above the first receipt group. It uses the existing review eligibility rules and the active receipts. A single draft opens in Review. With several drafts, the picker shows merchant, date and total so the user can select a receipt. The original receipt and correction controls are available through the usual review flow.
+
+| From Wallet | P19-01 through Filters | P19-02 shortcut |
+| --- | ---: | ---: |
+| One draft, reach Review | 6 taps | 1 tap |
+| One draft, reach its missing amount | 7 taps | 2 taps |
+| Two drafts, choose a draft and reach Review | 6 taps | 2 taps |
+
+The shortcut leaves a pending photo import available through **Continue import**. Cancel keeps the saved revision and returns to the original Wallet or List position. Saving or finishing opens the updated receipt. Finishing and archiving update the active draft count. The shortcut is hidden when the active count reaches zero.
+
+The first check caught a roughly 25-point movement after canceling from Wallet. The final run restored the paper within the 5-point test tolerance, and List restored the entry within the same tolerance. The verification covered relaunch, the chooser in Wallet and List, the separate pending photo, archive visibility, correction followed by discard, finalization, and a 1,000-receipt wallet. The one-draft shortcut passed at the Simulator's maximum Dynamic Type size with Reduce Motion. Five distinct UI tests, 38 targeted unit tests and the unsigned iPhone Release build passed. The multi-draft test uses the fictional Photos fixture. [Simulator fixture](IMPORT_DEMO.md)
+
+**Next approval** · P19-03, recover a filtered search in place.

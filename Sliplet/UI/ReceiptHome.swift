@@ -33,6 +33,8 @@ struct ReceiptHome: View {
     @State private var settings = false
     @State private var recoveryAISettings = false
     @State private var walletInformation = false
+    @State private var showingSavedDrafts = false
+    @State private var chosenSavedDraft: UUID?
     @State private var purchaseOverview: ReceiptOverviewNavigation?
     @State private var presentedPurchaseOverview: ReceiptOverviewNavigation?
     @State private var overviewReceiptID: UUID?
@@ -294,6 +296,13 @@ struct ReceiptHome: View {
             .sheet(isPresented: $workspace.searchFiltersExpanded) { ReceiptBrowseFiltersView(workspace: workspace) }
             .sheet(isPresented: $walletInformation) { WalletInformationView() }
             .sheet(isPresented: $settings) { ReceiptWalletSettingsView(workspace: workspace) }
+            .sheet(isPresented: $showingSavedDrafts, onDismiss: {
+                let id = chosenSavedDraft
+                chosenSavedDraft = nil
+                if session == workspace.sessionID, let id { workspace.resumeSavedDraft(id) }
+            }) {
+                savedDraftPicker
+            }
             .sheet(item: $presentedPurchaseOverview, onDismiss: finishOverviewPresentation) { navigation in
                 if workspace.privacyCovered {
                     ReceiptLockScreen()
@@ -318,11 +327,17 @@ struct ReceiptHome: View {
             .disabled(workspace.saving)
         }
         .alert("Import progress unavailable", isPresented: Binding(
-            get: { workspace.flow != .wallet && workspace.importCheckpointError != nil },
+            get: { workspace.flow != .wallet && !workspace.openedFromSavedDraftShortcut && workspace.importCheckpointError != nil },
             set: { if !$0 { workspace.dismissCheckpointError() } }
         )) {
             Button("OK", role: .cancel) { workspace.dismissCheckpointError() }
         } message: { Text(workspace.importCheckpointError ?? "") }
+        .alert("Couldn’t open draft", isPresented: Binding(
+            get: { workspace.savedDraftOpenError != nil },
+            set: { if !$0 { workspace.savedDraftOpenError = nil } }
+        )) {
+            Button("OK", role: .cancel) { workspace.savedDraftOpenError = nil }
+        } message: { Text(workspace.savedDraftOpenError ?? "") }
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             workspace.refreshCalendarGrouping()
         }
@@ -556,12 +571,19 @@ struct ReceiptHome: View {
     @ViewBuilder private var flow: some View {
         switch workspace.flow {
         case .wallet, .detail, .review:
+            let shortcutDetail = workspace.openedFromSavedDraftShortcut && workspace.flow == .detail
+            let hideHome = workspace.flow == .review || shortcutDetail
             ZStack {
                 // Disable this modifier when visible so decorative child visibility is preserved.
-                wallet.opacity(workspace.flow == .review ? 0 : 1)
-                    .allowsHitTesting(workspace.flow != .review)
-                    .accessibilityHidden(true, isEnabled: workspace.flow == .review)
+                wallet.opacity(hideHome ? 0 : 1)
+                    .allowsHitTesting(!hideHome)
+                    .accessibilityHidden(true, isEnabled: hideHome)
                 if workspace.flow == .review { ReceiptReviewView(workspace: workspace, editing: $editing) }
+                else if shortcutDetail { ReceiptSearchDetailView(workspace: workspace) }
+                else if workspace.openedFromSavedDraftShortcut && workspace.saving {
+                    ProgressView("Opening draft")
+                        .padding(16).background(.regularMaterial, in: .rect(cornerRadius: 16))
+                }
             }
         case .preparingUpload:
             if let record = workspace.photoDuplicatePrompt {
@@ -737,19 +759,60 @@ struct ReceiptHome: View {
 
     private var wallet: some View {
         Group {
-            if (workspace.library || workspace.searching) && workspace.flow == .wallet {
-                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true }, openOverview: showPurchaseOverview) { record in
+            if (workspace.library || workspace.searching) && (workspace.flow == .wallet || workspace.openedFromSavedDraftShortcut) {
+                ReceiptPurchaseHistoryView(workspace: workspace, openSettings: { settings = true },
+                                           openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts) { record in
                     deleteTarget = record; delete = true
                 }
             } else if workspace.library || workspace.searching || overviewReceiptID != nil {
                 ReceiptSearchDetailView(workspace: workspace)
             } else {
-                ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview) { record in
+                ReceiptWalletScene(workspace: workspace, openOverview: showPurchaseOverview, openSavedDrafts: openSavedDrafts) { record in
                     deleteTarget = record; delete = true
                 }
 
             }
         }
+    }
+
+    private func openSavedDrafts() {
+        guard workspace.savedDraftShortcutCount > 0, !workspace.saving else { return }
+        if workspace.savedDraftShortcutCount == 1, let record = workspace.activeSavedDrafts.first {
+            workspace.resumeSavedDraft(record.id)
+        } else {
+            showingSavedDrafts = true
+        }
+    }
+
+    private var savedDraftPicker: some View {
+        NavigationStack {
+            Group {
+                if workspace.privacyCovered { ReceiptLockScreen() }
+                else if workspace.activeSavedDrafts.isEmpty {
+                    ContentUnavailableView("No drafts to review", systemImage: "checkmark.circle")
+                } else {
+                    List(workspace.activeSavedDrafts) { record in
+                        Button {
+                            chosenSavedDraft = record.id
+                            showingSavedDrafts = false
+                        } label: {
+                            ReceiptSummary(record: record, showsReviewStatus: false)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("savedDraft-" + record.id.uuidString)
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Needs review")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showingSavedDrafts = false } }
+            }
+        }
+        .dynamicTypeSize(typeSize)
     }
     @ViewBuilder private var debugControls: some View {
         #if DEBUG
@@ -772,7 +835,7 @@ struct WalletInformationView: View {
                     Text("Receipts stay on this device. Export a password-encrypted backup in Settings so you can restore them later. Automatic backup is excluded.")
                 }
                 Section("Unfinished work") {
-                    Text("If you leave during an import, look for Continue import in the wallet. Save edits to existing receipts before leaving the app.")
+                    Text("Use Continue import for a photo you haven’t saved yet. Find saved drafts under Needs review. Save edits to existing receipts before leaving the app.")
                 }
                 #if DEBUG
                 if !SyntheticNativePreview.enabled {
@@ -787,6 +850,7 @@ struct WalletInformationView: View {
 
 struct ReceiptSummary: View {
     let record: ReceiptRecord
+    var showsReviewStatus = true
     @Environment(\.dynamicTypeSize) private var typeSize
     private var total: String {
         record.current.fields.total.map { "\($0.currency.code) \(ExactInput.format($0.minorUnits, scale: $0.currency.minorUnitScale))" } ?? "Total missing"
@@ -810,7 +874,7 @@ struct ReceiptSummary: View {
                 }
             }
             if record.isStarred { Label("Starred", systemImage: "star.fill").font(.caption) }
-            if !ReceiptCompletion.isComplete(record) {
+            if showsReviewStatus && !ReceiptCompletion.isComplete(record) {
                 Label("Needs review", systemImage: "exclamationmark.circle").font(.caption.weight(.medium))
             }
         }.foregroundStyle(.primary).accessibilityElement(children: .combine)

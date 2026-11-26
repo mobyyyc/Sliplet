@@ -22,6 +22,7 @@ import XCTest
         for id in ["uploadFixture", "adjustPhotoContinue", "previewAI", "readingMethodContinue", "reviewUpload"] {
             let button = app.buttons[id]
             XCTAssertTrue(button.waitForExistence(timeout: 15))
+            if id == "previewAI" { reveal(button, in: app) }
             button.tap()
         }
         let consent = app.switches["uploadConsent"]
@@ -567,6 +568,193 @@ extension ReceiptUploadUITests {
         result.tap()
         XCTAssertTrue(edit.waitForExistence(timeout: 10))
         XCTAssertEqual(edit.label, "Continue review")
+    }
+
+    private func saveLongDraft() -> XCUIApplication {
+        let app = sendAuditFixture("--p902-long-read", flags: ["--t05-light", "--p1702-missing-last-amount"])
+        let save = app.buttons["saveDraft"]
+        XCTAssertTrue(save.waitForExistence(timeout: 15))
+        save.tap()
+        let edit = app.buttons["edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 12))
+        XCTAssertEqual(edit.label, "Continue review")
+        return app
+    }
+
+    func testSavedDraftShortcutReopensAfterRelaunchAndClearsAfterFinish() {
+        let app = saveLongDraft()
+        app.terminate()
+        app.launchArguments = ["--t05-synthetic-preview", "resume", "--t05-light"]
+        app.launch()
+
+        let shortcut = app.buttons["savedDraftShortcut"]
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 15))
+        XCTAssertEqual(shortcut.value as? String, "1 saved draft")
+        let paper = app.buttons.matching(NSPredicate(
+            format: "identifier MATCHES 'receipt-[0-9]+' AND label CONTAINS 'FICTIONAL PREVIEW'")).firstMatch
+        XCTAssertTrue(paper.waitForExistence(timeout: 10))
+        let originalY = paper.frame.minY
+        let blocker = app.buttons["reviewBlocker"]
+        let amount = app.textFields["focusedLineAmount"]
+        let cancelCorrection = app.buttons["cancelFocusedCorrection"]
+        let finish = app.buttons["finishSave"]
+
+        shortcut.tap()
+        XCTAssertTrue(blocker.waitForExistence(timeout: 12))
+        XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
+        XCTAssertFalse(app.buttons["edit"].exists)
+        blocker.tap()
+        XCTAssertTrue(amount.waitForExistence(timeout: 10))
+        XCTAssertTrue(["", "Missing"].contains(amount.value as? String ?? ""))
+        XCTAssertTrue(app.descendants(matching: .any)["focusedSourceRaster"].firstMatch.waitForExistence(timeout: 10))
+        reveal(amount, in: app)
+        amount.tap()
+        amount.typeText("9.99")
+        app.buttons["applyFocusedCorrection"].tap()
+        XCTAssertTrue(cancelCorrection.waitForNonExistence(timeout: 10))
+        app.buttons["back"].tap()
+        app.buttons["Discard changes"].firstMatch.tap()
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
+        XCTAssertEqual(paper.frame.minY, originalY, accuracy: 5)
+
+        shortcut.tap()
+        XCTAssertTrue(blocker.waitForExistence(timeout: 10))
+        blocker.tap()
+        XCTAssertTrue(amount.waitForExistence(timeout: 10))
+        XCTAssertTrue(["", "Missing"].contains(amount.value as? String ?? ""))
+        reveal(amount, in: app)
+        amount.tap()
+        amount.typeText("1.00")
+        app.buttons["applyFocusedCorrection"].tap()
+        XCTAssertTrue(cancelCorrection.waitForNonExistence(timeout: 10))
+        XCTAssertTrue(finish.isEnabled)
+        finish.tap()
+        XCTAssertTrue(app.images["receiptReviewedMark"].waitForExistence(timeout: 15))
+        let edit = app.buttons["edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        XCTAssertEqual(edit.label, "Edit receipt")
+        edit.tap()
+        XCTAssertTrue(finish.waitForExistence(timeout: 10))
+        app.buttons["back"].tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 10), "A subsequent edit still returns to receipt detail")
+        app.buttons["back"].tap()
+        XCTAssertTrue(app.staticTexts["4 saved"].waitForExistence(timeout: 12))
+        XCTAssertFalse(shortcut.exists)
+    }
+
+    func testSavedDraftChooserInWalletAndListKeepsPendingImportAndOmitsArchive() {
+        let app = saveLongDraft()
+        let back = app.buttons["back"]
+        back.tap()
+        let second = app.buttons.matching(NSPredicate(
+            format: "identifier MATCHES 'receipt-[0-9]+' AND label CONTAINS 'SYNTHETIC MARKET'")).firstMatch
+        for _ in 0..<3 {
+            if second.exists && second.isHittable && second.frame.minY > 125 { break }
+            app.swipeDown()
+        }
+        XCTAssertTrue(second.isHittable)
+        second.coordinate(withNormalizedOffset: .init(dx: 0.5, dy: 0.09)).tap()
+        let edit = app.buttons["edit"]
+        XCTAssertTrue(edit.waitForExistence(timeout: 10))
+        edit.tap()
+        let save = app.buttons["saveDraft"]
+        XCTAssertTrue(save.waitForExistence(timeout: 12)); save.tap()
+        XCTAssertTrue(edit.waitForExistence(timeout: 12))
+        back.tap()
+
+        let importButton = app.buttons["import"]
+        XCTAssertTrue(importButton.waitForExistence(timeout: 12)); importButton.tap()
+        app.buttons["Photo library"].tap()
+        if app.staticTexts["Private Access to Photos"].firstMatch.waitForExistence(timeout: 2) {
+            app.buttons["Close"].firstMatch.tap()
+        }
+        let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo,' AND label CONTAINS '2036'")).firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 15), "Install the fictional Photos fixture from the import demo first")
+        photo.tap()
+        let advance = app.buttons["adjustPhotoContinue"]
+        XCTAssertTrue(advance.waitForExistence(timeout: 12)); advance.tap()
+        let readingMethod = app.buttons["readingMethodContinue"]
+        XCTAssertTrue(readingMethod.waitForExistence(timeout: 12))
+        XCUIDevice.shared.press(.home)
+        app.activate()
+
+        let resumeImport = app.buttons["resumePendingImport"]
+        XCTAssertTrue(resumeImport.waitForExistence(timeout: 15))
+        let shortcut = app.buttons["savedDraftShortcut"]
+        XCTAssertTrue(shortcut.isHittable)
+        XCTAssertEqual(shortcut.value as? String, "2 saved drafts")
+        let wallet = XCTAttachment(screenshot: app.screenshot())
+        wallet.name = "Saved drafts and unfinished import in Wallet"; wallet.lifetime = .keepAlways; add(wallet)
+        let chooser = app.navigationBars["Needs review"]
+        let choices = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'savedDraft-'"))
+        let previousPaper = app.buttons.matching(NSPredicate(
+            format: "identifier MATCHES 'receipt-[0-9]+' AND label CONTAINS 'FICTIONAL PREVIEW'")).firstMatch
+        XCTAssertTrue(previousPaper.isHittable)
+        let previousY = previousPaper.frame.minY
+        shortcut.tap()
+        XCTAssertTrue(chooser.waitForExistence(timeout: 10))
+        XCTAssertEqual(choices.count, 2)
+        XCTAssertTrue(choices.element(boundBy: 0).label.contains("FICTIONAL PREVIEW"))
+        XCTAssertTrue(choices.element(boundBy: 1).label.contains("SYNTHETIC MARKET"))
+        chooser.buttons["Cancel"].tap()
+        XCTAssertTrue(chooser.waitForNonExistence(timeout: 10))
+        XCTAssertEqual(previousPaper.frame.minY, previousY, accuracy: 5)
+
+        app.buttons["walletSettings"].tap()
+        app.buttons["receiptDisplayMode"].tap(); app.buttons["List"].tap(); app.buttons["Done"].tap()
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
+        let market = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH 'searchReceipt-' AND label CONTAINS 'SYNTHETIC MARKET'")).firstMatch
+        let priorListY = shortcut.frame.minY
+        shortcut.tap()
+        XCTAssertTrue(chooser.waitForExistence(timeout: 10))
+        let picker = XCTAttachment(screenshot: app.screenshot())
+        picker.name = "Choose between two saved drafts in List"; picker.lifetime = .keepAlways; add(picker)
+        choices.matching(NSPredicate(format: "label CONTAINS 'FICTIONAL PREVIEW'")).firstMatch.tap()
+        let blocker = app.buttons["reviewBlocker"]
+        XCTAssertTrue(blocker.waitForExistence(timeout: 12))
+        XCTAssertTrue(blocker.label.contains("FICTIONAL ITEM 36"))
+        back.tap()
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
+        XCTAssertEqual(shortcut.frame.minY, priorListY, accuracy: 5)
+        XCTAssertTrue(resumeImport.isHittable)
+
+        reveal(market, in: app)
+        market.tap()
+        XCTAssertTrue(app.buttons["receiptOptions"].waitForExistence(timeout: 10))
+        app.buttons["receiptOptions"].tap(); app.buttons["Archive receipt"].tap()
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
+        XCTAssertEqual(shortcut.value as? String, "1 saved draft")
+        XCTAssertFalse(market.exists)
+        app.buttons["searchFilters"].tap()
+        app.buttons["filterCollection"].tap(); app.buttons["Archive"].tap()
+        app.buttons["applySearchFilters"].tap()
+        XCTAssertTrue(market.waitForExistence(timeout: 10))
+        XCTAssertFalse(shortcut.exists)
+        resumeImport.tap()
+        XCTAssertTrue(readingMethod.waitForExistence(timeout: 12))
+    }
+
+    func testSavedDraftShortcutRemainsReachableAtMaximumTextSize() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--t05-synthetic-preview", "correction-long", "--t05-reduce-motion"]
+        app.launch()
+        let review = app.buttons["reviewBlocker"]
+        XCTAssertTrue(review.waitForExistence(timeout: 20))
+        app.buttons["back"].tap()
+        XCTAssertTrue(app.buttons["edit"].waitForExistence(timeout: 12))
+        app.buttons["back"].tap()
+        let shortcut = app.buttons["savedDraftShortcut"]
+        XCTAssertTrue(shortcut.waitForExistence(timeout: 12))
+        XCTAssertTrue(shortcut.isHittable)
+        XCTAssertGreaterThanOrEqual(shortcut.frame.height, 44)
+        XCTAssertLessThanOrEqual(shortcut.frame.maxX, app.frame.maxX)
+        XCTAssertLessThanOrEqual(shortcut.frame.maxY, app.buttons["import"].frame.minY)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Saved draft shortcut at maximum text size"; shot.lifetime = .keepAlways; add(shot)
+        shortcut.tap()
+        XCTAssertTrue(review.waitForExistence(timeout: 12))
     }
 
     func testOfflineRecoveryPreviewsAgainBeforeSending() {

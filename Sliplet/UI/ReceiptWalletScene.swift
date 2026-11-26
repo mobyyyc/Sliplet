@@ -78,6 +78,7 @@ private struct WalletDepartingPaper: Identifiable {
 struct ReceiptWalletScene: View {
     @Bindable var workspace: ReceiptWorkspace
     var openOverview: (String?) -> Void
+    var openSavedDrafts: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var presented: ReceiptRecord?
     @State private var expanded = false
@@ -105,7 +106,9 @@ struct ReceiptWalletScene: View {
     @Environment(\.accessibilityReduceMotion) private var systemMotion
     @State private var revealedID: UUID?
     private var reduceMotion: Bool { ReceiptAccessibility.reduceMotion(systemMotion) }
-    private var selectedID: UUID? { [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil }
+    private var selectedID: UUID? {
+        !workspace.openedFromSavedDraftShortcut && [.detail, .review].contains(workspace.flow) ? workspace.selected?.id : nil
+    }
     private var records: [ReceiptRecord] { retainedRecords ?? workspace.walletReceipts }
     private var layout: ReceiptWalletLayout { retainedLayout ?? workspace.walletLayout }
     private var motion: Animation { reduceMotion ? .easeOut(duration: 0.12) : .easeInOut(duration: 0.38) }
@@ -228,7 +231,9 @@ struct ReceiptWalletScene: View {
                     .scrollPosition($walletScroll)
                     .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
                         scrollOffset = offset
-                        if positioned && presented == nil && !records.isEmpty { workspace.walletScrollOffset = offset }
+                        if positioned && presented == nil && !workspace.openedFromSavedDraftShortcut && !records.isEmpty {
+                            workspace.walletScrollOffset = offset
+                        }
                     }
                     .walletScreenEdges(in: geometry)
                 }
@@ -459,7 +464,7 @@ struct ReceiptWalletScene: View {
             guard layout.revision == measurement.revision else { return }
             let value = measurement.y
             stackSceneY = value
-            if presented == nil {
+            if presented == nil && !workspace.openedFromSavedDraftShortcut {
                 let logical = (isElastic ? curve.logicalPosition(curve.readingY) : curve.readingY) - value
                 if !renderLayout.receiptIDs.isEmpty {
                     let index = min(renderLayout.receiptIDs.count - 1,
@@ -526,6 +531,7 @@ struct ReceiptWalletScene: View {
     }
     private func walletPocket(_ jump: @escaping () -> Void) -> some View {
         WalletCrown(count: records.count, filtered: workspace.hasBrowseFilters || !workspace.searchQuery.isEmpty,
+                    draftCount: workspace.savedDraftShortcutCount, showDrafts: openSavedDrafts,
                     showOverview: { openOverview(records.last.flatMap(ReceiptHistory.monthKey)) }, jumpToLatest: jump)
             .fixedSize(horizontal: false, vertical: true)
             .allowsHitTesting(presented == nil)
@@ -724,28 +730,41 @@ private struct WalletReadingContent: View, Equatable {
 private struct WalletCrown: View {
     let count: Int
     var filtered = false
+    let draftCount: Int
+    var showDrafts: () -> Void
     var showOverview: () -> Void
     var jumpToLatest: () -> Void
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var typeSize
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Wallet").font(.system(.title2, design: .serif, weight: .semibold))
-                    .shadow(color: .white.opacity(scheme == .dark ? 0.08 : 0.25), radius: 0, y: 1)
-                    .accessibilityIdentifier("walletHeading")
-                Text(filtered ? "\(count) matching" : "\(count) saved").font(.subheadline).lineLimit(1).minimumScaleFactor(0.6)
-            }
-            Spacer(minLength: 6)
-            Button("Purchase overview", systemImage: "chart.bar", action: showOverview)
-                .labelStyle(.iconOnly)
-                .buttonStyle(ReceiptSecondaryStyle(circular: true))
-                .accessibilityIdentifier("walletPurchaseOverview")
-            if count > 3 {
-                Button("Jump to newest receipt", systemImage: "arrow.down", action: jumpToLatest)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .center, spacing: 10) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Wallet").font(.system(.title2, design: .serif, weight: .semibold))
+                        .shadow(color: .white.opacity(scheme == .dark ? 0.08 : 0.25), radius: 0, y: 1)
+                        .accessibilityIdentifier("walletHeading")
+                    if draftCount > 0 && !typeSize.isAccessibilitySize {
+                        ViewThatFits(in: .horizontal) {
+                            HStack(spacing: 8) { savedCount; draftButton }.fixedSize(horizontal: true, vertical: false)
+                            VStack(alignment: .leading, spacing: 0) { savedCount; draftButton }
+                        }
+                    } else {
+                        savedCount
+                    }
+                }
+                Spacer(minLength: 6)
+                Button("Purchase overview", systemImage: "chart.bar", action: showOverview)
                     .labelStyle(.iconOnly)
                     .buttonStyle(ReceiptSecondaryStyle(circular: true))
-                    .accessibilityIdentifier("latestReceipt")
+                    .accessibilityIdentifier("walletPurchaseOverview")
+                if count > 3 {
+                    Button("Jump to newest receipt", systemImage: "arrow.down", action: jumpToLatest)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(ReceiptSecondaryStyle(circular: true))
+                        .accessibilityIdentifier("latestReceipt")
+                }
             }
+            if draftCount > 0 && typeSize.isAccessibilitySize { draftButton }
         }
         .foregroundStyle(scheme == .dark ? Color(red: 0.99, green: 0.92, blue: 0.83) : Color(red: 0.12, green: 0.06, blue: 0.03))
         .padding(.horizontal, 28).padding(.top, 26).padding(.bottom, 26)
@@ -754,6 +773,26 @@ private struct WalletCrown: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("walletPocket")
         .accessibilityLabel(filtered ? "Wallet, \(count) matching receipts" : "Wallet, \(count) saved receipts")
+    }
+
+    private var savedCount: some View {
+        Text(filtered ? "\(count) matching" : "\(count) saved")
+            .font(.subheadline).lineLimit(1).minimumScaleFactor(0.6)
+    }
+
+    private var draftButton: some View {
+        Button(action: showDrafts) {
+            Text("Needs review").font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(.primary.opacity(0.12), in: .capsule)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(draftCount == 1 ? "1 saved draft" : "\(draftCount) saved drafts")
+        .accessibilityIdentifier("savedDraftShortcut")
     }
 }
 

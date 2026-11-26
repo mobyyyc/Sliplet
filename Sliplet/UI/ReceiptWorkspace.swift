@@ -15,6 +15,7 @@ final class ReceiptWorkspace {
         if let preparedSearchIndex { searchIndex = preparedSearchIndex; self.preparedSearchIndex = nil }
         else { searchIndex.update(receipts) }
         orderedReceipts = receipts.sorted(by: ReceiptHistory.newestFirst)
+        activeSavedDrafts = orderedReceipts.filter(Self.isActiveSavedDraft)
         let previousWallet = walletLayout
         browseMerchants = Array(Set(receipts.compactMap { $0.current.fields.merchant })).sorted()
         browseMonths = Array(Set(receipts.compactMap(ReceiptHistory.monthKey))).sorted(by: >)
@@ -37,6 +38,20 @@ final class ReceiptWorkspace {
     private(set) var searchIndex = ReceiptSearchIndex()
     @ObservationIgnored private var preparedSearchIndex: ReceiptSearchIndex?
     private(set) var orderedReceipts: [ReceiptRecord] = []
+    private(set) var activeSavedDrafts: [ReceiptRecord] = []
+    var savedDraftShortcutCount: Int {
+        !searching && !hasBrowseFilters ? activeSavedDrafts.count : 0
+    }
+    private struct SavedDraftNavigation {
+        let walletFocus: ReceiptWalletFocus?
+        var returnsFromReviewToWallet = true
+    }
+    private var savedDraftNavigation: SavedDraftNavigation?
+    var openedFromSavedDraftShortcut: Bool { savedDraftNavigation != nil }
+    var savedDraftOpenError: String?
+    nonisolated private static func isActiveSavedDraft(_ record: ReceiptRecord) -> Bool {
+        !record.isArchived && !ReceiptCompletion.isComplete(record)
+    }
     private(set) var purchaseOverviewRevision = 0
     private(set) var walletReceipts: [ReceiptRecord] = []
     private(set) var walletLayout = ReceiptWalletLayout()
@@ -274,6 +289,7 @@ final class ReceiptWorkspace {
         preparedSearchIndex = nil; receipts = []; selected = nil; image = nil; extraction = nil
         readerInput = nil; readerRevisionID = nil
         draft = ReceiptReviewDraft(); reviewBaseline = nil; sourceVisible = false; detailLine = nil; splitVisible = false; sourceLineIDs = []
+        savedDraftNavigation = nil; savedDraftOpenError = nil
         errorMessage = nil; notice = nil; saving = false; flow = .wallet; availability = .closed
         merchantFilter = .all; monthFilter = .all; library = false
         walletScrollOffset = nil; walletAnchorID = nil; walletAnchorY = nil; walletFocus = nil; walletMonthID = nil; walletJumpID = nil
@@ -729,6 +745,7 @@ final class ReceiptWorkspace {
         image = nil; extraction = nil; selected = nil; draft = ReceiptReviewDraft()
         readerInput = nil; readerRevisionID = nil
         reviewBaseline = nil
+        savedDraftNavigation = nil; savedDraftOpenError = nil
         sourceVisible = false; sourceLineIDs = []; searchMatch = nil; errorMessage = nil
     }
     func showSource(ids: [UUID] = []) {
@@ -737,11 +754,30 @@ final class ReceiptWorkspace {
         if flow == .review { draft.sourceOpened = true }
     }
     func open(_ record: ReceiptRecord, match: ReceiptSearchIndex.Match? = nil) {
+        open(record, match: match, resumeReview: false)
+    }
+
+    func resumeSavedDraft(_ id: UUID) {
+        guard flow == .wallet, active, !privacyCovered, !saving, savedDraftShortcutCount > 0,
+              let record = activeSavedDrafts.first(where: { $0.id == id }) else { return }
+        open(record, match: nil, resumeReview: true)
+    }
+
+    private func open(_ record: ReceiptRecord, match: ReceiptSearchIndex.Match?, resumeReview: Bool) {
         guard let store, active, !saving else { return }
         task?.cancel(); let session = sessionID
+        let loadingFlow: Flow = resumeReview ? .wallet : .detail
+        if resumeReview {
+            let focus = library ? nil : walletAnchorID.map { ReceiptWalletFocus(receiptID: $0, y: walletAnchorY) }
+            savedDraftNavigation = SavedDraftNavigation(walletFocus: focus)
+        } else {
+            savedDraftNavigation = nil
+        }
+        savedDraftOpenError = nil
+        saving = resumeReview
         selected = record; image = nil; extraction = record.original; searchMatch = match
         readerInput = nil; readerRevisionID = nil
-        flow = .detail; errorMessage = nil
+        flow = loadingFlow; errorMessage = nil
         task = Task { [weak self] in
             do {
                 guard let current = try await store.receipt(id: record.id) else { throw ReceiptStoreError.notFound }
@@ -752,14 +788,28 @@ final class ReceiptWorkspace {
                     return (image, input)
                 }
                 let (decoded, input) = try await withTaskCancellationHandler { try await decode.value } onCancel: { decode.cancel() }
-                guard let self, self.isCurrent(session), self.flow == .detail, self.selected?.id == record.id else { return }
+                guard let self, self.isCurrent(session), self.flow == loadingFlow, self.selected?.id == record.id else { return }
                 self.selected = current; self.readerInput = input; self.readerRevisionID = current.current.id
-                self.image = decoded; self.extraction = current.original; self.flow = .detail
+                self.image = decoded; self.extraction = current.original
                 if let index = self.receipts.firstIndex(where: { $0.id == current.id }), self.receipts[index] != current { self.receipts[index] = current }
+                if resumeReview {
+                    self.saving = false
+                    guard Self.isActiveSavedDraft(current) else {
+                        self.resetImport()
+                        self.savedDraftOpenError = "This receipt is no longer in your active drafts."
+                        return
+                    }
+                    self.edit()
+                }
             } catch {
-                guard let self, self.isCurrent(session) else { return }
-                guard self.selected?.id == record.id, self.flow == .detail else { return }
-                self.errorMessage = Self.storageMessage(error)
+                guard let self, self.isCurrent(session), self.flow == loadingFlow, self.selected?.id == record.id else { return }
+                if resumeReview {
+                    self.saving = false
+                    self.resetImport()
+                    self.savedDraftOpenError = Self.storageMessage(error)
+                } else {
+                    self.errorMessage = Self.storageMessage(error)
+                }
             }
         }
     }
@@ -784,7 +834,8 @@ final class ReceiptWorkspace {
     }
     func finishEditing() {
         guard !saving else { return }
-        if selected != nil { flow = .detail; draft = ReceiptReviewDraft(); reviewBaseline = nil; errorMessage = nil }
+        if savedDraftNavigation?.returnsFromReviewToWallet == true { backToWallet() }
+        else if selected != nil { flow = .detail; draft = ReceiptReviewDraft(); reviewBaseline = nil; errorMessage = nil }
         else { cancelImport() }
     }
     func updateDraft(_ change: (inout ReceiptReviewDraft) -> Void) {
@@ -854,6 +905,7 @@ final class ReceiptWorkspace {
                     self.pendingImportID = nil; self.hasPendingImport = false; self.importCheckpointError = nil
                 }
                 self.selected = saved; self.readerInput = savedInput; self.readerRevisionID = saved.current.id
+                self.savedDraftNavigation?.returnsFromReviewToWallet = false
                 self.draft = ReceiptReviewDraft(); self.flow = .detail
                 if let index = self.receipts.firstIndex(where: { $0.id == saved.id }) { self.receipts[index] = saved }
                 else {
@@ -1100,7 +1152,11 @@ final class ReceiptWorkspace {
 
     func backToWallet() {
         guard !saving else { return }
+        let savedDraftFocus = savedDraftNavigation?.walletFocus
         resetImport()
+        if let savedDraftFocus, walletLayout.indexByID[savedDraftFocus.receiptID] != nil {
+            walletFocus = savedDraftFocus
+        }
     }
     static func storageMessage(_ error: Error) -> String {
         guard let error = error as? ReceiptStoreError else { return "Local storage could not complete this action. Your stored data has not been reset. Try again after unlocking." }

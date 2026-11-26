@@ -49,28 +49,53 @@ struct ReceiptPurchaseHistoryView: View {
     @Bindable var workspace: ReceiptWorkspace
     var openSettings: () -> Void
     var openOverview: (String?) -> Void
+    var openSavedDrafts: () -> Void
     var requestDelete: (ReceiptRecord) -> Void
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
     init(workspace: ReceiptWorkspace, openSettings: @escaping () -> Void = {},
-         openOverview: @escaping (String?) -> Void, requestDelete: @escaping (ReceiptRecord) -> Void) {
+         openOverview: @escaping (String?) -> Void, openSavedDrafts: @escaping () -> Void,
+         requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace; self.openSettings = openSettings; self.openOverview = openOverview
+        self.openSavedDrafts = openSavedDrafts
         self.requestDelete = requestDelete
         _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
     private var hasFilters: Bool { workspace.hasBrowseFilters }
 
     var body: some View {
+        let draftCount = workspace.savedDraftShortcutCount
         GeometryReader { geometry in
             let viewportBottom = geometry.frame(in: .global).maxY
             ScrollViewReader { proxy in
                 List {
+                    if draftCount > 0 {
+                        Section {
+                            Button(action: openSavedDrafts) {
+                                HStack {
+                                    Label("Needs review", systemImage: "exclamationmark.circle")
+                                    Spacer()
+                                    Text(draftCount.formatted()).foregroundStyle(.secondary)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                                        .accessibilityHidden(true)
+                                }
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Needs review")
+                            .accessibilityValue(draftCount == 1 ? "1 saved draft" : "\(draftCount) saved drafts")
+                            .accessibilityIdentifier("savedDraftShortcut")
+                            .id("browse-top")
+                        }
+                    }
                     if workspace.browsing.sections.isEmpty {
                         Section {
                             emptyState
-                        } header: { resultCount.id("browse-top") }
+                        } header: { resultCount.id(draftCount == 0 ? "browse-top" : "browse-count") }
                     }
                     ForEach(workspace.browsing.sections) { section in
                         Section {
@@ -79,7 +104,9 @@ struct ReceiptPurchaseHistoryView: View {
                             }
                         } header: {
                             VStack(alignment: .leading, spacing: 10) {
-                                if section.id == workspace.browsing.sections.first?.id { resultCount.id("browse-top") }
+                                if section.id == workspace.browsing.sections.first?.id {
+                                    resultCount.id(draftCount == 0 ? "browse-top" : "browse-count")
+                                }
                                 sectionHeading(section)
                             }.textCase(nil)
                         }
