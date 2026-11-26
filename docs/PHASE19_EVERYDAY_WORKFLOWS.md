@@ -80,4 +80,23 @@ The recovery query stops at the first eligible match using the existing index. E
 
 Four Simulator UI cases and 21 targeted unit tests passed, along with the unsigned iPhone Release build. The UI cases include the combined filters, maximum text size and keyboard, archived-only recovery, and a 1,000-receipt wallet.
 
-**Next approval** · P19-04, replay the two Phase 19 journeys and close the phase.
+## P19-04 · Combined verification
+
+Both journeys were replayed with the P19-01 fictional fixtures on iPhone 15 Pro Simulators running iOS 27.0. The counts use the same start and end states as the baseline. Opening Original and returning is counted separately from recovering a result.
+
+| Journey | P19-01 | P19-04 |
+| --- | ---: | ---: |
+| Wallet to the missing amount in one visible saved draft | 3 taps | 2 taps |
+| Wallet to the same amount via the draft shortcut, compared with the prior filtered route | 7 taps | 2 taps |
+| Wallet to the missing amount with two saved drafts and a separate pending import | 7 taps | 3 taps |
+| Wallet to the pending photo’s reading-method step | 1 tap | 1 tap |
+| Wallet to a match hidden by purchase filters, keeping Starred and Include archived | 4 taps + 1 text entry | 2 taps + 1 text entry |
+| Empty filtered search to that match with the same scope | 3 taps | 1 tap |
+| Wallet to an archived-only match | 2 taps + 1 text entry | 2 taps + 1 text entry |
+| Wallet to a genuine miss | 1 tap + 1 text entry | 1 tap + 1 text entry |
+
+These routes needed no drags. A genuine miss guided the user to change the query. Draft cancellation restored the wallet paper within 5 points with one or two drafts. Opening either recovered result, viewing Original and returning took four taps. The query and the applicable scope returned, and the result row was within 12 points of its previous position.
+
+The simulator checks covered Light and Dark, the largest system Dynamic Type size with Reduce Motion, search filter recovery with the software keyboard open, import interruption and relaunch, draft finalization, Wallet and List, archived-only search, and browsing 1,000 fictional receipts. The first accessibility batch stopped in the UI test runner before it opened Sliplet for the keyboard case. The same case passed in an isolated rerun at the same settings. Ten distinct Simulator UI cases and 71 targeted unit tests passed across the runs. The unsigned iPhone Release build passed.
+
+Phase 19 is closed in Simulator. An optional, separately approved iPhone 15 Pro walkthrough can verify the signed in-place update, the draft and pending-import actions, VoiceOver navigation, and search recovery and return with the physical device’s keyboard.

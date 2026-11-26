@@ -1,8 +1,8 @@
 # Task registry
 
-## Phase 19 · Finish drafts and recover searches
+## Phase 19 · Finish drafts and recover searches · Closed in Simulator
 
-P19-01 · Saved-draft resumption and empty filtered search baselines are complete in Simulator. P19-02 · The Needs review shortcut is complete in Simulator. P19-03 · One-tap purchase-filter recovery is complete in Simulator. P19-04 · Combined verification awaits approval. [Roadmap and results](docs/PHASE19_EVERYDAY_WORKFLOWS.md).
+P19-01 · Saved-draft resumption and empty filtered search baselines are complete in Simulator. P19-02 · The Needs review shortcut is complete in Simulator. P19-03 · One-tap purchase-filter recovery is complete in Simulator. P19-04 · Combined verification passed in Simulator with the same fictional fixtures and both measured shortcuts. [Roadmap and results](docs/PHASE19_EVERYDAY_WORKFLOWS.md).
 
 ## Phase 18 · Everyday interface refinements · Closed in Simulator
 
