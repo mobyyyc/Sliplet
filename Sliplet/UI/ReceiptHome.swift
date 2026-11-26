@@ -217,141 +217,16 @@ struct ReceiptHome: View {
     private func screen(isSearchRoute: Bool) -> some View {
         // When opening a result, the covered Wallet remains on the stack at its original scroll position.
         let screenFlow: ReceiptWorkspace.Flow = !isSearchRoute && workspace.searching ? .wallet : workspace.flow
-        let canReturnToImportStep = screenFlow == .preparingUpload && workspace.importStep > 0 && workspace.photoDuplicatePrompt == nil
-        return Group {
-            if workspace.privacyCovered { ReceiptLockScreen() }
-            else {
-                switch workspace.availability {
-                case .closed, .opening: ProgressView("Opening local wallet")
-                case .failed(let message):
-                    ContentUnavailableView {
-                        Label("Wallet unavailable", systemImage: "lock.trianglebadge.exclamationmark")
-                    } description: { Text(message) } actions: { Button("Try again", action: workspace.retryOpen).buttonStyle(ReceiptSecondaryStyle()) }
-                case .ready: flow(screenFlow, isSearchRoute: isSearchRoute)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            if workspace.availability == .ready && !workspace.privacyCovered &&
-                (screenFlow == .detail || (screenFlow == .wallet && !isSearchRoute)) {
-                AtmosphericBackground().ignoresSafeArea()
-            } else {
-                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
-            }
-        }
-        .navigationTitle(isSearchRoute && screenFlow == .wallet ? "Search" : title(for: screenFlow))
-        .navigationBarBackButtonHidden(isSearchRoute && screenFlow != .wallet)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if workspace.availability == .ready && !workspace.privacyCovered {
-                if screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(screenFlow == .preparingUpload ? (canReturnToImportStep ? "Back" : "Cancel") : screenFlow == .review ? "Cancel" : isSearchRoute ? "Search" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
-                            if screenFlow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
-                            else if canReturnToImportStep {
-                                workspace.importForward = false; workspace.importStep -= 1
-                                workspace.checkpointImport()
-                            }
-                            else if screenFlow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
-                            else if screenFlow == .review || screenFlow == .reading || screenFlow == .loading || screenFlow == .preparingUpload || (screenFlow == .failed && workspace.image != nil) { editing = nil; discard = true }
-                            else { workspace.backToWallet() }
-                        }.disabled(workspace.saving).accessibilityIdentifier("back")
-                    }
-                }
-                if workspace.image != nil && screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { editing = nil; workspace.showSource() } label: { Text("Original") }
-                            .accessibilityIdentifier("original").disabled(workspace.saving)
-                    }
-                }
-                if screenFlow == .wallet {
-                    if !isSearchRoute {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Text("Wallet")
-                                .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
-                                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                                .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
-                        }.sharedBackgroundVisibility(.hidden)
-                    }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        if !isSearchRoute {
-                            Button("Search", systemImage: "magnifyingglass", action: openSearch)
-                                .accessibilityIdentifier("receiptSearch")
-                        }
-                        Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            workspace.searchFiltersExpanded = true
-                        }.accessibilityIdentifier("searchFilters")
-                    }
-                    if !isSearchRoute {
-                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Settings", systemImage: "gearshape") { settings = true }
-                                .accessibilityIdentifier("walletSettings")
-                        }
-                    }
-                }
-                if screenFlow == .detail {
-                    if workspace.selected != nil {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            ReceiptShareButton { sharingReceipt = true }.disabled(workspace.saving)
-                        }
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            if let record = workspace.selected {
-                                Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
-                                Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
-                            }
-                            Button("Storage details", systemImage: "info.circle") { walletInformation = true }
-                            Button("Delete receipt", systemImage: "trash", role: .destructive) { deleteTarget = workspace.selected; delete = true }
-                                .accessibilityIdentifier("delete")
-                        } label: { Image(systemName: "ellipsis") }
-                        .accessibilityLabel("Receipt options").accessibilityIdentifier("receiptOptions")
-                    }
-                }
-                #if DEBUG
-                if !isSearchRoute && SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && screenFlow == .wallet && workspace.receipts.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Import fictional image", systemImage: "doc.badge.plus") {
-                            let bytes = SyntheticNativePreview.fixture(index: 0).0
-                            workspace.startImport { bytes }
-                        }
-                        .labelStyle(.iconOnly)
-                        .accessibilityIdentifier("searchDemoImport")
-                    }
-                }
-                if !isSearchRoute && ReceiptUploadFixture.enabled && screenFlow == .wallet {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("Fictional import", systemImage: "doc.badge.plus") {
-                            let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
-                            workspace.startImport(chooseRecognition: true) { bytes }
-                        }.labelStyle(.iconOnly).accessibilityIdentifier("uploadFixture")
-                    }
-                }
-                if !isSearchRoute && WorkflowTestInput.enabled {
-                    if screenFlow == .wallet {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Local test image") {
-                                if let url = try? WorkflowTestInput.imageURL() { workspace.importFile(url) }
-                            }.accessibilityIdentifier("debugImport")
-                        }
-                    }
-                    if screenFlow == .review {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Test reference") { WorkflowTestInput.applyReference(workspace) }.accessibilityIdentifier("debugReference")
-                        }
-                    }
-                    if screenFlow == .detail {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Test verify") { WorkflowTestInput.verify(workspace) }.accessibilityIdentifier("debugVerify")
-                        }
-                    }
-                }
-                #endif
-            }
-        }
+        let content = AnyView(screenContent(screenFlow, isSearchRoute: isSearchRoute))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { screenBackground(screenFlow, isSearchRoute: isSearchRoute) }
+            .navigationTitle(isSearchRoute && screenFlow == .wallet ? "Search" : title(for: screenFlow))
+            .navigationBarBackButtonHidden(isSearchRoute && screenFlow != .wallet)
+            .navigationBarTitleDisplayMode(.inline)
+        // Bound the generic view type across the navigation, toolbar and safe-area layers.
+        // Resolving the combined type crashed during startup on iOS 27.2.1.
+        let chrome = AnyView(content.toolbar { screenToolbar(screenFlow, isSearchRoute: isSearchRoute) })
+        return chrome
         .safeAreaBar(edge: .top, spacing: 0) {
             if isSearchRoute && screenFlow == .wallet && workspace.hasBrowseFilters && !workspace.privacyCovered {
                 ReceiptActiveFiltersBar(workspace: workspace)
@@ -366,7 +241,162 @@ struct ReceiptHome: View {
                 }
             }
         }
+        .ignoresSafeArea(.keyboard, edges: !isSearchRoute && screenFlow == .wallet ? .bottom : [])
     }
+
+    @ViewBuilder private func screenContent(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some View {
+        Group {
+            if workspace.privacyCovered { ReceiptLockScreen() }
+            else {
+                switch workspace.availability {
+                case .closed, .opening: ProgressView("Opening local wallet")
+                case .failed(let message):
+                    ContentUnavailableView {
+                        Label("Wallet unavailable", systemImage: "lock.trianglebadge.exclamationmark")
+                    } description: { Text(message) } actions: { Button("Try again", action: workspace.retryOpen).buttonStyle(ReceiptSecondaryStyle()) }
+                case .ready: flow(screenFlow, isSearchRoute: isSearchRoute)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func screenBackground(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some View {
+        if workspace.availability == .ready && !workspace.privacyCovered &&
+            (screenFlow == .detail || (screenFlow == .wallet && !isSearchRoute)) {
+            AtmosphericBackground().ignoresSafeArea()
+        } else {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+        }
+    }
+
+    @ToolbarContentBuilder private func screenToolbar(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some ToolbarContent {
+        if workspace.availability == .ready && !workspace.privacyCovered {
+            workflowToolbar(screenFlow, isSearchRoute: isSearchRoute)
+            browseToolbar(screenFlow, isSearchRoute: isSearchRoute)
+            detailToolbar(screenFlow)
+            #if DEBUG
+            if !isSearchRoute { debugToolbar(screenFlow) }
+            #endif
+        }
+    }
+
+    @ToolbarContentBuilder private func workflowToolbar(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some ToolbarContent {
+        let canReturnToImportStep = screenFlow == .preparingUpload && workspace.importStep > 0 && workspace.photoDuplicatePrompt == nil
+        if screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(screenFlow == .preparingUpload ? (canReturnToImportStep ? "Back" : "Cancel") : screenFlow == .review ? "Cancel" : isSearchRoute ? "Search" : overviewReceiptID != nil ? "Purchase overview" : "Wallet", systemImage: "chevron.left") {
+                    if screenFlow == .preparingUpload && workspace.importCropping { workspace.importCropping = false }
+                    else if canReturnToImportStep {
+                        workspace.importForward = false; workspace.importStep -= 1
+                        workspace.checkpointImport()
+                    }
+                    else if screenFlow == .review && !workspace.hasUnsavedReviewChanges { editing = nil; workspace.finishEditing() }
+                    else if screenFlow == .review || screenFlow == .reading || screenFlow == .loading || screenFlow == .preparingUpload || (screenFlow == .failed && workspace.image != nil) { editing = nil; discard = true }
+                    else { workspace.backToWallet() }
+                }.disabled(workspace.saving).accessibilityIdentifier("back")
+            }
+        }
+        if workspace.image != nil && screenFlow != .wallet && screenFlow != .reading && screenFlow != .loading {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { editing = nil; workspace.showSource() } label: { Text("Original") }
+                    .accessibilityIdentifier("original").disabled(workspace.saving)
+            }
+        }
+    }
+
+    @ToolbarContentBuilder private func browseToolbar(_ screenFlow: ReceiptWorkspace.Flow, isSearchRoute: Bool) -> some ToolbarContent {
+        if screenFlow == .wallet {
+            if !isSearchRoute {
+                ToolbarItem(placement: .topBarLeading) {
+                    Text("Wallet")
+                        .font(.headline).lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                        .accessibilityAddTraits(.isHeader).accessibilityIdentifier("browseTitle")
+                }.sharedBackgroundVisibility(.hidden)
+            }
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !isSearchRoute {
+                    Button("Search", systemImage: "magnifyingglass", action: openSearch)
+                        .accessibilityIdentifier("receiptSearch")
+                }
+                Button("Filters", systemImage: workspace.hasBrowseFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    workspace.searchFiltersExpanded = true
+                }.accessibilityIdentifier("searchFilters")
+            }
+            if !isSearchRoute {
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Settings", systemImage: "gearshape") { settings = true }
+                        .accessibilityIdentifier("walletSettings")
+                }
+            }
+        }
+    }
+
+    @ToolbarContentBuilder private func detailToolbar(_ screenFlow: ReceiptWorkspace.Flow) -> some ToolbarContent {
+        if screenFlow == .detail {
+            if workspace.selected != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ReceiptShareButton { sharingReceipt = true }.disabled(workspace.saving)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    if let record = workspace.selected {
+                        Button(record.isStarred ? "Unstar receipt" : "Star receipt", systemImage: record.isStarred ? "star.fill" : "star") { workspace.organize(record, action: .star) }
+                        Button(record.isArchived ? "Unarchive receipt" : "Archive receipt", systemImage: "archivebox") { workspace.organize(record, action: .archive) }
+                    }
+                    Button("Storage details", systemImage: "info.circle") { walletInformation = true }
+                    Button("Delete receipt", systemImage: "trash", role: .destructive) { deleteTarget = workspace.selected; delete = true }
+                        .accessibilityIdentifier("delete")
+                } label: { Image(systemName: "ellipsis") }
+                .accessibilityLabel("Receipt options").accessibilityIdentifier("receiptOptions")
+            }
+        }
+    }
+
+    #if DEBUG
+    @ToolbarContentBuilder private func debugToolbar(_ screenFlow: ReceiptWorkspace.Flow) -> some ToolbarContent {
+        if SyntheticNativePreview.enabled && SyntheticNativePreview.mode == "search-import" && screenFlow == .wallet && workspace.receipts.isEmpty {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Import fictional image", systemImage: "doc.badge.plus") {
+                    let bytes = SyntheticNativePreview.fixture(index: 0).0
+                    workspace.startImport { bytes }
+                }
+                .labelStyle(.iconOnly)
+                .accessibilityIdentifier("searchDemoImport")
+            }
+        }
+        if ReceiptUploadFixture.enabled && screenFlow == .wallet {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Fictional import", systemImage: "doc.badge.plus") {
+                    let bytes = SyntheticNativePreview.fixture(index: 0, forImport: true).0
+                    workspace.startImport(chooseRecognition: true) { bytes }
+                }.labelStyle(.iconOnly).accessibilityIdentifier("uploadFixture")
+            }
+        }
+        if WorkflowTestInput.enabled {
+            if screenFlow == .wallet {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Local test image") {
+                        if let url = try? WorkflowTestInput.imageURL() { workspace.importFile(url) }
+                    }.accessibilityIdentifier("debugImport")
+                }
+            }
+            if screenFlow == .review {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Test reference") { WorkflowTestInput.applyReference(workspace) }.accessibilityIdentifier("debugReference")
+                }
+            }
+            if screenFlow == .detail {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Test verify") { WorkflowTestInput.verify(workspace) }.accessibilityIdentifier("debugVerify")
+                }
+            }
+        }
+    }
+    #endif
 
     private func showPurchaseOverview(_ month: String?) {
         guard workspace.flow == .wallet, !workspace.searching, !workspace.privacyCovered, !workspace.saving else { return }
