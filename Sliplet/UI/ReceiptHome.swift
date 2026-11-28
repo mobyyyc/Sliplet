@@ -423,7 +423,7 @@ struct ReceiptHome: View {
         workspace.searching = true
     }
 
-    private func focusSearchAsItAppears() {
+    private func focusSearchAfterPush() {
         guard focusSearchOnEntry, workspace.active, !workspace.privacyCovered,
               workspace.searching, workspace.flow == .wallet else { return }
         focusSearchOnEntry = false
@@ -571,7 +571,7 @@ struct ReceiptHome: View {
                             searchBar.modifier(ReceiptActionBarLayout())
                         }
                         .background {
-                            SearchScreenAppearance(action: focusSearchAsItAppears)
+                            SearchScreenAppearance(action: focusSearchAfterPush)
                                 .frame(width: 0, height: 0)
                                 .allowsHitTesting(false)
                                 .accessibilityHidden(true)

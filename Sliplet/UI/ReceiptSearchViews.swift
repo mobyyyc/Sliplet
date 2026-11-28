@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Request focus after the destination joins the hierarchy, at the start of its native transition.
+/// Let the native push settle before the keyboard changes the destination's safe area.
 struct SearchScreenAppearance: UIViewControllerRepresentable {
     let action: () -> Void
 
@@ -13,8 +13,8 @@ struct SearchScreenAppearance: UIViewControllerRepresentable {
     final class Observer: UIViewController {
         var action: (() -> Void)?
 
-        override func viewIsAppearing(_ animated: Bool) {
-            super.viewIsAppearing(animated)
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
             action?()
         }
     }
