@@ -7,6 +7,12 @@ import UIKit
     weak var view: UIScrollView?
     // Tracking row geometry should not invalidate the List while it is scrolling.
     var rowFrames: [String: CGRect] = [:]
+    var isDraggingDown: Bool {
+        guard let view else { return false }
+        let velocity = view.panGestureRecognizer.velocity(in: view)
+        return velocity.y > abs(velocity.x)
+    }
+
     var visibleTop: CGFloat {
         guard let view else { return 0 }
         return view.convert(CGPoint(x: view.bounds.minX, y: view.bounds.minY + view.adjustedContentInset.top), to: nil).y

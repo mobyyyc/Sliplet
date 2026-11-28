@@ -68,13 +68,16 @@ struct ReceiptSearchDetailView: View {
 struct ReceiptSearchResultsView: View {
     @Bindable var workspace: ReceiptWorkspace
     var requestDelete: (ReceiptRecord) -> Void
+    var dismissKeyboard: () -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
     @State private var scrollAccess = ReceiptListScrollAccess()
-    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
+    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void,
+         dismissKeyboard: @escaping () -> Void) {
         self.workspace = workspace
         self.requestDelete = requestDelete
+        self.dismissKeyboard = dismissKeyboard
         _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
     private var isActiveSurface: Bool { workspace.flow == .wallet && workspace.searching }
@@ -106,7 +109,7 @@ struct ReceiptSearchResultsView: View {
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
                 .autocorrectionDisabled()
-                .scrollDismissesKeyboard(.immediately)
+                .scrollDismissesKeyboard(.never)
                 .scrollBounceBehavior(.always, axes: .vertical)
                 .scrollEdgeEffectStyle(.soft, for: .vertical)
                 .opacity(pendingRestore == nil ? 1 : 0)
@@ -129,6 +132,9 @@ struct ReceiptSearchResultsView: View {
                 }
                 .onScrollPhaseChange { _, phase in
                     guard isActiveSurface else { return }
+                    if phase == .interacting, scrollAccess.isDraggingDown {
+                        dismissKeyboard()
+                    }
                     if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
                     guard phase == .idle, userScrolled, pendingRestore == nil else { return }
                     userScrolled = false
@@ -187,6 +193,13 @@ struct ReceiptSearchResultsView: View {
     private var resultCount: some View {
         Text("\(workspace.browsing.receiptCount) \(workspace.browsing.receiptCount == 1 ? "receipt" : "receipts")")
             .font(.caption).foregroundStyle(Color(uiColor: .secondaryLabel)).accessibilityIdentifier("searchResultCount")
+            .background { scrollProbe }
+    }
+    private var scrollProbe: some View {
+        ReceiptListScrollProbe { scroll in
+            scrollAccess.view = scroll
+            DispatchQueue.main.async { completeRestore() }
+        }.frame(width: 0, height: 0).accessibilityHidden(true).allowsHitTesting(false)
     }
     private func restore(using proxy: ScrollViewProxy) {
         guard let anchor = workspace.browseAnchor, workspace.browsing.indexByID[anchor.rowID] != nil else { return }
@@ -223,12 +236,7 @@ struct ReceiptSearchResultsView: View {
             .contentShape(Rectangle()).accessibilityElement(children: .combine)
         }
         .buttonStyle(.plain).accessibilityIdentifier(row.identifier).id(row.id)
-        .background {
-            ReceiptListScrollProbe { scroll in
-                scrollAccess.view = scroll
-                DispatchQueue.main.async { completeRestore() }
-            }.frame(width: 0, height: 0).accessibilityHidden(true).allowsHitTesting(false)
-        }
+        .background { scrollProbe }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
             if frame.maxY >= -80 && frame.minY <= viewportBottom + 80 { scrollAccess.rowFrames[row.id] = frame }
             else { scrollAccess.rowFrames.removeValue(forKey: row.id) }

@@ -157,6 +157,9 @@ import XCTest
 
         field.tap()
         XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
+        lower.press(forDuration: 0.07, thenDragTo: upper, withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(keyboard.exists)
+
         app.buttons["Clear text"].tap()
         field.typeText("no fictional match")
         XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))

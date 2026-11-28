@@ -564,7 +564,9 @@ struct ReceiptHome: View {
                 case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
                 case .detail: ReceiptSearchDetailView(workspace: workspace)
                 default:
-                    ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                    ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion) {
+                        searchFocused = false
+                    }
                         .safeAreaInset(edge: .bottom, spacing: 0) {
                             searchBar.modifier(ReceiptActionBarLayout())
                         }
