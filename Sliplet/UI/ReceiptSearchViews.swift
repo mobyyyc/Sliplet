@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Wait for native navigation to finish before allowing the keyboard to resize the search page.
+/// Request focus after the destination joins the hierarchy, at the start of its native transition.
 struct SearchScreenAppearance: UIViewControllerRepresentable {
     let action: () -> Void
 
@@ -13,8 +13,8 @@ struct SearchScreenAppearance: UIViewControllerRepresentable {
     final class Observer: UIViewController {
         var action: (() -> Void)?
 
-        override func viewDidAppear(_ animated: Bool) {
-            super.viewDidAppear(animated)
+        override func viewIsAppearing(_ animated: Bool) {
+            super.viewIsAppearing(animated)
             action?()
         }
     }
