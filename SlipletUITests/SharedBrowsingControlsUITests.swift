@@ -35,7 +35,11 @@ import XCTest
     func testSearchKeepsToolbarAndReturnsToMatchingReceipt() {
         let app = launch(true)
         app.buttons["receiptSearch"].tap()
-        let field = app.searchFields.firstMatch; XCTAssertTrue(field.waitForExistence(timeout: 10)); field.typeText("milk\n")
+        let field = app.searchFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
+        field.typeText("milk\n")
         XCTAssertTrue(app.navigationBars["Search"].buttons.firstMatch.isHittable)
         XCTAssertTrue(app.buttons["searchFilters"].isHittable)
         capture(app, "native-search-destination")
@@ -44,6 +48,7 @@ import XCTest
         XCTAssertTrue(app.buttons["back"].waitForExistence(timeout: 10)); app.buttons["back"].tap()
         XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 10))
         XCTAssertEqual(app.searchFields.firstMatch.value as? String, "milk")
+        XCTAssertFalse(keyboard.exists)
         app.buttons["searchFilters"].tap(); XCTAssertTrue(app.buttons["filterDateMode"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         app.buttons["filterDateMode"].tap(); app.buttons["Date range"].tap()

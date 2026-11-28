@@ -1,5 +1,25 @@
 import SwiftUI
 
+/// Wait for native navigation to finish before allowing the keyboard to resize the search page.
+struct SearchScreenAppearance: UIViewControllerRepresentable {
+    let action: () -> Void
+
+    func makeUIViewController(context: Context) -> Observer { Observer() }
+
+    func updateUIViewController(_ controller: Observer, context: Context) {
+        controller.action = action
+    }
+
+    final class Observer: UIViewController {
+        var action: (() -> Void)?
+
+        override func viewDidAppear(_ animated: Bool) {
+            super.viewDidAppear(animated)
+            action?()
+        }
+    }
+}
+
 /// History opens a reading surface directly; only the home wallet lifts a paper from its stack.
 struct ReceiptSearchDetailView: View {
     @Bindable var workspace: ReceiptWorkspace

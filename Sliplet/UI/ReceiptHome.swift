@@ -427,6 +427,13 @@ struct ReceiptHome: View {
         workspace.searching = true
     }
 
+    private func focusSearchAfterPush() {
+        guard focusSearchOnEntry, workspace.active, !workspace.privacyCovered,
+              workspace.searching, workspace.flow == .wallet else { return }
+        focusSearchOnEntry = false
+        searchFocused = true
+    }
+
     private var searchBar: some View {
         Group {
             if ReceiptAccessibility.reduceTransparency(reduceTransparency) || ReceiptAccessibility.contrast(colorSchemeContrast) == .increased {
@@ -434,12 +441,6 @@ struct ReceiptHome: View {
                     .overlay { Capsule().stroke(.primary.opacity(0.35), lineWidth: 1).allowsHitTesting(false) }
             } else {
                 searchField.glassEffect(.regular, in: .capsule)
-            }
-        }
-        .task {
-            if focusSearchOnEntry {
-                focusSearchOnEntry = false
-                searchFocused = true
             }
         }
     }
@@ -566,7 +567,14 @@ struct ReceiptHome: View {
                 switch screenFlow {
                 case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
                 case .detail: ReceiptSearchDetailView(workspace: workspace)
-                default: ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                default:
+                    ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                        .background {
+                            SearchScreenAppearance(action: focusSearchAfterPush)
+                                .frame(width: 0, height: 0)
+                                .allowsHitTesting(false)
+                                .accessibilityHidden(true)
+                        }
                 }
             } else {
                 ZStack {

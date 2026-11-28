@@ -97,6 +97,11 @@ struct ReceiptWalletScene: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var walletScroll = ScrollPosition()
     @State private var openingOffset: CGFloat = 0
+    @State private var searchPosition: WalletSearchPosition?
+    private struct WalletSearchPosition {
+        let offset: CGFloat
+        let receiptIDs: [UUID]
+    }
     @State private var jumpToNewest = 0
     @State private var stackSceneY: CGFloat?
     @ScaledMetric(relativeTo: .body) private var accessiblePaperHeight: CGFloat = 190
@@ -202,6 +207,21 @@ struct ReceiptWalletScene: View {
                     .swipeActionsContainer()
                     .onChange(of: jumpToNewest) { _, _ in
                         withAnimation(motion) { proxy.scrollTo("walletEnd", anchor: .bottom) }
+                    }
+                    .onChange(of: workspace.searching) { _, searching in
+                        if searching {
+                            searchPosition = WalletSearchPosition(offset: scrollOffset, receiptIDs: layout.receiptIDs)
+                        } else if let position = searchPosition {
+                            searchPosition = nil
+                            guard layout.receiptIDs == position.receiptIDs, presented == nil,
+                                  abs(scrollOffset - position.offset) > 1 else { return }
+                            // UIKit can relayout the covered scroll view while the search keyboard changes its inset.
+                            var transaction = Transaction(animation: nil)
+                            transaction.disablesAnimations = true
+                            withTransaction(transaction) {
+                                walletScroll.scrollTo(y: max(0, position.offset))
+                            }
+                        }
                     }
                     .onChange(of: workspace.walletFocus) { _, focus in
                         guard let focus, presented == nil, positioned, layout.indexByID[focus.receiptID] != nil else { return }
