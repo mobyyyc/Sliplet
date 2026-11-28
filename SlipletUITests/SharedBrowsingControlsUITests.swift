@@ -136,6 +136,38 @@ import XCTest
         XCTAssertFalse((summary.value as? String)?.contains("Including archived") == true)
     }
 
+    func testSearchKeepsKeyboardDuringScrollAndDismissesOnlyAfterIntentionalTopPull() {
+        let app = launch()
+        app.buttons["receiptSearch"].tap()
+        let field = app.searchFields.firstMatch
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
+        field.typeText("synthetic")
+        let count = app.staticTexts["searchResultCount"]
+        XCTAssertTrue(count.waitForExistence(timeout: 10))
+
+        let upper = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.24))
+        let lower = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.50))
+        lower.press(forDuration: 0.07, thenDragTo: upper)
+        lower.press(forDuration: 0.07, thenDragTo: upper)
+        XCTAssertTrue(keyboard.exists)
+        upper.press(forDuration: 0.07, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0)
+        XCTAssertTrue(keyboard.exists)
+        XCTAssertEqual(field.value as? String, "synthetic")
+
+        app.buttons["Clear text"].tap()
+        field.typeText("no fictional match")
+        XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
+        let short = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.27))
+        upper.press(forDuration: 0.07, thenDragTo: short, withVelocity: .slow, thenHoldForDuration: 0)
+        XCTAssertTrue(keyboard.exists)
+        upper.press(forDuration: 0.07, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, "no fictional match")
+        XCTAssertTrue(app.navigationBars["Search"].exists)
+    }
+
     func testSearchEdgeSwipeCancelsShortDragAndClosesWithKeyboardOpen() {
         let app = launch()
         app.buttons["receiptSearch"].tap()

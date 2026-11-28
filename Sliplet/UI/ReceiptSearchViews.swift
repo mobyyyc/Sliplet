@@ -67,14 +67,18 @@ struct ReceiptSearchDetailView: View {
 
 struct ReceiptSearchResultsView: View {
     @Bindable var workspace: ReceiptWorkspace
+    let searchFocus: FocusState<Bool>.Binding
     var requestDelete: (ReceiptRecord) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
+    @State private var canPullToDismiss = false
+    @State private var shouldDismissAfterPull = false
     @State private var scrollAccess = ReceiptListScrollAccess()
-    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
+    init(workspace: ReceiptWorkspace, searchFocus: FocusState<Bool>.Binding, requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace
+        self.searchFocus = searchFocus
         self.requestDelete = requestDelete
         _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
@@ -106,7 +110,14 @@ struct ReceiptSearchResultsView: View {
                     }
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
-                .autocorrectionDisabled().scrollDismissesKeyboard(.interactively)
+                .autocorrectionDisabled()
+                .scrollDismissesKeyboard(.never)
+                .scrollBounceBehavior(.always, axes: .vertical)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.contentInsets.top < -36
+                } action: { _, crossedThreshold in
+                    if canPullToDismiss && crossedThreshold { shouldDismissAfterPull = true }
+                }
                 .scrollEdgeEffectStyle(.soft, for: .vertical)
                 .coordinateSpace(name: "receiptBrowse")
                 .opacity(pendingRestore == nil ? 1 : 0)
@@ -127,8 +138,9 @@ struct ReceiptSearchResultsView: View {
                         } else { restore(using: proxy) }
                     }
                 }
-                .onScrollPhaseChange { _, phase in
+                .onScrollPhaseChange { previous, phase, context in
                     guard isActiveSurface else { return }
+                    updateKeyboardDismissal(previous: previous, phase: phase, geometry: context.geometry)
                     if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
                     guard phase == .idle, userScrolled, pendingRestore == nil else { return }
                     userScrolled = false
@@ -139,6 +151,20 @@ struct ReceiptSearchResultsView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func updateKeyboardDismissal(previous: ScrollPhase, phase: ScrollPhase, geometry: ScrollGeometry) {
+        if phase == .tracking || (phase == .interacting && previous == .idle) {
+            canPullToDismiss = searchFocus.wrappedValue && geometry.contentOffset.y + geometry.contentInsets.top <= 2
+            shouldDismissAfterPull = false
+        } else if phase == .idle {
+            canPullToDismiss = false
+            // Let the list finish rubber-banding before the keyboard changes its viewport.
+            if shouldDismissAfterPull { searchFocus.wrappedValue = false }
+            shouldDismissAfterPull = false
+        } else if phase != .interacting {
+            canPullToDismiss = false
         }
     }
 

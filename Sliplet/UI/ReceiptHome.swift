@@ -568,7 +568,8 @@ struct ReceiptHome: View {
                 case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
                 case .detail: ReceiptSearchDetailView(workspace: workspace)
                 default:
-                    ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                    ReceiptSearchResultsView(workspace: workspace, searchFocus: $searchFocused,
+                                             requestDelete: requestBrowseDeletion)
                         .background {
                             SearchScreenAppearance(action: focusSearchAfterPush)
                                 .frame(width: 0, height: 0)
