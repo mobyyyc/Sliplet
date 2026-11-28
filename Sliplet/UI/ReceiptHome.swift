@@ -233,12 +233,8 @@ struct ReceiptHome: View {
             }
         }
         .safeAreaBar(edge: .bottom, spacing: 0) {
-            if workspace.availability == .ready && !workspace.privacyCovered {
-                if isSearchRoute && screenFlow == .wallet {
-                    searchBar.modifier(ReceiptActionBarLayout())
-                } else if [.detail, .review].contains(screenFlow) {
-                    bottomActions(for: screenFlow).modifier(ReceiptActionBarLayout())
-                }
+            if workspace.availability == .ready && !workspace.privacyCovered && [.detail, .review].contains(screenFlow) {
+                bottomActions(for: screenFlow).modifier(ReceiptActionBarLayout())
             }
         }
         .ignoresSafeArea(.keyboard, edges: !isSearchRoute && screenFlow == .wallet ? .bottom : [])
@@ -568,8 +564,10 @@ struct ReceiptHome: View {
                 case .review: ReceiptReviewView(workspace: workspace, editing: $editing)
                 case .detail: ReceiptSearchDetailView(workspace: workspace)
                 default:
-                    ReceiptSearchResultsView(workspace: workspace, searchFocus: $searchFocused,
-                                             requestDelete: requestBrowseDeletion)
+                    ReceiptSearchResultsView(workspace: workspace, requestDelete: requestBrowseDeletion)
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            searchBar.modifier(ReceiptActionBarLayout())
+                        }
                         .background {
                             SearchScreenAppearance(action: focusSearchAfterPush)
                                 .frame(width: 0, height: 0)

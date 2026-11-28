@@ -67,18 +67,13 @@ struct ReceiptSearchDetailView: View {
 
 struct ReceiptSearchResultsView: View {
     @Bindable var workspace: ReceiptWorkspace
-    let searchFocus: FocusState<Bool>.Binding
     var requestDelete: (ReceiptRecord) -> Void
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var rowFrames: [String: CGRect] = [:]
     @State private var pendingRestore: ReceiptBrowsingAnchor?
     @State private var userScrolled = false
-    @State private var canPullToDismiss = false
-    @State private var shouldDismissAfterPull = false
     @State private var scrollAccess = ReceiptListScrollAccess()
-    init(workspace: ReceiptWorkspace, searchFocus: FocusState<Bool>.Binding, requestDelete: @escaping (ReceiptRecord) -> Void) {
+    init(workspace: ReceiptWorkspace, requestDelete: @escaping (ReceiptRecord) -> Void) {
         self.workspace = workspace
-        self.searchFocus = searchFocus
         self.requestDelete = requestDelete
         _pendingRestore = State(initialValue: workspace.browseAnchor)
     }
@@ -111,15 +106,9 @@ struct ReceiptSearchResultsView: View {
                 }
                 .listStyle(.insetGrouped).listSectionSpacing(16)
                 .autocorrectionDisabled()
-                .scrollDismissesKeyboard(.never)
+                .scrollDismissesKeyboard(.immediately)
                 .scrollBounceBehavior(.always, axes: .vertical)
-                .onScrollGeometryChange(for: Bool.self) { geometry in
-                    geometry.contentOffset.y + geometry.contentInsets.top < -36
-                } action: { _, crossedThreshold in
-                    if canPullToDismiss && crossedThreshold { shouldDismissAfterPull = true }
-                }
                 .scrollEdgeEffectStyle(.soft, for: .vertical)
-                .coordinateSpace(name: "receiptBrowse")
                 .opacity(pendingRestore == nil ? 1 : 0)
                 .task(id: pendingRestore?.rowID) {
                     guard let pending = pendingRestore else { return }
@@ -138,33 +127,18 @@ struct ReceiptSearchResultsView: View {
                         } else { restore(using: proxy) }
                     }
                 }
-                .onScrollPhaseChange { previous, phase, context in
+                .onScrollPhaseChange { _, phase in
                     guard isActiveSurface else { return }
-                    updateKeyboardDismissal(previous: previous, phase: phase, geometry: context.geometry)
                     if phase == .tracking || phase == .interacting { userScrolled = true; pendingRestore = nil }
                     guard phase == .idle, userScrolled, pendingRestore == nil else { return }
                     userScrolled = false
-                    let first = rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportBottom }
+                    let first = scrollAccess.rowFrames.filter { $0.value.minY >= scrollAccess.visibleTop && $0.value.minY < viewportBottom }
                         .min { $0.value.minY < $1.value.minY }
                     if let first, let index = workspace.browsing.indexByID[first.key] {
                         remember(workspace.browsing.rows[index])
                     }
                 }
             }
-        }
-    }
-
-    private func updateKeyboardDismissal(previous: ScrollPhase, phase: ScrollPhase, geometry: ScrollGeometry) {
-        if phase == .tracking || (phase == .interacting && previous == .idle) {
-            canPullToDismiss = searchFocus.wrappedValue && geometry.contentOffset.y + geometry.contentInsets.top <= 2
-            shouldDismissAfterPull = false
-        } else if phase == .idle {
-            canPullToDismiss = false
-            // Let the list finish rubber-banding before the keyboard changes its viewport.
-            if shouldDismissAfterPull { searchFocus.wrappedValue = false }
-            shouldDismissAfterPull = false
-        } else if phase != .interacting {
-            canPullToDismiss = false
         }
     }
 
@@ -221,11 +195,11 @@ struct ReceiptSearchResultsView: View {
         completeRestore()
     }
     private func completeRestore() {
-        guard let anchor = pendingRestore, let frame = rowFrames[anchor.rowID], frame.maxY > 0 else { return }
+        guard let anchor = pendingRestore, let frame = scrollAccess.rowFrames[anchor.rowID], frame.maxY > 0 else { return }
         if scrollAccess.align(row: frame, to: anchor.y) { pendingRestore = nil }
     }
     private func remember(_ row: ReceiptBrowsingSnapshot.Row) {
-        let frame = rowFrames[row.id] ?? .zero
+        let frame = scrollAccess.rowFrames[row.id] ?? .zero
         workspace.browseAnchor = ReceiptBrowsingAnchor(rowID: row.id, receiptID: row.record.id, y: frame.minY)
         workspace.searchReturnID = row.id
     }
@@ -256,11 +230,11 @@ struct ReceiptSearchResultsView: View {
             }.frame(width: 0, height: 0).accessibilityHidden(true).allowsHitTesting(false)
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
-            if frame.maxY >= -80 && frame.minY <= viewportBottom + 80 { rowFrames[row.id] = frame }
-            else { rowFrames.removeValue(forKey: row.id) }
+            if frame.maxY >= -80 && frame.minY <= viewportBottom + 80 { scrollAccess.rowFrames[row.id] = frame }
+            else { scrollAccess.rowFrames.removeValue(forKey: row.id) }
             if pendingRestore?.rowID == row.id { completeRestore() }
         }
-        .onDisappear { rowFrames.removeValue(forKey: row.id) }
+        .onDisappear { scrollAccess.rowFrames.removeValue(forKey: row.id) }
         .receiptSwipeActions(row.record, identifier: row.identifier) { action in
             remember(row)
             if action == .delete { requestDelete(row.record) }

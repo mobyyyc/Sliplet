@@ -136,7 +136,7 @@ import XCTest
         XCTAssertFalse((summary.value as? String)?.contains("Including archived") == true)
     }
 
-    func testSearchKeepsKeyboardDuringScrollAndDismissesOnlyAfterIntentionalTopPull() {
+    func testSearchDownwardDragDismissesKeyboardInResultsAndEmptyState() {
         let app = launch()
         app.buttons["receiptSearch"].tap()
         let field = app.searchFields.firstMatch
@@ -146,22 +146,20 @@ import XCTest
         field.typeText("synthetic")
         let count = app.staticTexts["searchResultCount"]
         XCTAssertTrue(count.waitForExistence(timeout: 10))
+        let topY = count.frame.minY
 
-        let upper = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.24))
         let lower = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.50))
-        lower.press(forDuration: 0.07, thenDragTo: upper)
-        lower.press(forDuration: 0.07, thenDragTo: upper)
-        XCTAssertTrue(keyboard.exists)
-        upper.press(forDuration: 0.07, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0)
-        XCTAssertTrue(keyboard.exists)
+        let upper = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.18))
+        upper.press(forDuration: 0.07, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.1)
+        XCTAssertTrue(keyboard.waitForNonExistence(timeout: 10))
         XCTAssertEqual(field.value as? String, "synthetic")
+        XCTAssertEqual(count.frame.minY, topY, accuracy: 4)
 
+        field.tap()
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 10))
         app.buttons["Clear text"].tap()
         field.typeText("no fictional match")
         XCTAssertTrue(app.staticTexts["No matches"].waitForExistence(timeout: 10))
-        let short = app.coordinate(withNormalizedOffset: .init(dx: 0.48, dy: 0.27))
-        upper.press(forDuration: 0.07, thenDragTo: short, withVelocity: .slow, thenHoldForDuration: 0)
-        XCTAssertTrue(keyboard.exists)
         upper.press(forDuration: 0.07, thenDragTo: lower, withVelocity: .slow, thenHoldForDuration: 0.1)
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: 10))
         XCTAssertEqual(field.value as? String, "no fictional match")

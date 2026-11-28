@@ -5,6 +5,8 @@ import UIKit
 /// the saved pixel position after SwiftUI has brought the stable row identity into view.
 @MainActor final class ReceiptListScrollAccess {
     weak var view: UIScrollView?
+    // Tracking row geometry should not invalidate the List while it is scrolling.
+    var rowFrames: [String: CGRect] = [:]
     var visibleTop: CGFloat {
         guard let view else { return 0 }
         return view.convert(CGPoint(x: view.bounds.minX, y: view.bounds.minY + view.adjustedContentInset.top), to: nil).y
